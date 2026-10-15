@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { FixtureProfile } from '../shared/fixture-profile';
 import type { EngineCommand, EngineEvent, ShowEdit, VenueEdit } from '../shared/protocol';
-import type { Scene } from '../shared/show';
-import { fixtureZone, type PatchedFixture, type VenuePatch } from '../shared/venue-patch';
+import type { Scene, Show } from '../shared/show';
+import {
+  fixtureZone,
+  type HouseLook,
+  type PatchedFixture,
+  type VenuePatch,
+} from '../shared/venue-patch';
 import { createEngine } from './engine';
 import { readLibraryFile } from './profile-library';
 import { gdtfDimmer } from './gdtf-test-files';
@@ -250,6 +255,7 @@ describe('engine Venue Patch', () => {
         canUndo: false,
         canRedo: false,
       },
+      { type: 'house', fired: { type: 'startup' } },
       { type: 'venueDone', requestId: 1, errors: [] },
     ]);
   });
@@ -347,6 +353,108 @@ describe('engine Venue Patch undo', () => {
     redo();
     expect(venue().patch.fixtures).toEqual([]);
     expect(venue()).toMatchObject({ canRedo: false });
+  });
+});
+
+describe('engine House', () => {
+  const light = {
+    ...{ id: 'h1', name: 'Bar 1', group: 'bar', profileId: 'acme/dimmer', mode: '1ch' },
+    ...{ universe: 1, address: 100 },
+  };
+
+  it('adds a House Group and a House Light with a copy of its Profile from the library', () => {
+    const { edit, patch } = venueEngine();
+
+    expect(edit({ type: 'putHouseGroup', group: { id: 'bar', name: 'Bar' } })).toEqual([]);
+    expect(edit({ type: 'putHouseLight', light })).toEqual([]);
+
+    expect(patch()).toMatchObject({
+      fixtures: [],
+      profiles: [dimmer],
+      house: { groups: [{ id: 'bar', name: 'Bar' }], lights: [light] },
+    });
+  });
+
+  it('rejects a House Light in an unknown Group or over a Fixture', () => {
+    const { edit } = venueEngine();
+    edit({ type: 'putFixture', fixture: fixture({ address: 100 }) });
+    edit({ type: 'putHouseGroup', group: { id: 'bar', name: 'Bar' } });
+
+    expect(edit({ type: 'putHouseLight', light: { ...light, group: 'ceiling' } })).toEqual([
+      '"Bar 1": House Group "ceiling" is not in the patch',
+    ]);
+    expect(edit({ type: 'putHouseLight', light: { ...light, id: 'h2' } })).toEqual([
+      '"Bar 1" (1.100–1.100) overlaps "Dimmer 1" (1.100–1.100)',
+    ]);
+  });
+
+  it('removes a House Group with its House Lights, and undoes it as one step', () => {
+    const { edit, patch, undo } = venueEngine();
+    edit({ type: 'putHouseGroup', group: { id: 'bar', name: 'Bar' } });
+    edit({ type: 'putHouseLight', light });
+
+    expect(edit({ type: 'removeHouseGroup', id: 'bar' })).toEqual([]);
+    expect(patch()).toMatchObject({ profiles: [], house: { groups: [], lights: [] } });
+
+    undo();
+    expect(patch().house).toEqual({ groups: [{ id: 'bar', name: 'Bar' }], lights: [light] });
+  });
+
+  it('rejects removing a House Group or House Light that is not in the patch', () => {
+    const { edit } = venueEngine();
+
+    expect(edit({ type: 'removeHouseGroup', id: 'bar' })).toEqual([
+      'House Group "bar" is not in the patch',
+    ]);
+    expect(edit({ type: 'removeHouseLights', ids: ['h1'] })).toEqual([
+      'House Light id "h1" is not in the patch',
+    ]);
+  });
+
+  it('undoes quick changes to the Startup look as one step', () => {
+    const clock = { now: 0 };
+    const { edit, patch, undo } = venueEngine(new Map(), clock);
+    edit({ type: 'putHouseGroup', group: { id: 'bar', name: 'Bar' } });
+    for (const intensity of [0.2, 0.4, 0.6]) {
+      clock.now += 100;
+      edit({ type: 'setStartupLook', look: { bar: { intensity, colour: { swatch: 'White' } } } });
+    }
+
+    undo();
+
+    expect(patch().house).toEqual({ groups: [{ id: 'bar', name: 'Bar' }], lights: [] });
+  });
+
+  it('undoes quick changes to one house look as one step, apart from other looks', () => {
+    const clock = { now: 0 };
+    const { edit, patch, undo } = venueEngine(new Map(), clock);
+    edit({ type: 'putHouseGroup', group: { id: 'bar', name: 'Bar' } });
+    const look = (intensity: number): HouseLook => ({
+      bar: { intensity, colour: { swatch: 'White' } },
+    });
+    for (const intensity of [0.2, 0.4]) {
+      clock.now += 100;
+      edit({ type: 'setHouseLook', preset: 'dim', look: look(intensity) });
+    }
+    clock.now += 100;
+    expect(edit({ type: 'setHouseLook', preset: 'up', look: look(1) })).toEqual([]);
+
+    undo();
+    expect(patch().house?.looks).toEqual({ dim: look(0.4) });
+    undo();
+    expect(patch().house?.looks).toBeUndefined();
+  });
+
+  it('rejects a house look for a House Group not in the patch', () => {
+    const { edit } = venueEngine();
+
+    expect(
+      edit({
+        type: 'setHouseLook',
+        preset: 'dim',
+        look: { bar: { intensity: 1, colour: { swatch: 'White' } } },
+      }),
+    ).toEqual(['House look "dim": House Group "bar" is not in the patch']);
   });
 });
 
@@ -587,6 +695,57 @@ describe('engine Show', () => {
       canUndo: false,
       canRedo: false,
     });
+  });
+});
+
+describe('engine House Presets', () => {
+  const dim = { id: 'dim', name: 'Dim', fade: 3 };
+  const up = { id: 'up', name: 'Up', fade: 5 };
+  const ids = (show: Show) => show.housePresets?.map((p) => p.id);
+
+  it('adds, edits, reorders and removes House Presets, each undoable', () => {
+    const { edit, undo, show } = showEngine();
+    edit({ type: 'putHousePreset', preset: dim });
+    edit({ type: 'putHousePreset', preset: up });
+    edit({ type: 'putHousePreset', preset: { ...dim, name: 'Show dim' } });
+    edit({ type: 'moveHousePreset', id: 'up', to: 0 });
+    edit({ type: 'removeHousePreset', id: 'dim' });
+    expect(show().show.housePresets).toEqual([up]);
+
+    undo();
+    expect(show().show.housePresets).toEqual([up, { ...dim, name: 'Show dim' }]);
+    undo();
+    expect(ids(show().show)).toEqual(['dim', 'up']);
+    undo();
+    expect(show().show.housePresets).toEqual([dim, up]);
+  });
+
+  it('rejects moving or removing a House Preset the Show does not have, or moving out of the list', () => {
+    const { edit } = showEngine();
+    edit({ type: 'putHousePreset', preset: dim });
+
+    expect(edit({ type: 'removeHousePreset', id: 'up' })).toEqual([
+      'House Preset id "up" is not in the Show',
+    ]);
+    expect(edit({ type: 'moveHousePreset', id: 'up', to: 0 })).toEqual([
+      'House Preset id "up" is not in the Show',
+    ]);
+    expect(edit({ type: 'moveHousePreset', id: 'dim', to: 1 })).toEqual([
+      'House Preset position 1 is not in the list',
+    ]);
+  });
+
+  it('undoes quick edits to the same House Preset as one step', () => {
+    const clock = { now: 0 };
+    const { edit, undo, show } = showEngine(undefined, clock);
+    edit({ type: 'putHousePreset', preset: dim });
+    for (const fade of [1, 1.5, 2]) {
+      clock.now += 400;
+      edit({ type: 'putHousePreset', preset: { ...dim, fade } });
+    }
+
+    undo();
+    expect(show().show.housePresets).toEqual([dim]);
   });
 });
 

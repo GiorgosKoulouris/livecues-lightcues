@@ -3,6 +3,7 @@
 //
 // Scenes target Zones × Roles, never Fixtures, and hold no raw DMX values, so
 // the same Show runs against any Venue Patch (ADR 0001).
+import { colourProblems, inRange, type Colour } from './colour';
 import { ROLES, type Role } from './fixture-profile';
 import {
   fixtureRole,
@@ -14,26 +15,7 @@ import {
   type Zone,
 } from './venue-patch';
 
-// Named colours for a Rule, translated per Fixture by the engine.
-export const SWATCHES = [
-  'Red',
-  'Orange',
-  'Amber',
-  'Yellow',
-  'Green',
-  'Cyan',
-  'Blue',
-  'Lavender',
-  'Magenta',
-  'Pink',
-  'White',
-  'Warm White',
-  'UV',
-] as const;
-export type Swatch = (typeof SWATCHES)[number];
-
-// hue in degrees, 0 to under 360; saturation 0–1.
-export type Colour = { hue: number; saturation: number } | { swatch: Swatch };
+export { SWATCHES, type Colour, type Swatch } from './colour';
 
 // Named aims for moving Fixtures, computed per Fixture from its stage
 // position and Mounting (ADR 0007).
@@ -130,6 +112,17 @@ export interface Trigger extends MidiNote {
   mode: TriggerMode;
 }
 
+// A named slot the House Lights go to, with the house look each Venue Patch
+// gives it (ADR 0013). Its note only does Go.
+export interface HousePreset {
+  // Unique in the Show; Venue Patches key their house looks by it.
+  id: string;
+  name: string;
+  // Seconds to crossfade from the current house state.
+  fade: number;
+  note?: MidiNote;
+}
+
 export interface Show {
   // In display order.
   layers: Layer[];
@@ -144,10 +137,15 @@ export interface Show {
   defaultDirection?: Direction;
   // The Scene ids on the Fallback Panel's buttons, in order. None when absent.
   panelScenes?: string[];
+  // In order, at most `MAX_HOUSE_PRESETS`. None when absent.
+  housePresets?: HousePreset[];
 }
 
 // The Fallback Panel's Scene buttons, one per shortcut key 1–9.
 export const MAX_PANEL_SCENES = 9;
+
+// The House Preset slots, one per Fallback Panel shortcut Shift+1–8.
+export const MAX_HOUSE_PRESETS = 8;
 
 export type ShowResult = { show: Show } | { errors: string[] };
 
@@ -212,6 +210,42 @@ export function putTrigger(show: Show, trigger: Trigger): ShowResult {
 
 export function removeTrigger(show: Show, note: MidiNote): Show {
   return { ...show, triggers: show.triggers.filter((t) => !sameNote(t, note)) };
+}
+
+export function showHousePresets(show: Show): HousePreset[] {
+  return show.housePresets ?? [];
+}
+
+export function findHousePreset(show: Show, id: string): HousePreset | undefined {
+  return showHousePresets(show).find((p) => p.id === id);
+}
+
+// The House Preset a channel and note fire, if any.
+export function findHousePresetOn(show: Show, note: MidiNote): HousePreset | undefined {
+  return showHousePresets(show).find((p) => p.note !== undefined && sameNote(p.note, note));
+}
+
+// Adds a House Preset at the end, or replaces the one with the same id in
+// place.
+export function putHousePreset(show: Show, preset: HousePreset): ShowResult {
+  const presets = put(showHousePresets(show), preset, (p) => p.id === preset.id);
+  return validated({ ...show, housePresets: presets });
+}
+
+// Moves a House Preset to index `to`.
+export function moveHousePreset(show: Show, id: string, to: number): Show {
+  const presets = [...showHousePresets(show)];
+  const from = presets.findIndex((p) => p.id === id);
+  if (from < 0) return show;
+  presets.splice(to, 0, ...presets.splice(from, 1));
+  return { ...show, housePresets: presets };
+}
+
+// Removes a House Preset; without any left, the Show has no list.
+export function removeHousePreset(show: Show, id: string): Show {
+  const { housePresets, ...rest } = show;
+  const left = (housePresets ?? []).filter((p) => p.id !== id);
+  return left.length > 0 ? { ...rest, housePresets: left } : rest;
 }
 
 // Designates a Scene as the Base Look; undefined leaves the Show without one.
@@ -294,6 +328,7 @@ export function validateShow(show: Show): string[] {
   for (const problem of panelProblems(show, show.panelScenes ?? [])) {
     errors.push(`Fallback Panel: ${problem}`);
   }
+  errors.push(...housePresetErrors(show));
   return errors;
 }
 
@@ -316,12 +351,44 @@ function sceneProblems(show: Show, { layer, fadeIn, tags, rules }: Scene): strin
 }
 
 function triggerProblems(show: Show, { channel, note, scene, mode }: Trigger): string[] {
-  const problems: string[] = [];
-  if (!isWhole(channel, 1, 16)) problems.push('channel must be a whole number from 1 to 16');
-  if (!isWhole(note, 0, 127)) problems.push('note must be a whole number from 0 to 127');
+  const problems = noteProblems({ channel, note });
   if (!hasScene(show, scene)) problems.push(`Scene "${scene}" is not in the Show`);
   if (!TRIGGER_MODES.includes(mode)) problems.push(`mode "${mode}" is not go, flash or release`);
   return problems;
+}
+
+function noteProblems({ channel, note }: MidiNote): string[] {
+  const problems: string[] = [];
+  if (!isWhole(channel, 1, 16)) problems.push('channel must be a whole number from 1 to 16');
+  if (!isWhole(note, 0, 127)) problems.push('note must be a whole number from 0 to 127');
+  return problems;
+}
+
+// A House Preset note may not also be a Trigger's, so a note does one thing.
+function housePresetErrors(show: Show): string[] {
+  const presets = showHousePresets(show);
+  const errors: string[] = [];
+  for (const { id, name, fade, note } of presets) {
+    const at = `House Preset "${name}": `;
+    // Venue Patches key their house looks by the id.
+    if (typeof id !== 'string' || id === '') errors.push(`${at}id is missing`);
+    if (typeof name !== 'string' || name.trim() === '') errors.push(`${at}name is empty`);
+    if (!Number.isFinite(fade) || fade < 0) errors.push(`${at}fade must be 0 seconds or more`);
+    if (note === undefined) continue;
+    errors.push(...noteProblems(note).map((problem) => at + problem));
+    if (findTrigger(show, note)) {
+      errors.push(`${at}note ${note.channel}/${note.note} is also a Trigger`);
+    }
+  }
+  for (const id of duplicates(presets.map((p) => p.id))) {
+    errors.push(`House Preset id "${id}" is used twice`);
+  }
+  const notes = presets.flatMap(({ note }) => (note ? [`${note.channel}/${note.note}`] : []));
+  for (const key of duplicates(notes)) errors.push(`House Preset note ${key} is used twice`);
+  if (presets.length > MAX_HOUSE_PRESETS) {
+    errors.push(`House Presets: at most ${MAX_HOUSE_PRESETS}`);
+  }
+  return errors;
 }
 
 function panelProblems(show: Show, sceneIds: string[]): string[] {
@@ -384,25 +451,8 @@ function directionProblems(direction: Direction): string[] {
   return DIRECTIONS.includes(direction) ? [] : [`"${direction}" is not a Direction`];
 }
 
-function colourProblems(colour: Colour): string[] {
-  if ('swatch' in colour) {
-    return SWATCHES.includes(colour.swatch) ? [] : [`"${colour.swatch}" is not a swatch`];
-  }
-  const problems: string[] = [];
-  if (!inRange(colour.hue, 0, 360) || colour.hue === 360) {
-    problems.push('hue must be from 0 to under 360');
-  }
-  if (!inRange(colour.saturation, 0, 1)) problems.push('saturation must be from 0 to 1');
-  return problems;
-}
-
 function isWhole(value: number, min: number, max: number): boolean {
   return Number.isInteger(value) && value >= min && value <= max;
-}
-
-// False for NaN and non-numbers.
-function inRange(value: number, min: number, max: number): boolean {
-  return typeof value === 'number' && value >= min && value <= max;
 }
 
 function duplicates<T>(values: T[]): T[] {

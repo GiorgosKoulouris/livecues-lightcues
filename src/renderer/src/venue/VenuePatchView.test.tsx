@@ -10,10 +10,16 @@ import {
   moveFixture,
   putFixture,
   putFixtures,
+  putHouseGroup,
+  putHouseLight,
   putUniverse,
   removeFixtures,
+  removeHouseGroup,
+  removeHouseLights,
   removeUniverse,
+  setHouseLook,
   setStage,
+  setStartupLook,
   type PatchedFixture,
   type PatchResult,
   type VenuePatch,
@@ -141,6 +147,18 @@ function applied(current: VenuePatch, edit: VenueEdit): PatchResult {
       return moveFixture(current, edit.id, edit.position);
     case 'removeFixtures':
       return { patch: removeFixtures(current, edit.ids) };
+    case 'putHouseGroup':
+      return putHouseGroup(current, edit.group);
+    case 'removeHouseGroup':
+      return { patch: removeHouseGroup(current, edit.id) };
+    case 'putHouseLight':
+      return putHouseLight(current, edit.light, par);
+    case 'removeHouseLights':
+      return { patch: removeHouseLights(current, edit.ids) };
+    case 'setStartupLook':
+      return setStartupLook(current, edit.look);
+    case 'setHouseLook':
+      return setHouseLook(current, edit.preset, edit.look);
   }
 }
 
@@ -666,6 +684,171 @@ describe('Rig setup', () => {
     );
     expect(edits()).toEqual([{ type: 'putUniverse', universe: { number: 1, output: 'virtual' } }]);
     expect(await screen.findByText('No hardware. See the channel monitor.')).toBeInTheDocument();
+  });
+});
+
+describe('House', () => {
+  const previews = () => engine.sent.filter((c) => c.type === 'previewHouseLook');
+  const white = { swatch: 'White' };
+
+  async function openHouse() {
+    await renderView();
+    await userEvent.click(screen.getByRole('tab', { name: 'House' }));
+  }
+
+  it('adds a House Group and a House Light, and sets the Startup look live', async () => {
+    await openHouse();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole('button', { name: 'Add House Group' }));
+    const [added] = edits();
+    if (added?.type !== 'putHouseGroup') throw new Error('No House Group added');
+    const { id } = added.group;
+    expect(added.group.name).toBe('House Group 1');
+    const name = await screen.findByRole('textbox', { name: 'House Group name' });
+    await user.clear(name);
+    await user.type(name, 'Bar');
+    expect(edits().at(-1)).toEqual({ type: 'putHouseGroup', group: { id, name: 'Bar' } });
+
+    const group = within(await screen.findByRole('region', { name: 'House Group Bar' }));
+    expect(group.getByText('No House Lights yet.')).toBeInTheDocument();
+    await user.click(group.getByRole('button', { name: 'Add House Light' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Add House Light' }));
+    // After Par 8, the last Fixture in Universe 1.
+    expect(dialog.getByRole('textbox', { name: 'Address' })).toHaveValue('25');
+    await user.click(dialog.getByRole('button', { name: 'Add' }));
+    expect(edits().at(-1)).toEqual({
+      type: 'putHouseLight',
+      light: expect.objectContaining({ name: 'Par 10', group: id, universe: 1, address: 25 }),
+    });
+    expect(await group.findByRole('textbox', { name: 'Address of Par 10' })).toHaveValue('25');
+
+    expect(previews()).toEqual([]);
+    const look = within(screen.getByRole('group', { name: 'Bar' }));
+    await user.click(look.getByRole('checkbox', { name: 'Set in this look' }));
+    expect(edits().at(-1)).toEqual({
+      type: 'setStartupLook',
+      look: { [id]: { intensity: 1, colour: white } },
+    });
+    fireEvent.change(await look.findByRole('slider', { name: 'Bar intensity' }), {
+      target: { value: '40' },
+    });
+    const dim = { [id]: { intensity: 0.4, colour: white } };
+    expect(edits().at(-1)).toEqual({ type: 'setStartupLook', look: dim });
+    await vi.waitFor(() =>
+      expect(previews().at(-1)).toEqual({ type: 'previewHouseLook', look: dim }),
+    );
+
+    await user.click(screen.getByRole('tab', { name: 'Fixtures' }));
+    expect(previews().at(-1)).toEqual({ type: 'previewHouseLook' });
+  });
+
+  it('removes a House Group, naming the House Lights that went with it', async () => {
+    patch = { ...PATCH, house: { groups: [{ id: 'bar', name: 'Bar' }], lights: [] } };
+    const light = { id: 'h1', name: 'Bar 1', group: 'bar', profileId: 'acme/par', mode: '3ch' };
+    patch = {
+      ...patch,
+      house: { ...patch.house!, lights: [{ ...light, universe: 1, address: 30 }] },
+    };
+    await openHouse();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Remove House Group Bar' }));
+
+    expect(edits()).toEqual([{ type: 'removeHouseGroup', id: 'bar' }]);
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Removed Bar and its 1 House Light: Bar 1',
+    );
+  });
+
+  it('shows a House Light change that does not fit inline, without sending it', async () => {
+    const light = { id: 'h1', name: 'Bar 1', group: 'bar', profileId: 'acme/par', mode: '3ch' };
+    const lights = [
+      { ...light, universe: 1, address: 25 },
+      { ...light, id: 'h2', name: 'Bar 2', universe: 1, address: 28 },
+    ];
+    patch = { ...PATCH, house: { groups: [{ id: 'bar', name: 'Bar' }], lights } };
+    await openHouse();
+
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Mode of Bar 1' }), '6ch');
+
+    expect(
+      screen.getByText('"Bar 2" (1.28–1.30) overlaps "Bar 1" (1.25–1.30)'),
+    ).toBeInTheDocument();
+    expect(edits()).toEqual([]);
+  });
+
+  describe('house looks', () => {
+    const bar = { groups: [{ id: 'bar', name: 'Bar' }], lights: [] };
+    const amber = { intensity: 0.2, colour: { swatch: 'Amber' as const } };
+    const presets = (...names: string[]): Show => ({
+      layers: [],
+      scenes: [],
+      triggers: [],
+      housePresets: names.map((name) => ({ id: name.toLowerCase(), name, fade: 2 })),
+    });
+    const look = (name: string) => within(screen.getByRole('region', { name }));
+
+    it('sets the look of a House Preset of the Show live, by name', async () => {
+      show = presets('Dim', 'Up');
+      patch = { ...PATCH, house: { ...bar, looks: { up: { bar: amber } } } };
+      await openHouse();
+      const user = userEvent.setup();
+
+      const dim = within(await screen.findByRole('region', { name: 'House look Dim' }));
+      expect(dim.getByText('Not set up in this venue')).toBeInTheDocument();
+      expect(look('House look Up').queryByText('Not set up in this venue')).toBeNull();
+      expect(look('House look Up').getByRole('slider', { name: 'Bar intensity' })).toHaveValue(
+        '20',
+      );
+
+      await user.click(dim.getByRole('checkbox', { name: 'Set in this look' }));
+      const full = { bar: { intensity: 1, colour: white } };
+      expect(edits()).toEqual([{ type: 'setHouseLook', preset: 'dim', look: full }]);
+      await vi.waitFor(() =>
+        expect(previews().at(-1)).toEqual({ type: 'previewHouseLook', look: full }),
+      );
+      expect(dim.queryByText('Not set up in this venue')).toBeNull();
+
+      await user.click(dim.getByRole('checkbox', { name: 'Set in this look' }));
+      expect(edits().at(-1)).toEqual({ type: 'setHouseLook', preset: 'dim' });
+
+      await user.click(screen.getByRole('tab', { name: 'Fixtures' }));
+      expect(previews().at(-1)).toEqual({ type: 'previewHouseLook' });
+    });
+
+    it('lists a look for a House Preset not in the Show, and removes it', async () => {
+      show = presets('Dim');
+      patch = { ...PATCH, house: { ...bar, looks: { gone: { bar: amber } } } };
+      await openHouse();
+
+      const other = within(await screen.findByRole('region', { name: 'Other look 1' }));
+      expect(other.getByText('Not in this Show')).toBeInTheDocument();
+      expect(other.getByRole('slider', { name: 'Bar intensity' })).toHaveValue('20');
+      await userEvent.click(other.getByRole('button', { name: 'Remove Other look 1' }));
+
+      expect(edits()).toEqual([{ type: 'setHouseLook', preset: 'gone' }]);
+      expect(await screen.findByRole('status')).toHaveTextContent('Removed Other look 1');
+      expect(screen.queryByRole('region', { name: 'Other look 1' })).toBeNull();
+    });
+
+    it('marks every House Preset not set up before a House Group is added', async () => {
+      show = presets('Dim');
+      await openHouse();
+
+      const dim = within(await screen.findByRole('region', { name: 'House look Dim' }));
+      expect(dim.getByText('Not set up in this venue')).toBeInTheDocument();
+      expect(screen.getByText('Add a House Group to set the house looks.')).toBeInTheDocument();
+    });
+
+    it('shows only the Startup look and the stored looks with no Show', async () => {
+      patch = { ...PATCH, house: { ...bar, looks: { gone: { bar: amber } } } };
+      await openHouse();
+
+      expect(screen.getByRole('region', { name: 'Startup look' })).toBeInTheDocument();
+      const other = look('Other look 1');
+      expect(other.queryByText('Not in this Show')).toBeNull();
+      expect(screen.queryByRole('region', { name: /^House look/ })).toBeNull();
+    });
   });
 });
 

@@ -206,6 +206,17 @@ function levelOutput(channels: Channel[], intensity: number, colour: ColourLevel
   };
 }
 
+// The DMX values of a Fixture's channels set to `intensity` (0–1) and
+// `colour`, with no Show: the other channels stay at their defaults. For
+// House Lights, which Scenes never reach.
+export function levelChannels(
+  channels: Channel[],
+  intensity: number,
+  colour: ColourLevels,
+): number[] {
+  return encodeChannels(channels, levelOutput(channels, intensity, colour));
+}
+
 // The Focus Check over `frames`: every moving Fixture in the patch aimed at
 // `direction`, open in white at `intensity` (0–1). Other Fixtures keep what
 // `frames` has. Returns new frames; `frames` is not changed.
@@ -421,11 +432,11 @@ function sceneLook(patch: VenuePatch, fixture: PatchedFixture, scene: Scene, bea
   return look;
 }
 
-function lerp(a: number, b: number, p: number): number {
+export function lerp(a: number, b: number, p: number): number {
   return a + (b - a) * p;
 }
 
-function blend(a: ColourLevels, b: ColourLevels, p: number): ColourLevels {
+export function blend(a: ColourLevels, b: ColourLevels, p: number): ColourLevels {
   return {
     red: lerp(a.red, b.red, p),
     green: lerp(a.green, b.green, p),
@@ -436,7 +447,7 @@ function blend(a: ColourLevels, b: ColourLevels, p: number): ColourLevels {
 
 // A colour as red, green, blue and ultraviolet levels, each 0–1. Red, green
 // and blue stand in for ultraviolet on Fixtures without a UV emitter.
-interface ColourLevels {
+export interface ColourLevels {
   red: number;
   green: number;
   blue: number;
@@ -468,7 +479,7 @@ const SWATCH_LEVELS: Record<Swatch, ColourLevels> = {
   UV: { red: 0.3, green: 0, blue: 1, uv: 1 },
 };
 
-function colourLevels(colour: Colour): ColourLevels {
+export function colourLevels(colour: Colour): ColourLevels {
   return 'swatch' in colour ? SWATCH_LEVELS[colour.swatch] : hsv(colour.hue, colour.saturation);
 }
 

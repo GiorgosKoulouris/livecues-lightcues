@@ -2,8 +2,11 @@
 // The UI sends EngineCommands; the engine sends EngineEvents.
 import type { AimAngles } from './aim';
 import type { FixtureProfile, UnsupportedFeature } from './fixture-profile';
-import type { Colour, Direction, Layer, MidiNote, Scene, Show, Trigger } from './show';
+import type { Colour, Direction, HousePreset, Layer, MidiNote, Scene, Show, Trigger } from './show';
 import type {
+  HouseGroup,
+  HouseLight,
+  HouseLook,
   PatchedFixture,
   StageBounds,
   StagePosition,
@@ -99,7 +102,23 @@ export type EngineCommand =
   // While a Universe is monitored, the engine sends its `dmxFrame`s. A new
   // monitorUniverse replaces the Universe monitored before.
   | { type: 'monitorUniverse'; universe: number }
-  | { type: 'stopMonitor' };
+  | { type: 'stopMonitor' }
+  // While a house look is previewed, the House Lights show it over the house
+  // state. Without a look, they go back to the house state, which the
+  // preview never changes.
+  | { type: 'previewHouseLook'; look?: HouseLook }
+  | { type: 'getHouse' }
+  // Crossfades the House Lights to the House Preset's house look in this
+  // Venue Patch, over its fade. Does nothing when the patch has no look for
+  // it. Not in the undo history.
+  | { type: 'fireHousePreset'; id: string }
+  // Crossfades the House Lights to the Startup look, Groups it does not set
+  // to full white, over a fixed fade.
+  | { type: 'goStartupLook' };
+
+// What the House Lights went to last: the Startup look, or a House Preset's
+// look, by House Preset id.
+export type HouseFired = { type: 'startup' } | { type: 'preset'; id: string };
 
 // Monitor sends the active Scenes to the Outputs. Blind holds the Outputs at
 // the frames sent last.
@@ -135,7 +154,12 @@ export type ShowEdit =
   | { type: 'setPanelScenes'; sceneIds: string[] }
   // Replaces the Trigger on the same channel and note.
   | { type: 'putTrigger'; trigger: Trigger }
-  | { type: 'removeTrigger'; note: MidiNote };
+  | { type: 'removeTrigger'; note: MidiNote }
+  // Adds at the end, or replaces the House Preset with the same id in place.
+  | { type: 'putHousePreset'; preset: HousePreset }
+  // Moves the House Preset to index `to`.
+  | { type: 'moveHousePreset'; id: string; to: number }
+  | { type: 'removeHousePreset'; id: string };
 
 // A change to the current Venue Patch. `putFixture` and `putFixtures` embed a
 // Fixture's Profile from the Profile Library when the patch does not have it
@@ -151,7 +175,20 @@ export type VenueEdit =
   | { type: 'putFixture'; fixture: PatchedFixture }
   | { type: 'putFixtures'; fixtures: PatchedFixture[] }
   | { type: 'moveFixture'; id: string; position: StagePosition }
-  | { type: 'removeFixtures'; ids: string[] };
+  | { type: 'removeFixtures'; ids: string[] }
+  // Adds a House Group, or renames it.
+  | { type: 'putHouseGroup'; group: HouseGroup }
+  // Removes its House Lights and its Startup look setting too.
+  | { type: 'removeHouseGroup'; id: string }
+  // Embeds the House Light's Profile from the Profile Library, as for a
+  // Fixture.
+  | { type: 'putHouseLight'; light: HouseLight }
+  | { type: 'removeHouseLights'; ids: string[] }
+  // Without a look, the House Lights start at full white.
+  | { type: 'setStartupLook'; look?: HouseLook }
+  // The house look of the House Preset with id `preset`. Without a look, or
+  // with one that sets no House Group, removes it.
+  | { type: 'setHouseLook'; preset: string; look?: HouseLook };
 
 // A DMX interface port that Universes are sent to. `id` is what a Universe's
 // `output` names: the device's USB serial number, or its port when it has
@@ -263,6 +300,9 @@ export type EngineEvent =
       freeze: boolean;
       focusCheck?: Direction;
     }
+  // What the House Lights went to last, during its fade too. Sent on request
+  // and after every change.
+  | { type: 'house'; fired: HouseFired }
   // The MIDI input status. Sent on request and after every change.
   | { type: 'midiInput'; status: MidiInputStatus }
   // The Tempo and where it comes from. Sent on request and after every change
@@ -307,6 +347,7 @@ export interface EngineSnapshot {
   show: DocumentSnapshot<Show>;
   venue: DocumentSnapshot<VenuePatch>;
   playback: PlaybackSnapshot;
+  house: HouseSnapshot;
   // The selected MIDI Input's name, absent when none is selected.
   midiInput: { selected?: string };
 }
@@ -330,6 +371,13 @@ export interface PlaybackSnapshot {
   freeze: boolean;
   bpm: number;
   tempoSource: TempoSource;
+}
+
+// The house state: what each House Group goes to, fades done, and what was
+// fired last.
+export interface HouseSnapshot {
+  look: HouseLook;
+  fired: HouseFired;
 }
 
 // Sent by the engine to main on the parent port: the whole snapshot once on
@@ -489,6 +537,7 @@ export const STATE_REQUESTS: readonly EngineCommand['type'][] = [
   'getVenue',
   'getShow',
   'getPlayback',
+  'getHouse',
   'listOutputs',
   'listMidiInputs',
   'getTempo',
