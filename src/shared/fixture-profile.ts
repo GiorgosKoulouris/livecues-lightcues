@@ -34,17 +34,21 @@ export interface WheelSlot {
   colour: string;
 }
 
+// `assumed` marks a span made from words, such as an OFL file's slow → fast,
+// not read as numbers.
 export type Capability =
   | { type: 'none' }
   // `level` is the output fraction across the range; 0→1 when absent.
-  | { type: 'intensity'; level?: Span }
-  | { type: 'emitter'; emitter: Emitter; level?: Span }
+  | { type: 'intensity'; level?: Span; assumed?: true }
+  | { type: 'emitter'; emitter: Emitter; level?: Span; assumed?: true }
   | { type: 'wheelSlot'; slot: WheelSlot }
   | { type: 'pan'; degrees?: Span }
   | { type: 'tilt'; degrees?: Span }
+  // `speed` is relative: 0 is the slowest and 1 the fastest. Nothing drives it.
+  | { type: 'panTiltSpeed'; speed?: Span }
   | { type: 'shutter'; effect: 'open' | 'closed' }
-  | { type: 'strobe'; hz?: Span }
-  | { type: 'strobeSpeed'; hz?: Span }
+  | { type: 'strobe'; hz?: Span; assumed?: true }
+  | { type: 'strobeSpeed'; hz?: Span; assumed?: true }
   // Kept so the channel still occupies its DMX slot; reported on import.
   | { type: 'unsupported'; feature: string };
 
@@ -81,4 +85,7 @@ export interface UnsupportedFeature {
   channel?: string;
   mode?: string;
   feature: string;
+  // The 8-bit default the channel is held at when nothing drives it. Absent
+  // on mode-level lines and on channels left out of the Profile.
+  held?: number;
 }

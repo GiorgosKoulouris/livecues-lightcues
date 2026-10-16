@@ -287,12 +287,12 @@ describe('importOflFixture', () => {
       ],
     });
     expect(unsupported).toEqual([
-      { channel: 'Gobo Wheel', feature: 'WheelSlot between slots' },
-      { channel: 'Gobo Wheel', feature: 'WheelSlot Gobo' },
-      { channel: 'Zoom', feature: 'Zoom' },
-      { channel: 'Strobe', feature: 'ShutterStrobe Pulse' },
-      { channel: 'Mode', feature: 'Switching channels' },
-      { channel: 'Speed/Zoom', feature: 'Switching channel' },
+      { channel: 'Gobo Wheel', feature: 'WheelSlot between slots', held: 0 },
+      { channel: 'Gobo Wheel', feature: 'WheelSlot Gobo', held: 0 },
+      { channel: 'Zoom', feature: 'Zoom', held: 0 },
+      { channel: 'Strobe', feature: 'ShutterStrobe Pulse', held: 0 },
+      { channel: 'Mode', feature: 'Switching channels', held: 0 },
+      { channel: 'Speed/Zoom', feature: 'Switching channel', held: 0 },
     ]);
   });
 
@@ -487,7 +487,7 @@ describe('importOflFixture', () => {
     );
 
     expect(profile.modes[0]!.channels).toHaveLength(2);
-    expect(unsupported).toEqual([{ channel: 'Dimer', feature: 'Unknown channel' }]);
+    expect(unsupported).toEqual([{ channel: 'Dimer', feature: 'Unknown channel', held: 0 }]);
   });
 
   it('rejects JSON that is not an OFL fixture', () => {
@@ -551,6 +551,159 @@ describe('importOflFixture', () => {
     expect(unsupported).toEqual([]);
   });
 
+  it('takes slow and fast as 1 and 20 Hz and dark as 5%, in file order, assumed', () => {
+    const { profile, unsupported } = importOflFixture(
+      {
+        name: 'Wordy Strobe',
+        categories: ['Strobe'],
+        meta,
+        availableChannels: {
+          Speed: { capability: { type: 'StrobeSpeed', speedStart: 'slow', speedEnd: 'fast' } },
+          Strobe: {
+            capabilities: [
+              { dmxRange: [0, 9], type: 'ShutterStrobe', shutterEffect: 'Open' },
+              {
+                dmxRange: [10, 127],
+                type: 'ShutterStrobe',
+                shutterEffect: 'Strobe',
+                speedStart: 'fast',
+                speedEnd: 'slow',
+              },
+              {
+                dmxRange: [128, 191],
+                type: 'ShutterStrobe',
+                shutterEffect: 'Strobe',
+                speedStart: 'slow',
+                speedEnd: '10Hz',
+              },
+              {
+                dmxRange: [192, 255],
+                type: 'ShutterStrobe',
+                shutterEffect: 'Strobe',
+                speedStart: '10Hz',
+                speedEnd: '20Hz',
+              },
+            ],
+          },
+          Dimmer: {
+            capability: { type: 'Intensity', brightnessStart: 'dark', brightnessEnd: 'bright' },
+          },
+        },
+        modes: [{ name: '3ch', channels: ['Speed', 'Strobe', 'Dimmer'] }],
+      },
+      'Generic',
+    );
+
+    expect(
+      profile.modes[0]!.channels.flatMap((c) =>
+        c.kind === 'control' ? c.ranges.map((r) => r.capability) : [],
+      ),
+    ).toStrictEqual([
+      { type: 'strobeSpeed', hz: [1, 20], assumed: true },
+      { type: 'shutter', effect: 'open' },
+      { type: 'strobe', hz: [20, 1], assumed: true },
+      { type: 'strobe', hz: [1, 10], assumed: true },
+      { type: 'strobe', hz: [10, 20] },
+      { type: 'intensity', level: [0.05, 1], assumed: true },
+    ]);
+    expect(unsupported).toEqual([]);
+  });
+
+  it('imports pan/tilt speed as a relative speed, 0 slowest to 1 fastest, in file order', () => {
+    const speeds: [string, Record<string, string>][] = [
+      ['Fast to slow', { speedStart: 'fast', speedEnd: 'slow' }],
+      ['Stop to fast', { speedStart: 'stop', speedEnd: 'fast' }],
+      ['Percent up', { speedStart: '10%', speedEnd: '90%' }],
+      ['Percent down', { speedStart: '100%', speedEnd: '0%' }],
+      ['Ms down', { durationStart: '100ms', durationEnd: '2000ms' }],
+      ['Ms up', { durationStart: '2000ms', durationEnd: '100ms' }],
+      ['S down', { durationStart: '0.5s', durationEnd: '25s' }],
+      ['S up', { durationStart: '25s', durationEnd: '0.5s' }],
+      ['Mixed up', { durationStart: '25s', durationEnd: '500ms' }],
+      ['Equal', { durationStart: '2s', durationEnd: '2000ms' }],
+    ];
+    const { profile, unsupported } = importOflFixture(
+      {
+        name: 'Speedy Head',
+        categories: ['Moving Head'],
+        meta,
+        availableChannels: Object.fromEntries(
+          speeds.map(([name, cap]) => [name, { capability: { type: 'PanTiltSpeed', ...cap } }]),
+        ),
+        modes: [{ name: 'All', channels: speeds.map(([name]) => name) }],
+      },
+      'Generic',
+    );
+
+    expect(
+      profile.modes[0]!.channels.map((c) => c.kind === 'control' && c.ranges[0]!.capability),
+    ).toEqual([
+      { type: 'panTiltSpeed', speed: [1, 0] },
+      { type: 'panTiltSpeed', speed: [0, 1] },
+      { type: 'panTiltSpeed', speed: [0.1, 0.9] },
+      { type: 'panTiltSpeed', speed: [1, 0] },
+      { type: 'panTiltSpeed', speed: [1, 0] },
+      { type: 'panTiltSpeed', speed: [0, 1] },
+      { type: 'panTiltSpeed', speed: [1, 0] },
+      { type: 'panTiltSpeed', speed: [0, 1] },
+      { type: 'panTiltSpeed', speed: [0, 1] },
+      { type: 'panTiltSpeed', speed: undefined },
+    ]);
+    expect(unsupported).toEqual([]);
+  });
+
+  it('reports pan/tilt speeds with no relative speed, and keeps other ranges unsupported', () => {
+    const { profile, unsupported } = importOflFixture(
+      {
+        name: 'Smart Head',
+        categories: ['Moving Head'],
+        meta,
+        availableChannels: {
+          Hz: { capability: { type: 'PanTiltSpeed', speedStart: '1Hz', speedEnd: '10Hz' } },
+          Reverse: {
+            capability: { type: 'PanTiltSpeed', speedStart: 'fast reverse', speedEnd: 'slow' },
+          },
+          Over: { capability: { type: 'PanTiltSpeed', speedStart: '-50%', speedEnd: '150%' } },
+          Words: {
+            capability: { type: 'PanTiltSpeed', durationStart: 'short', durationEnd: 'long' },
+          },
+          'Pan/Tilt Speed': {
+            capabilities: [
+              { dmxRange: [0, 225], type: 'PanTiltSpeed', speedStart: 'fast', speedEnd: 'slow' },
+              { dmxRange: [226, 235], type: 'Maintenance' },
+              { dmxRange: [236, 245], type: 'Maintenance' },
+              { dmxRange: [246, 255], type: 'NoFunction' },
+            ],
+          },
+        },
+        modes: [{ name: '4ch', channels: ['Hz', 'Reverse', 'Over', 'Words', 'Pan/Tilt Speed'] }],
+      },
+      'Generic',
+    );
+
+    expect(
+      profile.modes[0]!.channels.flatMap((c) =>
+        c.kind === 'control' ? c.ranges.map((r) => r.capability) : [],
+      ),
+    ).toEqual([
+      { type: 'panTiltSpeed', speed: undefined },
+      { type: 'panTiltSpeed', speed: undefined },
+      { type: 'panTiltSpeed', speed: undefined },
+      { type: 'panTiltSpeed', speed: undefined },
+      { type: 'panTiltSpeed', speed: [1, 0] },
+      { type: 'unsupported', feature: 'Maintenance' },
+      { type: 'unsupported', feature: 'Maintenance' },
+      { type: 'none' },
+    ]);
+    expect(unsupported).toEqual([
+      { channel: 'Hz', feature: 'PanTiltSpeed speed not relative', held: 0 },
+      { channel: 'Reverse', feature: 'PanTiltSpeed speed not relative', held: 0 },
+      { channel: 'Over', feature: 'PanTiltSpeed speed not relative', held: 0 },
+      { channel: 'Words', feature: 'PanTiltSpeed duration not in ms or s', held: 0 },
+      { channel: 'Pan/Tilt Speed', feature: 'Maintenance', held: 0 },
+    ]);
+  });
+
   it('reports values it cannot place in its units', () => {
     const { profile, unsupported } = importOflFixture(
       {
@@ -559,9 +712,9 @@ describe('importOflFixture', () => {
         meta,
         availableChannels: {
           Pan: { capability: { type: 'Pan', angleStart: '0%', angleEnd: '100%' } },
-          Strobe: { capability: { type: 'StrobeSpeed', speedStart: 'slow', speedEnd: 'fast' } },
+          Strobe: { capability: { type: 'StrobeSpeed', speedStart: 'stop', speedEnd: 'fast' } },
           Dimmer: {
-            capability: { type: 'Intensity', brightnessStart: 'dark', brightnessEnd: 'bright' },
+            capability: { type: 'Intensity', brightnessStart: '0lm', brightnessEnd: 'bright' },
           },
         },
         modes: [{ name: '3ch', channels: ['Pan', 'Strobe', 'Dimmer'] }],
@@ -573,10 +726,72 @@ describe('importOflFixture', () => {
       profile.modes[0]!.channels.map((c) => c.kind === 'control' && c.ranges[0]!.capability),
     ).toEqual([{ type: 'pan' }, { type: 'strobeSpeed' }, { type: 'intensity' }]);
     expect(unsupported).toEqual([
-      { channel: 'Pan', feature: 'Pan angle not in degrees' },
-      { channel: 'Strobe', feature: 'StrobeSpeed speed not in Hz' },
-      { channel: 'Dimmer', feature: 'Intensity brightness not in %' },
+      { channel: 'Pan', feature: 'Pan angle not in degrees', held: 0 },
+      { channel: 'Strobe', feature: 'StrobeSpeed speed not in Hz', held: 0 },
+      { channel: 'Dimmer', feature: 'Intensity brightness not in %', held: 0 },
     ]);
+  });
+
+  it('names the value an unsupported channel holds: its default, or its coarse byte', () => {
+    const { unsupported } = importOflFixture(
+      {
+        name: 'Held Head',
+        categories: ['Moving Head'],
+        meta,
+        availableChannels: {
+          Motor: { defaultValue: 64, capability: { type: 'Rotation' } },
+          Zoom: {
+            fineChannelAliases: ['Zoom fine'],
+            defaultValue: 32896,
+            capability: { type: 'Zoom' },
+          },
+          Focus: {
+            dmxValueResolution: '8bit',
+            fineChannelAliases: ['Focus fine'],
+            defaultValue: 200,
+            capability: { type: 'Focus' },
+          },
+          Prism: { capability: { type: 'Prism' } },
+        },
+        modes: [
+          { name: 'Standard', channels: ['Motor', 'Zoom', 'Zoom fine', 'Focus', 'Focus fine'] },
+          { name: 'Extra', channels: ['Motor', 'Prism', 'Gobo'] },
+        ],
+      },
+      'Generic',
+    );
+
+    expect(unsupported).toEqual([
+      { channel: 'Motor', feature: 'Rotation', held: 64 },
+      { channel: 'Zoom', feature: 'Zoom', held: 128 },
+      { channel: 'Focus', feature: 'Focus', held: 200 },
+      { channel: 'Prism', feature: 'Prism', held: 0 },
+      { channel: 'Gobo', feature: 'Unknown channel', held: 0 },
+    ]);
+  });
+
+  it('reports once that a fixture with cyan, magenta or yellow and no red, green or blue may be CMY', () => {
+    const { profile, unsupported } = importOflFixture(
+      colourFixture(['Cyan', 'Magenta', 'Yellow']),
+      'Generic',
+    );
+
+    expect(profile.modes[0]!.channels.slice(0, 3)).toEqual([
+      emitterChannel('Cyan', 'cyan', 0),
+      emitterChannel('Magenta', 'magenta', 0),
+      emitterChannel('Yellow', 'yellow', 0),
+    ]);
+    expect(unsupported).toEqual([
+      { feature: 'Cyan/Magenta/Yellow may be subtractive (CMY); driven as additive emitters' },
+    ]);
+  });
+
+  it.each([
+    ['RGB and CMY', ['Red', 'Green', 'Blue', 'Cyan', 'Magenta', 'Yellow']],
+    ['RGB', ['Red', 'Green', 'Blue']],
+    ['no colour', []],
+  ])('does not report CMY for a fixture with %s', (_, colours) => {
+    expect(importOflFixture(colourFixture(colours), 'Generic').unsupported).toEqual([]);
   });
 
   it.each([
@@ -610,6 +825,20 @@ describe('importOflFixture', () => {
     expect(profile.defaultRole).toBe(role);
   });
 });
+
+// A fixture with a dimmer and one ColorIntensity channel per colour.
+function colourFixture(colours: string[]) {
+  const colourChannels = Object.fromEntries(
+    colours.map((color) => [color, { capability: { type: 'ColorIntensity', color } }]),
+  );
+  return {
+    name: 'Colour Head',
+    categories: ['Color Changer'],
+    meta,
+    availableChannels: { ...colourChannels, Dimmer: { capability: { type: 'Intensity' } } },
+    modes: [{ name: 'Full', channels: [...colours, 'Dimmer'] }],
+  };
+}
 
 // Channel names, '-' for an unused slot.
 function channelNames(channels: Channel[]): string[] {

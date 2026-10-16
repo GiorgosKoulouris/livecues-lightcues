@@ -15,10 +15,16 @@ What changed in each LightCues release. The format follows [Keep a Changelog](ht
 - Effects can run in cycles of 1/4 and 1/2 beat.
 - Intensity Effects: Pulse, Ramp up, Ramp down, Square and Chase scale the intensity of a Rule's Fixtures, even intensity from other Layers. Chase lights one Spread position at a time. **None** stops the intensity Effect of lower Layers and earlier Rules.
 - Colour Effects: a Rule can step or fade through 2 to 4 colours, or run a Rainbow, in place of its colour. Spread offsets each Fixture, so Alternate with two colours gives odd and even. Fixtures with a colour wheel snap to its nearest colour. **None** stops the colour Effect of lower Layers and earlier Rules, back to the colour under it.
+- Pan/Tilt speed channels in Open Fixture Library files now import as a speed from slow to fast, and the Profile editor can set one. LightCues still leaves the channel at its default. Re-import the Fixture Profile to pick this up.
 
 ### Changed
 
 - Venue Patches and Shows saved by this version do not open in older versions of LightCues, as they can hold House Lights, House Presets, strobe and the new Effect settings. Older files still open.
+- Strobe speeds given as slow and fast in Open Fixture Library files now import as 1 to 20 Hz, in the right direction, so a fast-to-slow strobe channel no longer runs backwards. Re-import the Fixture Profile and apply it again to pick this up.
+- A "dark" brightness in Open Fixture Library files now imports as 5%. Re-import the Fixture Profile and apply it again to pick this up.
+- GDTF channels whose meaning depends on another channel now import the meaning that applies at that channel's default. Re-import the Fixture Profile and apply it again to pick this up.
+- The fixture import report names the value each channel it cannot drive is held at. In the Profile editor, a channel with an unsupported range shows "held at default" by its default value, as that is what LightCues sends there. Re-import the Fixture Profile to see the held values in the report.
+- The fixture import report warns when an Open Fixture Library file has cyan, magenta or yellow but no red, green or blue, as it may be a CMY fixture that mixes colour subtractively. LightCues still drives cyan, magenta and yellow as additive emitters. Re-import the Fixture Profile to see the warning.
 
 ## [0.1.1] - 2026-10-12
 

@@ -256,13 +256,13 @@ describe('importGdtfFixture', () => {
       },
     ]);
     expect(unsupported).toEqual([
-      { channel: 'Zoom', feature: 'Zoom' },
-      { channel: 'Shutter1', feature: 'Shutter1 Pulse' },
+      { channel: 'Zoom', feature: 'Zoom', held: 0 },
+      { channel: 'Shutter1', feature: 'Shutter1 Pulse', held: 0 },
       { channel: 'Dimmer', mode: 'Basic', feature: 'Virtual channel' },
     ]);
   });
 
-  it('imports one mode per DMX mode, keeping functions that apply together', () => {
+  it('imports one mode per DMX mode, dropping functions whose master is outside their range', () => {
     const modeDependent = { ModeMaster: 'Body_Control', ModeFrom: '128/1', ModeTo: '255/1' };
     const { profile, unsupported } = importGdtfFixture(
       gdtf(
@@ -290,8 +290,113 @@ describe('importGdtfFixture', () => {
       ranges: [{ from: 0, to: 255, capability: { type: 'intensity' } }],
     });
     expect(unsupported).toEqual([
-      { channel: 'Dimmer', feature: 'Mode-dependent channel functions' },
+      { channel: 'Dimmer', feature: 'Mode-dependent channel functions', held: 0 },
     ]);
+  });
+
+  describe('mode-dependent functions', () => {
+    // A channel whose functions depend on a Control1 channel: dimmer below 128,
+    // strobe from 128.
+    const shutter = (master = 'Body_Control1', dmx: string | Record<string, string> = '1') =>
+      channel(
+        dmx,
+        'Shutter1',
+        channelFunction('Dimmer', '0/1', { ModeMaster: master, ModeFrom: '0/1', ModeTo: '127/1' }),
+        channelFunction('Shutter1Strobe', '0/1', {
+          ModeMaster: master,
+          ModeFrom: '128/1',
+          ModeTo: '255/1',
+        }),
+      );
+    const control = (dmx: string | Record<string, string>, defaultValue: string) =>
+      channel(dmx, 'Control1', channelFunction('NoFeature', '0/1', { Default: defaultValue }));
+    const firstChannel = (fixture: Uint8Array) =>
+      importGdtfFixture(fixture).profile.modes[0]!.channels[0];
+
+    it('keeps the group that applies at the master channel default', () => {
+      const { profile, unsupported } = importGdtfFixture(
+        gdtf(
+          { Manufacturer: 'Generic', Name: 'Spot' },
+          mode('2ch', shutter(), control('2', '200/1')),
+        ),
+      );
+
+      expect(profile.modes[0]!.channels[0]).toMatchObject({
+        ranges: [{ from: 0, to: 255, capability: { type: 'strobe' } }],
+      });
+      expect(unsupported).toContainEqual({
+        channel: 'Shutter1',
+        feature: 'Mode-dependent channel functions',
+        held: 0,
+      });
+    });
+
+    it('keeps the first group when the master default is in it', () => {
+      expect(
+        firstChannel(
+          gdtf(
+            { Manufacturer: 'Generic', Name: 'Spot' },
+            mode('2ch', shutter(), control('2', '0/1')),
+          ),
+        ),
+      ).toMatchObject({ ranges: [{ capability: { type: 'intensity' } }] });
+    });
+
+    it('resolves a 16-bit master linked through its channel function', () => {
+      expect(
+        firstChannel(
+          gdtf(
+            { Manufacturer: 'Generic', Name: 'Spot' },
+            mode('3ch', shutter('Body_Control1.Control1.NoFeature'), control('2,3', '51200/2')),
+          ),
+        ),
+      ).toMatchObject({ ranges: [{ capability: { type: 'strobe' } }] });
+    });
+
+    it('falls back to the first group when a virtual master has a malformed default', () => {
+      expect(
+        firstChannel(
+          gdtf(
+            { Manufacturer: 'Generic', Name: 'Spot' },
+            mode('1ch', shutter(), control({}, 'full')),
+          ),
+        ),
+      ).toMatchObject({ ranges: [{ capability: { type: 'intensity' } }] });
+    });
+
+    it('falls back to the first group when the master is missing', () => {
+      expect(
+        firstChannel(
+          gdtf({ Manufacturer: 'Generic', Name: 'Spot' }, mode('2ch', shutter('Body_Gone'))),
+        ),
+      ).toMatchObject({ ranges: [{ capability: { type: 'intensity' } }] });
+    });
+
+    it('resolves the master of a cell channel in the same mode', () => {
+      const cellShutter = shutter('SectionBeam_Control1', { Offset: '1', Geometry: 'SectionBeam' });
+      const { profile } = importGdtfFixture(
+        gdtfWithGeometries(
+          { Manufacturer: 'Generic', Name: 'Bar' },
+          [
+            geometry(
+              'Geometry',
+              'Body',
+              geometryReference('Section 1', 'Section', ['1', '1']),
+              geometryReference('Section 2', 'Section', ['1', '3']),
+            ),
+            geometry('Geometry', 'Section', geometry('Beam', 'SectionBeam')),
+          ],
+          mode('4ch', cellShutter, control({ Offset: '2', Geometry: 'SectionBeam' }, '255/1')),
+        ),
+      );
+
+      const channels = profile.modes[0]!.channels;
+      for (const index of [0, 2]) {
+        expect(channels[index]).toMatchObject({
+          ranges: [{ capability: { type: 'strobe' } }],
+        });
+      }
+    });
   });
 
   it('reports channels it cannot place instead of overwriting slots', () => {
@@ -544,7 +649,7 @@ describe('importGdtfFixture', () => {
       ranges: [emitterRange('red')],
     });
     expect(channels[14]).toMatchObject({ name: 'White (Cell 3)', ranges: [emitterRange('white')] });
-    expect(unsupported).toEqual([{ channel: 'ColorMacro1', feature: 'ColorMacro1' }]);
+    expect(unsupported).toEqual([{ channel: 'ColorMacro1', feature: 'ColorMacro1', held: 0 }]);
     expect(profile.defaultRole).toBe('Wash');
   });
 
@@ -627,7 +732,7 @@ describe('importGdtfFixture', () => {
       'Zoom (Cell 1)',
     ]);
     expect(unsupported).toEqual([
-      { channel: 'Zoom (Cell 1)', feature: 'Zoom' },
+      { channel: 'Zoom (Cell 1)', feature: 'Zoom', held: 0 },
       { channel: 'Zoom (Cell 2)', mode: '2ch', feature: 'Invalid DMXOffset in cell 2' },
     ]);
   });
@@ -702,6 +807,58 @@ describe('importGdtfFixture', () => {
       { channel: 'Iris', mode: 'Remote', feature: 'Invalid DMX offset "x"' },
       { mode: 'Remote', feature: 'DMX break 3 (1 channel)' },
     ]);
+  });
+
+  describe('held values', () => {
+    const rotation = (dmx: string | Record<string, string>, defaultValue: string) =>
+      channel(dmx, 'Rotation', channelFunction('Rotation', '0/1', { Default: defaultValue }));
+
+    it('names the channel default, the coarse byte of a 16-bit one', () => {
+      const { unsupported } = importGdtfFixture(
+        gdtf(
+          { Manufacturer: 'Generic', Name: 'Spot' },
+          mode(
+            '3ch',
+            rotation('1', '64/1'),
+            channel('2,3', 'Zoom', channelFunction('Zoom', '0/1', { Default: '32896/2' })),
+          ),
+        ),
+      );
+
+      expect(unsupported).toEqual([
+        { channel: 'Rotation', feature: 'Rotation', held: 64 },
+        { channel: 'Zoom', feature: 'Zoom', held: 128 },
+      ]);
+    });
+
+    it('gives one line for a channel held at the same value in every mode', () => {
+      const { unsupported } = importGdtfFixture(
+        gdtf(
+          { Manufacturer: 'Generic', Name: 'Spot' },
+          mode('A', rotation('1', '64/1')),
+          mode('B', rotation('2', '64/1')),
+        ),
+      );
+
+      expect(unsupported).toEqual([{ channel: 'Rotation', feature: 'Rotation', held: 64 }]);
+    });
+
+    it('names the mode when a channel is held at different values', () => {
+      const { unsupported } = importGdtfFixture(
+        gdtf(
+          { Manufacturer: 'Generic', Name: 'Spot' },
+          mode('A', rotation('1', '64/1')),
+          mode('B', rotation('1', '64/1')),
+          mode('C', rotation('1', '0/1')),
+        ),
+      );
+
+      expect(unsupported).toEqual([
+        { channel: 'Rotation', mode: 'A', feature: 'Rotation', held: 64 },
+        { channel: 'Rotation', mode: 'B', feature: 'Rotation', held: 64 },
+        { channel: 'Rotation', mode: 'C', feature: 'Rotation', held: 0 },
+      ]);
+    });
   });
 });
 
