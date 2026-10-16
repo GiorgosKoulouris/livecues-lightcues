@@ -21,12 +21,30 @@ const mover: FixtureProfile = {
         channel('Dimmer', { type: 'intensity' }),
         channel('Pan', { type: 'pan', degrees: [-270, 270] }),
         channel('Tilt', { type: 'tilt', degrees: [-135, 135] }),
+        channel('Strobe', { type: 'strobe', hz: [1, 25] }),
       ],
     },
   ],
 };
 
-// Hung 6 m up on Stage Left.
+const par: FixtureProfile = {
+  id: 'test/par',
+  manufacturer: 'Test',
+  model: 'par',
+  defaultRole: 'Wash',
+  modes: [
+    {
+      name: 'mode',
+      channels: [
+        channel('Red', { type: 'emitter', emitter: 'red' }),
+        channel('Green', { type: 'emitter', emitter: 'green' }),
+        channel('Blue', { type: 'emitter', emitter: 'blue' }),
+      ],
+    },
+  ],
+};
+
+// A mover hung 6 m up on Stage Left, and an RGB par.
 const rig: VenuePatch = {
   stage: { width: 12, depth: 9 },
   universes: [{ number: 1 }],
@@ -42,8 +60,19 @@ const rig: VenuePatch = {
       y: 4,
       height: 6,
     },
+    {
+      id: 'par',
+      name: 'Par',
+      profileId: par.id,
+      mode: 'mode',
+      universe: 1,
+      address: 11,
+      x: -3,
+      y: 1,
+      height: 0,
+    },
   ],
-  profiles: [mover],
+  profiles: [mover, par],
 };
 
 function scene(id: string, rule: Omit<Rule, 'target'>, fadeIn = 0, layer = 'l1'): Scene {
@@ -62,9 +91,23 @@ const show: Show = {
     scene('sweep', {
       intensity: 1,
       direction: 'Cross',
-      effect: { shape: 'Pan sweep', size: 10, length: 4, spread: 'In sync' },
+      movementEffect: { shape: 'Pan sweep', size: 10, length: 4, spread: 'In sync' },
     }),
     scene('centre', { direction: 'Centre' }, 0, 'l2'),
+    scene('strobe', { intensity: 1, strobe: 0.25 }),
+    scene('ramp', {
+      intensity: 1,
+      intensityEffect: { shape: 'Ramp up', depth: 1, length: 4, spread: 'In sync' },
+    }),
+    scene('red blue', {
+      intensity: 1,
+      colourEffect: {
+        shape: 'Step',
+        colours: [{ swatch: 'Red' }, { swatch: 'Blue' }],
+        length: 4,
+        spread: 'In sync',
+      },
+    }),
   ],
   triggers: [],
 };
@@ -79,6 +122,7 @@ describe('playback', () => {
       emit: () => {},
       now,
       beat: tempo.beat,
+      bpm: tempo.bpm,
       show: () => show,
       patch: () => rig,
     });
@@ -90,6 +134,15 @@ describe('playback', () => {
       pan: () => p.lights().mover!.aim!.pan!,
       // Pan and tilt of the mover.
       aim: () => [...p.frames().get(1)!.subarray(1, 3)],
+      // The mover's intensity in the preview.
+      intensity: () => p.lights().mover!.intensity,
+      // The par's red, green and blue in the preview.
+      colour: () => {
+        const { red, green, blue } = p.lights().par!;
+        return [red, green, blue];
+      },
+      // The mover's strobe channel, and its rate in the preview.
+      strobe: () => [p.frames().get(1)![3], p.lights().mover!.strobe],
     };
   }
 
@@ -168,6 +221,34 @@ describe('playback', () => {
       expect(pan()).toBeCloseTo(100);
     });
 
+    it('holds an intensity Effect at its level while on, then resumes with the beat', () => {
+      const { p, at, intensity } = playback();
+      p.handle({ type: 'goScene', sceneId: 'ramp' });
+      // Beat 1 of a 4-beat ramp.
+      at(0.5);
+      p.handle({ type: 'setFreeze', on: true });
+
+      at(1.5);
+      expect(intensity()).toBeCloseTo(0.25);
+      p.handle({ type: 'setFreeze', on: false });
+      // Beat 3.
+      expect(intensity()).toBeCloseTo(0.75);
+    });
+
+    it('holds a colour Effect at its colour while on, then resumes with the beat', () => {
+      const { p, at, colour } = playback();
+      p.handle({ type: 'goScene', sceneId: 'red blue' });
+      // Beat 1 of 4: red.
+      at(0.5);
+      p.handle({ type: 'setFreeze', on: true });
+
+      at(1.5);
+      expect(colour()).toEqual([1, 0, 0]);
+      p.handle({ type: 'setFreeze', on: false });
+      // Beat 3: blue.
+      expect(colour()).toEqual([0, 0, 1]);
+    });
+
     it('keeps applying Directions around the held offset', () => {
       const { p, at, pan } = playback();
       p.handle({ type: 'goScene', sceneId: 'centre' });
@@ -210,12 +291,28 @@ describe('playback', () => {
       expect(pan()).toBeCloseTo(80);
     });
 
+    it('does not hold strobe, whose beat rate follows the Tempo', () => {
+      const { p, tempo, at, strobe } = playback();
+      p.handle({ type: 'goScene', sceneId: 'strobe' });
+      p.handle({ type: 'setFreeze', on: true });
+
+      // A 1/4 beat at 120 BPM: 8 Hz, 7/24 of the way across 1–25 Hz.
+      at(1);
+      expect(strobe()).toEqual([74, 8]);
+      // Taps 0.4 s apart: 150 BPM, so 10 Hz.
+      tempo.tap();
+      at(1.4);
+      tempo.tap();
+      expect(strobe()).toEqual([96, 10]);
+    });
+
     it('is reported with the playback, off at first', () => {
       const events: unknown[] = [];
       const p = createPlayback({
         emit: (e) => events.push(e),
         now: () => 0,
         beat: () => 0,
+        bpm: () => 120,
         show: () => show,
         patch: () => rig,
       });

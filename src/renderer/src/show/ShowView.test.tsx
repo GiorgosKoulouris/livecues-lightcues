@@ -309,6 +309,26 @@ describe('Scene editor', () => {
     expect(put.scene.rules[0]).toEqual({ target: {}, intensity: 0.5 });
   });
 
+  it("sets a Rule's strobe rate, and leaves it to others when not set", async () => {
+    await selectWarm();
+    const rule = () => {
+      const put = edits().at(-1);
+      if (put?.type !== 'putScene') throw new Error('No Scene put');
+      return put.scene.rules[0];
+    };
+    const strobe = screen.getAllByRole('combobox', { name: 'Strobe' })[0]!;
+    expect(strobe).toHaveValue('');
+
+    await userEvent.selectOptions(strobe, 'Fast (12 Hz)');
+    expect(rule()).toEqual({ target: {}, intensity: 0.5, strobe: 'Fast' });
+    await userEvent.selectOptions(strobe, '1/4 beat');
+    expect(rule()).toEqual({ target: {}, intensity: 0.5, strobe: 0.25 });
+    await userEvent.selectOptions(strobe, 'Off');
+    expect(rule()).toEqual({ target: {}, intensity: 0.5, strobe: 'Off' });
+    await userEvent.selectOptions(strobe, 'Not set');
+    expect(rule()).toEqual({ target: {}, intensity: 0.5 });
+  });
+
   it("sets a Rule's movement Effect: shape, size with quick picks, length and Spread", async () => {
     await selectWarm();
     const rule = () => {
@@ -324,7 +344,7 @@ describe('Scene editor', () => {
     expect(rule()).toEqual({
       target: {},
       intensity: 0.5,
-      effect: { shape: 'Circle', size: 12, length: 4, spread: 'In sync' },
+      movementEffect: { shape: 'Circle', size: 12, length: 4, spread: 'In sync' },
     });
 
     const sizes = within(screen.getByRole('group', { name: 'Quick sizes' }));
@@ -333,26 +353,167 @@ describe('Scene editor', () => {
       'true',
     );
     await userEvent.click(sizes.getByRole('button', { name: 'Large 25°' }));
-    expect(rule()?.effect?.size).toBe(25);
+    expect(rule()?.movementEffect).toMatchObject({ size: 25 });
     const size = screen.getByRole('textbox', { name: 'Size (°)' });
     await userEvent.clear(size);
     await userEvent.type(size, '7.5');
-    expect(rule()?.effect?.size).toBe(7.5);
+    expect(rule()?.movementEffect).toMatchObject({ size: 7.5 });
 
     await userEvent.selectOptions(screen.getByLabelText('Length (beats)'), '16');
-    expect(rule()?.effect?.length).toBe(16);
+    expect(rule()?.movementEffect).toMatchObject({ length: 16 });
     await userEvent.selectOptions(screen.getByLabelText('Spread'), 'Mirrored');
-    expect(rule()?.effect).toEqual({ shape: 'Circle', size: 7.5, length: 16, spread: 'Mirrored' });
+    expect(rule()?.movementEffect).toEqual({
+      shape: 'Circle',
+      size: 7.5,
+      length: 16,
+      spread: 'Mirrored',
+    });
 
     // A new shape keeps the rest.
     await userEvent.selectOptions(effect, 'Ballyhoo');
-    expect(rule()?.effect).toEqual({
+    expect(rule()?.movementEffect).toEqual({
       shape: 'Ballyhoo',
       size: 7.5,
       length: 16,
       spread: 'Mirrored',
     });
     await userEvent.selectOptions(effect, 'Not set');
+    expect(rule()).toEqual({ target: {}, intensity: 0.5 });
+  });
+
+  it("sets a Rule's movement Effect to None, and its length to 1/4 beat", async () => {
+    await selectWarm();
+    const rule = () => {
+      const put = edits().at(-1);
+      if (put?.type !== 'putScene') throw new Error('No Scene put');
+      return put.scene.rules[0];
+    };
+    const effect = screen.getAllByLabelText('Movement Effect')[0]!;
+
+    await userEvent.selectOptions(effect, 'None');
+    expect(rule()).toEqual({ target: {}, intensity: 0.5, movementEffect: 'None' });
+    expect(screen.queryByLabelText('Length (beats)')).toBeNull();
+
+    await userEvent.selectOptions(effect, 'Pan sweep');
+    await userEvent.selectOptions(screen.getByLabelText('Length (beats)'), '1/4');
+    expect(rule()?.movementEffect).toEqual({
+      shape: 'Pan sweep',
+      size: 12,
+      length: 0.25,
+      spread: 'In sync',
+    });
+    await userEvent.selectOptions(screen.getByLabelText('Length (beats)'), '1/2');
+    expect(rule()?.movementEffect).toMatchObject({ length: 0.5 });
+  });
+
+  it("adds a Pulse to a Rule's intensity Effect, with depth, length and Spread, or None", async () => {
+    await selectWarm();
+    const rule = () => {
+      const put = edits().at(-1);
+      if (put?.type !== 'putScene') throw new Error('No Scene put');
+      return put.scene.rules[0];
+    };
+    const effect = screen.getAllByLabelText('Intensity Effect')[0]!;
+    expect(effect).toHaveValue('');
+
+    await userEvent.selectOptions(effect, 'Pulse');
+    expect(rule()).toEqual({
+      target: {},
+      intensity: 0.5,
+      intensityEffect: { shape: 'Pulse', depth: 1, length: 1, spread: 'In sync' },
+    });
+
+    const settings = within(screen.getByRole('group', { name: 'Intensity Effect settings' }));
+    const depth = settings.getByRole('textbox', { name: 'Depth (%)' });
+    await userEvent.clear(depth);
+    await userEvent.type(depth, '50');
+    expect(rule()?.intensityEffect).toMatchObject({ depth: 0.5 });
+    await userEvent.selectOptions(settings.getByLabelText('Length (beats)'), '1/2');
+    await userEvent.selectOptions(settings.getByLabelText('Spread'), 'Left→Right');
+    expect(rule()?.intensityEffect).toEqual({
+      shape: 'Pulse',
+      depth: 0.5,
+      length: 0.5,
+      spread: 'Left→Right',
+    });
+
+    // A new shape keeps the rest.
+    await userEvent.selectOptions(effect, 'Chase');
+    expect(rule()?.intensityEffect).toMatchObject({ shape: 'Chase', depth: 0.5 });
+
+    await userEvent.selectOptions(effect, 'None');
+    expect(rule()).toEqual({ target: {}, intensity: 0.5, intensityEffect: 'None' });
+    expect(screen.queryByRole('group', { name: 'Intensity Effect settings' })).toBeNull();
+    await userEvent.selectOptions(effect, 'Not set');
+    expect(rule()).toEqual({ target: {}, intensity: 0.5 });
+  });
+
+  it("sets a two-colour Step as a Rule's colour Effect, in place of its colour", async () => {
+    await selectWarm();
+    const rule = () => {
+      const put = edits().at(-1);
+      if (put?.type !== 'putScene') throw new Error('No Scene put');
+      return put.scene.rules[0];
+    };
+    const switcher = within(screen.getAllByRole('group', { name: 'Colour or Colour Effect' })[0]!);
+    expect(switcher.getByRole('button', { name: 'Colour' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await userEvent.selectOptions(screen.getAllByLabelText('Colour')[0]!, 'Swatch');
+    expect(rule()).toMatchObject({ colour: { swatch: 'White' } });
+
+    // Switching drops the colour.
+    await userEvent.click(switcher.getByRole('button', { name: 'Colour Effect' }));
+    expect(rule()).toEqual({ target: {}, intensity: 0.5 });
+    const effect = screen.getAllByLabelText('Colour Effect')[0]!;
+    expect(effect).toHaveValue('');
+
+    await userEvent.selectOptions(effect, 'Step');
+    expect(rule()).toEqual({
+      target: {},
+      intensity: 0.5,
+      colourEffect: {
+        shape: 'Step',
+        colours: [{ swatch: 'Red' }, { swatch: 'Blue' }],
+        length: 2,
+        spread: 'In sync',
+      },
+    });
+
+    const settings = within(screen.getByRole('group', { name: 'Colour Effect settings' }));
+    await userEvent.selectOptions(settings.getAllByLabelText('Swatch')[1]!, 'Green');
+    await userEvent.selectOptions(settings.getByLabelText('Length (beats)'), '1');
+    await userEvent.selectOptions(settings.getByLabelText('Spread'), 'Alternate');
+    expect(rule()?.colourEffect).toEqual({
+      shape: 'Step',
+      colours: [{ swatch: 'Red' }, { swatch: 'Green' }],
+      length: 1,
+      spread: 'Alternate',
+    });
+
+    // 2 to 4 colours.
+    expect(settings.queryByRole('button', { name: 'Remove Colour 1' })).toBeNull();
+    await userEvent.click(settings.getByRole('button', { name: 'Add colour' }));
+    await userEvent.click(settings.getByRole('button', { name: 'Add colour' }));
+    expect(rule()?.colourEffect).toMatchObject({ colours: { length: 4 } });
+    expect(settings.queryByRole('button', { name: 'Add colour' })).toBeNull();
+    await userEvent.click(settings.getByRole('button', { name: 'Remove Colour 1' }));
+    expect(rule()?.colourEffect).toMatchObject({
+      colours: [{ swatch: 'Green' }, { swatch: 'White' }, { swatch: 'White' }],
+    });
+
+    // Fade keeps the colours; Rainbow takes none.
+    await userEvent.selectOptions(effect, 'Fade');
+    expect(rule()?.colourEffect).toMatchObject({ shape: 'Fade', colours: { length: 3 } });
+    await userEvent.selectOptions(effect, 'Rainbow');
+    expect(rule()?.colourEffect).toEqual({ shape: 'Rainbow', length: 1, spread: 'Alternate' });
+
+    await userEvent.selectOptions(effect, 'None');
+    expect(rule()).toEqual({ target: {}, intensity: 0.5, colourEffect: 'None' });
+
+    // Switching back drops the colour Effect.
+    await userEvent.click(switcher.getByRole('button', { name: 'Colour' }));
     expect(rule()).toEqual({ target: {}, intensity: 0.5 });
   });
 
