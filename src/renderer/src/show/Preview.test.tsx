@@ -87,11 +87,11 @@ describe('Preview', () => {
   });
 
   it('draws Fixture markers the same size on screen as the stage plan', () => {
-    // jsdom lays nothing out. 680 px wide less the label room is 600 px. The
+    // jsdom lays nothing out. 704 px wide less the label room is 600 px. The
     // 10 m wide stage shows 10 m wide top-down, 12 m (1 m margins) in the
     // front elevation.
     vi.spyOn(SVGElement.prototype, 'getBoundingClientRect').mockReturnValue(
-      DOMRect.fromRect({ width: 680, height: 0 }),
+      DOMRect.fromRect({ width: 704, height: 0 }),
     );
     show({ intensity: 1, ...red });
 

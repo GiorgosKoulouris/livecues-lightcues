@@ -11,6 +11,15 @@
   background: var(--display);
 }
 
+/* The Preview is narrow: its labels are plain case, so that Stage Right,
+   Centre and Stage Left do not run together. */
+.view text {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-normal);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 .floor {
   fill: var(--key);
   stroke: var(--edge);

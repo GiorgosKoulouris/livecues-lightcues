@@ -72,6 +72,9 @@
 .action {
   justify-content: flex-start;
   padding: 0 var(--space-2);
+  /* The label must fit the 176px Sidebar beside its icon. */
+  font-size: var(--text-sm);
+  letter-spacing: 0;
 }
 
 .action svg {
