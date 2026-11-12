@@ -78,7 +78,7 @@ Actions are pinned by commit SHA, with the version in a trailing comment.
 
 ### Dependabot
 
-[.github/dependabot.yml](../.github/dependabot.yml) opens monthly PRs against `dev`. npm gets two grouped PRs: dev dependencies and runtime. GitHub Actions get one PR each.
+[.github/dependabot.yml](../.github/dependabot.yml) opens weekly PRs against `dev`. npm gets two grouped PRs: dev dependencies and runtime. GitHub Actions get one PR each.
 
 - No CI runs on `dev`. Run `npm run check` on the PR branch before merging, then pull `dev`.
 - Merge or close open Dependabot PRs before a promote ([agents/promote.md](agents/promote.md)).
