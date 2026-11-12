@@ -64,6 +64,25 @@ function openLinks(url: string, host: string): void {
   shell.showItemInFolder(url);
 }
 
+function openChecked(url: unknown, other: string): void {
+  // ok: electron-open-external-non-literal
+  if (isReleasePageUrl(url)) void shell.openExternal(url);
+  if (!isAllowed(other)) return;
+  // ok: electron-open-external-non-literal
+  void shell.openExternal(other);
+}
+
+function openWrongCheck(url: string, other: string): void {
+  if (isReleasePageUrl(other)) {
+    // ruleid: electron-open-external-non-literal
+    void shell.openExternal(url);
+  }
+  if (looksFine(url)) {
+    // ruleid: electron-open-external-non-literal
+    void shell.openExternal(url);
+  }
+}
+
 // --- IPC payloads -----------------------------------------------------------
 
 // ruleid: electron-ipc-unvalidated-payload
@@ -78,6 +97,11 @@ ipcMain.on('remove', (_event, path) => rmSync(path));
 ipcMain.once('copy', function (_event, from: string, to: string) {
   if (typeof from !== 'string') return;
   copyFileSync(from, to);
+});
+
+// ok: electron-ipc-unvalidated-payload
+ipcMain.on('delegated', (_event, file: unknown) => {
+  void licensePath(file, root);
 });
 
 // ruleid: electron-ipc-unvalidated-payload

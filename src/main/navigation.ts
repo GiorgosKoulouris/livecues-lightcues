@@ -15,3 +15,25 @@ export function isAppPage(url: string, appUrl: string): boolean {
   // Opaque origins (`javascript:`, `data:`) are all 'null'.
   return appPage.origin !== 'null' && target.origin === appPage.origin;
 }
+
+// The part of `WebContents` that `restrictContents` uses.
+export interface NavigationTarget {
+  setWindowOpenHandler(handler: () => { action: 'deny' }): void;
+  on(event: 'will-navigate' | 'will-redirect', listener: (event: NavigationEvent) => void): unknown;
+}
+
+export interface NavigationEvent {
+  url: string;
+  preventDefault(): void;
+}
+
+// Denies new windows, and any navigation or redirect off the app's page.
+// `will-navigate` does not fire for redirects, so both are guarded.
+export function restrictContents(contents: NavigationTarget, pageUrl: string): void {
+  contents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  const guard = (event: NavigationEvent): void => {
+    if (!isAppPage(event.url, pageUrl)) event.preventDefault();
+  };
+  contents.on('will-navigate', guard);
+  contents.on('will-redirect', guard);
+}

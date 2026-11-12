@@ -93,6 +93,23 @@ rules:
           - pattern: $ELECTRON.shell.openExternal($URL, ...)
       - pattern-not: shell.openExternal('...', ...)
       - pattern-not: $ELECTRON.shell.openExternal('...', ...)
+      # Guarded: an `if` on a check of the URL (`isReleasePageUrl(url)`, a
+      # name starting with `is` or `validate`), or an early return on one.
+      # Read the check by hand. The rule only sees its name.
+      - pattern-not-inside:
+          patterns:
+            - pattern-either:
+                - pattern: |
+                    if ($CHECK(..., $URL, ...)) $THEN
+                - pattern: |
+                    if (!$CHECK(..., $URL, ...)) return ...;
+                    ...
+                - pattern: |
+                    if (!$CHECK(..., $URL, ...)) { ... return ...; }
+                    ...
+            - metavariable-regex:
+                metavariable: $CHECK
+                regex: ^([\w.]+\.)?(is|validate)[A-Z]\w*$
     metadata:
       references:
         - https://www.electronjs.org/docs/latest/tutorial/security#15-do-not-use-shellopenexternal-with-untrusted-content
@@ -144,7 +161,13 @@ rules:
             # condition (`if ($P)`, `$P ? a : b`, `!$P`) is not a use: no value
             # can abuse it.
             - any:
-                - $F(..., $P, ...)
+                # Except functions that check their own payload. Add a name
+                # here only after reading the function.
+                - all:
+                    - $F(..., $P, ...)
+                  where:
+                    - metavariable: $F
+                      regex: ^(?!(licensePath|saveFromSnapshot)$)
                 - new $C(..., $P, ...)
                 - $P.$PROP
                 - $P[$KEY]
@@ -310,13 +333,24 @@ rules:
                   $APP_GUARD;
             where:
               - metavariable: $APP_GUARD
-                all:
-                  - $APP.on('web-contents-created', function ($EV, $CONTENTS) { $...APP_BODY })
-                where:
-                  - metavariable: $...APP_BODY
-                    pattern: $A.setWindowOpenHandler(...)
-                  - metavariable: $...APP_BODY
-                    pattern: $B.on('will-navigate', ...)
+                any:
+                  - all:
+                      - $APP.on('web-contents-created', function ($EV, $CONTENTS) { $...APP_BODY })
+                    where:
+                      - metavariable: $...APP_BODY
+                        pattern: $A.setWindowOpenHandler(...)
+                      - metavariable: $...APP_BODY
+                        pattern: $B.on('will-navigate', ...)
+                  # The handler hands the contents to a guard in another file,
+                  # which the rule cannot read: a function named `restrict…` or
+                  # `guard…`. Check the guard by hand.
+                  - all:
+                      - any:
+                          - $APP.on('web-contents-created', ($EV, $CONTENTS) => $HELPER($CONTENTS, ...))
+                          - $APP.on('web-contents-created', function ($EV, $CONTENTS) { $HELPER($CONTENTS, ...); })
+                    where:
+                      - metavariable: $HELPER
+                        regex: ^(restrict|guard)[A-Z]\w*$
     metadata:
       references:
         - https://www.electronjs.org/docs/latest/tutorial/security#13-disable-or-limit-navigation
