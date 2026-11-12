@@ -10,3 +10,10 @@ coverage/
 test-results/
 
 temp/
+
+# Impeccable skill install (local tooling; .claude/ is ignored above).
+.github/skills/impeccable/
+.github/agents/impeccable-*.agent.md
+.github/hooks/impeccable.json
+# Impeccable per-developer settings. The rest of .impeccable/ is shared.
+.impeccable/config.local.json
