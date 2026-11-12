@@ -7,22 +7,22 @@
 .view {
   width: 100%;
   height: auto;
-  border-radius: var(--radius-md);
-  background: var(--surface-0);
+  border-radius: 0;
+  background: var(--display);
 }
 
 .floor {
-  fill: var(--surface-3);
-  stroke: var(--border-strong);
+  fill: var(--key);
+  stroke: var(--edge);
 }
 
 .label {
-  fill: var(--text-faint);
+  fill: var(--legend-dim);
   font-size: var(--text-sm);
 }
 
 /* A Fixture's body, unlit. */
 .body {
-  fill: var(--surface-0);
-  stroke: var(--text-faint);
+  fill: var(--chassis);
+  stroke: var(--legend-dim);
 }

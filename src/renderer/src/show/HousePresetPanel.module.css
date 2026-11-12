@@ -20,11 +20,16 @@
 }
 
 .heading {
-  font-size: var(--text-md);
+  margin: 0;
+  color: var(--legend-dim);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .hint {
-  color: var(--text-faint);
+  color: var(--legend-dim);
   font-size: var(--text-sm);
 }
 
@@ -37,9 +42,9 @@
   align-items: start;
   gap: var(--space-2);
   padding: var(--space-1);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--bar);
 }
 
 .note {
@@ -58,10 +63,10 @@
 
 .none {
   align-self: center;
-  color: var(--text-faint);
+  color: var(--legend-dim);
 }
 
 .empty {
   padding: var(--space-4);
-  color: var(--text-faint);
+  color: var(--legend-dim);
 }
