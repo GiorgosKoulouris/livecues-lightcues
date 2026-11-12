@@ -7,24 +7,61 @@
 }
 
 .file {
-  color: var(--text-muted);
+  color: var(--legend-dim);
 }
 
+/* A quiet key, like the other buttons. */
 .file::file-selector-button {
   height: var(--control-height);
   margin-right: var(--space-2);
   padding: 0 var(--space-3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface-3);
-  color: var(--text);
+  border: 1px solid var(--edge);
+  border-radius: 0;
+  background: var(--key);
+  color: var(--legend);
   font: inherit;
-  font-weight: var(--weight-medium);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.04em;
   cursor: pointer;
 }
 
 .file::file-selector-button:hover {
-  border-color: var(--border-strong);
+  background: var(--key-hover);
+}
+
+/* The import result: a Display panel, led by a drawn mark and the verdict. */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--edge);
+  background: var(--display);
+}
+
+.verdict {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.mark {
+  flex-shrink: 0;
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2.5;
+  stroke-linecap: square;
+}
+
+.ok .mark {
+  color: var(--led-green);
+}
+
+.warn .mark {
+  color: var(--warn-amber);
 }
 
 .unsupported {
@@ -32,15 +69,7 @@
   margin: 0;
   padding-left: var(--space-5);
   overflow-y: auto;
-  color: var(--text-muted);
-}
-
-.error {
-  color: var(--danger);
-}
-
-.message {
-  color: var(--text-muted);
+  color: var(--legend-dim);
 }
 
 .footer {
