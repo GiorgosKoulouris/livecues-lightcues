@@ -1,63 +1,53 @@
 ---
 name: LightCues
-description: A dark, quiet Windows lighting controller for live music shows.
+description: A flat dark hardware panel (silkscreen legends, recessed display slots, one signal orange) for running live lighting from MIDI.
 colors:
-  booth-black: "#0e1014"
-  desk-panel: "#15181e"
-  raised-panel: "#1c2028"
-  lifted-panel: "#262b35"
-  hairline: "#2f3541"
-  hairline-strong: "#444c5b"
-  label-white: "#e3e6eb"
-  label-grey: "#9aa2b1"
-  label-faint: "#6b7383"
-  cue-blue: "#5b9dff"
-  cue-blue-hover: "#7aafff"
-  cue-blue-soft: "rgb(91 157 255 / 16%)"
-  live-green: "#3ddc97"
-  live-green-soft: "rgb(61 220 151 / 16%)"
-  blackout-red: "#ff4d4f"
-  blackout-red-hover: "#ff6b6d"
-  blackout-red-soft: "rgb(255 77 79 / 16%)"
-  blind-amber: "#ffb020"
-  blind-amber-soft: "rgb(255 176 32 / 16%)"
+  chassis: "#191a17"
+  bar: "#141512"
+  display: "#0c0d0b"
+  key: "#282a25"
+  key-hover: "#343630"
+  edge: "#3a3c34"
+  line: "#2d2e29"
+  active-wash: "#22241f"
+  legend: "#dcdbcd"
+  legend-dim: "#8d8c80"
+  signal: "#ff6a1a"
+  signal-ink: "#1c0b00"
+  led-green: "#79e08a"
+  led-red: "#ff4a3a"
+  warn-amber: "#e0a030"
 typography:
-  perform:
-    fontFamily: "'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif"
-    fontSize: "20px"
-    fontWeight: 500
-    lineHeight: 1.4
-  headline:
-    fontFamily: "'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif"
-    fontSize: "16px"
+  title:
+    fontFamily: "IBM Plex Sans"
+    fontSize: "18px"
     fontWeight: 600
-    lineHeight: 1.4
+  perform:
+    fontFamily: "IBM Plex Sans"
+    fontSize: "20px"
+    fontWeight: 600
   body:
-    fontFamily: "'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif"
+    fontFamily: "IBM Plex Sans"
     fontSize: "14px"
-    fontWeight: 400
-    lineHeight: 1.4
-  label:
-    fontFamily: "'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif"
-    fontSize: "12px"
     fontWeight: 500
-    lineHeight: 1.4
-  caption:
-    fontFamily: "'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif"
+  key-label:
+    fontFamily: "IBM Plex Sans"
+    fontSize: "14px"
+    fontWeight: 600
+    letterSpacing: "0.04em"
+  legend:
+    fontFamily: "IBM Plex Sans"
     fontSize: "11px"
-    fontWeight: 500
-    lineHeight: 1.4
-  mono:
-    fontFamily: "ui-monospace, Consolas, 'Cascadia Mono', monospace"
+    fontWeight: 600
+    letterSpacing: "0.12em"
+  readout:
+    fontFamily: "IBM Plex Mono"
     fontSize: "14px"
     fontWeight: 400
-    lineHeight: 1.4
     fontFeature: "tnum"
 rounded:
-  sm: "4px"
-  md: "6px"
-  lg: "10px"
-  pill: "999px"
+  none: "0px"
+  chamfer: "8px"
 spacing:
   "1": "4px"
   "2": "8px"
@@ -66,82 +56,62 @@ spacing:
   "5": "24px"
   "6": "32px"
 components:
-  button-primary:
-    backgroundColor: "{colors.cue-blue}"
-    textColor: "{colors.booth-black}"
-    typography: "{typography.body}"
-    rounded: "{rounded.md}"
+  key:
+    backgroundColor: "{colors.key}"
+    textColor: "{colors.legend}"
+    typography: "{typography.key-label}"
+    rounded: "{rounded.none}"
     padding: "0 12px"
     height: "32px"
-  button-primary-hover:
-    backgroundColor: "{colors.cue-blue-hover}"
-  button-secondary:
-    backgroundColor: "{colors.raised-panel}"
-    textColor: "{colors.label-white}"
-    rounded: "{rounded.md}"
-    padding: "0 12px"
-    height: "32px"
-  button-secondary-hover:
-    backgroundColor: "{colors.lifted-panel}"
-  button-ghost:
-    backgroundColor: "transparent"
-    textColor: "{colors.label-grey}"
-    rounded: "{rounded.md}"
-    padding: "0 12px"
-    height: "32px"
-  button-danger:
-    backgroundColor: "{colors.blackout-red}"
-    textColor: "{colors.booth-black}"
-    rounded: "{rounded.md}"
-    padding: "0 12px"
-    height: "32px"
-  button-large:
+  key-hover:
+    backgroundColor: "{colors.key-hover}"
+  key-pressed:
+    backgroundColor: "{colors.legend}"
+    textColor: "{colors.chassis}"
+  key-lit:
+    backgroundColor: "{colors.signal}"
+    textColor: "{colors.signal-ink}"
+  key-sunk:
+    backgroundColor: "{colors.chassis}"
+    textColor: "{colors.led-red}"
+  key-large:
     padding: "0 16px"
     height: "44px"
   perform-control:
     typography: "{typography.perform}"
     height: "64px"
   scene-button:
-    backgroundColor: "{colors.raised-panel}"
-    rounded: "{rounded.md}"
+    backgroundColor: "{colors.key}"
+    textColor: "{colors.legend}"
     padding: "8px 12px"
     height: "52px"
     width: "160px"
-  scene-button-active:
-    backgroundColor: "{colors.live-green-soft}"
-  input:
-    backgroundColor: "{colors.desk-panel}"
-    textColor: "{colors.label-white}"
-    rounded: "{rounded.md}"
+  scene-button-live:
+    backgroundColor: "{colors.active-wash}"
+    textColor: "{colors.legend}"
+  field:
+    backgroundColor: "{colors.display}"
+    textColor: "{colors.legend}"
+    rounded: "{rounded.none}"
     padding: "0 8px"
     height: "32px"
   nav-item:
-    backgroundColor: "transparent"
-    textColor: "{colors.label-grey}"
-    rounded: "{rounded.md}"
-    padding: "0 8px"
+    textColor: "{colors.legend-dim}"
+    typography: "{typography.legend}"
     height: "32px"
   nav-item-current:
-    backgroundColor: "{colors.cue-blue-soft}"
-    textColor: "{colors.cue-blue}"
+    backgroundColor: "{colors.active-wash}"
+    textColor: "{colors.legend}"
   tab:
-    textColor: "{colors.label-grey}"
-    padding: "0 12px"
+    textColor: "{colors.legend-dim}"
+    typography: "{typography.legend}"
     height: "32px"
-  badge:
-    backgroundColor: "{colors.lifted-panel}"
-    textColor: "{colors.label-grey}"
-    typography: "{typography.caption}"
-    rounded: "{rounded.pill}"
-    padding: "0 8px"
-    height: "20px"
-  layer-panel:
-    backgroundColor: "{colors.desk-panel}"
-    rounded: "{rounded.lg}"
-    padding: "12px"
+  state-chip:
+    textColor: "{colors.legend}"
+    typography: "{typography.legend}"
   dialog:
-    backgroundColor: "{colors.raised-panel}"
-    rounded: "{rounded.lg}"
+    backgroundColor: "{colors.chassis}"
+    rounded: "{rounded.none}"
     padding: "24px"
     width: "480px"
 ---
@@ -150,149 +120,152 @@ components:
 
 ## Overview
 
-**Creative North Star: "The Front-of-House Desk"**
+**Creative North Star: "The Silkscreen Desk"**
 
-LightCues looks like a lighting desk at the back of a dark room. Every control is labelled, numbers are exact, and nothing glows unless it has to. The screen sits in a dark venue during the show, so the base is near-black and text steps down to muted greys. Colour is kept for state: what is selected, what is live, what is dark, what is unseen.
+LightCues is a piece of show hardware: a matte dark panel with legends silkscreened onto it, values in recessed display slots, and keys you press. It sits in a dark venue during the show, so it is calm, legible and deliberate. Nothing moves or glows unless the state changed, and every mark means something.
 
-The system is dense and made for a pro. It assumes the user knows DMX, fits a lot on one screen like a console does, and uses small type (11–16px) with tight 4px-step spacing. Perform is the exception. Its controls grow to gig size (64px high, 20px text) so they can be read and hit from arm's length.
+It shares this system with its LiveCues siblings, [VideoCues](https://github.com/GiorgosKoulouris/livecues-videocues) and [Reaper Remote](https://github.com/GiorgosKoulouris/livecues-reaper-remote). VideoCues is the closest, since it is also a Windows desktop app. Hex values stay identical across the three. LightCues adds sections for its own surfaces: the Fallback Panel, Perform, the Scene list and editor, the Preview and Stage Plan, Blackout and Blind.
 
-Structure comes from tonal steps and 1px hairlines, not from decoration. There is no gradient, texture, illustration or brand flourish anywhere in the app. Fonts and icons are local (Segoe UI from Windows, bundled Lucide icons), because the app must run offline and stay MIT compatible.
+The density is a working rack unit's. It assumes the user knows DMX, and fits a lot on one screen like a console. Perform is the exception: its controls grow to gig size.
 
 **Key Characteristics:**
-- Dark only, with a glare budget: near-black base, greys for text, colour only for state.
-- One hue per meaning: blue for action, green for live, red for Blackout, amber for Blind.
-- Dense, 4px-step layout. Perform scales up to gig size.
-- Flat: tonal layers and hairlines. Shadows only on overlays.
-- Hardware-style controls: bordered, labelled, keys printed on the buttons.
+- Dark only. A light theme stays possible because tokens are named by role.
+- Flat: depth is tone (Bar, Chassis, Display) plus 1px rules. No shadows, blur or gradients. The only exceptions are a lit LED's 6px halo and inset hard lines.
+- Square corners everywhere. A key has one chamfered corner, top right, 8px, cut with `clip-path`.
+- One Signal Orange: the one lit key, keyboard focus, selection and the selected view.
+- State is always a drawn shape plus a word, never colour alone: disc, ring, triangle, square.
+- IBM Plex Sans for anything printed on the panel, IBM Plex Mono for values the machine reports.
 
 ## Colors
 
-A cool blue-grey neutral ramp with four saturated signal colours, each tied to one meaning.
+A near-black, slightly olive chassis palette, warm off-white legends, one hot orange and three indicator-lamp colours. The values live in `src/renderer/src/ui/tokens.css` and nowhere else.
 
 ### Primary
-- **Cue Blue** (`cue-blue`): the action and selection colour. Primary buttons, the current Sidebar item, the selected tab underline, focus rings, selected list rows and selected Fixtures on the stage plan, the Grand Master thumb. **Cue Blue Hover** (`cue-blue-hover`) is its hover state. **Cue Blue Soft** (`cue-blue-soft`, 16% tint) fills selected rows and the current nav item.
-
-### Secondary
-- **Live Green** (`live-green`): something is playing now. The outline and dot of an active Scene button, the running Engine dot, success toasts. **Live Green Soft** fills an active Scene button in Perform, so it reads from a distance.
-
-### Tertiary
-- **Blackout Red** (`blackout-red`): Blackout, errors and destructive actions. The danger button, the red window frame during Blackout, the Fallback Panel's top edge and tint during Blackout, invalid inputs, a lost MIDI Input.
-- **Blind Amber** (`blind-amber`): Blind, warnings and unsaved changes. The amber window frame during Blind, the unsaved dot in the top bar, Fixture markers on the stage plan.
+- **Signal Orange** (`signal`): the one raised voice. The lit key, the 2px focus ring, the 3px edge of a selected row or view, selection on the Stage Plan, and "LightCues" in the top bar.
+- **Signal Ink** (`signal-ink`): text and glyphs on a Signal fill. Never used on its own.
 
 ### Neutral
-- **Booth Black** (`booth-black`): the app background, the stage plan canvas, and text on coloured buttons.
-- **Desk Panel** (`desk-panel`): Sidebar, top bar, Fallback Panel, Layer panels, input fields.
-- **Raised Panel** (`raised-panel`): secondary buttons, dialogs, popovers, menus, toasts, list hover.
-- **Lifted Panel** (`lifted-panel`): hover on raised items, the stage shape, neutral badges, tooltips, the fader track.
-- **Hairline** (`hairline`) and **Hairline Strong** (`hairline-strong`): 1px borders and dividers. The stronger one is for hover borders and key hints.
-- **Label White** (`label-white`): main text.
-- **Label Grey** (`label-grey`): field labels, idle nav items and tabs, secondary text.
-- **Label Faint** (`label-faint`): hints, captions, empty states, group headings, the file kind in the top bar.
+- **Chassis** (`chassis`): the panel itself, dialogs, and the face of a sunk key.
+- **Bar** (`bar`): the strip above and beside the panel: top bar, Sidebar, Fallback Panel, table headers, tooltips and popups.
+- **Display** (`display`): recessed slots: fields, readouts, tables. The darkest tone.
+- **Key** (`key`) and **Key Hover** (`key-hover`): the key face and its hover face. Key Hover also colours scrollbar handles.
+- **Edge** (`edge`): the 1px border round a Display slot, and the outline of a quiet key.
+- **Line** (`line`): 1px dividers between sections, under bars and between table rows.
+- **Active Wash** (`active-wash`): the face of a live Scene, the selected view and a selected row. A tint, not a highlight.
+- **Legend** (`legend`): all primary text and glyphs.
+- **Legend Dim** (`legend-dim`): secondary text: captions, hints, unselected tabs, placeholders and disabled text.
+
+### Indicator lamps
+- **LED Green** (`led-green`): something is live and healthy. A live Scene (triangle), a running Engine (disc).
+- **LED Red** (`led-red`): Blackout, errors and destructive actions.
+- **Warn Amber** (`warn-amber`): needs attention. Blind, unsaved changes, warnings.
 
 ### Named Rules
-**The Signal Colour Rule.** Each signal hue currently has one meaning: blue is action or selection, green is live, red is Blackout or danger, amber is Blind or a warning. This is the house convention, not a hard law. Break it only with a clear reason, and never for decoration.
+**The Lit-Key Rule.** At most one Signal-filled key per view, and only for the forward action. Every other primary button is a plain key.
 
-**The Glare Budget Rule.** No large bright areas. Fills behind state use the 16% soft tints, not the solid hue. Solid signal colour goes on small marks (dots, outlines, thin frames) and on the few primary or danger buttons.
+**The LED Rule.** Green, red and amber only report state, and always appear beside a drawn shape and a word. They never fill a key face or tint a background.
+
+**The Dark Room Rule.** Text is Legend or Legend Dim. No new greys, no new hues, no hex outside `tokens.css`. The one exception is Preview and Stage Plan data (see below).
 
 ## Typography
 
-**Body Font:** Segoe UI Variable Text (with Segoe UI, system-ui, sans-serif)
-**Mono Font:** ui-monospace (Consolas, Cascadia Mono)
+**Sans:** IBM Plex Sans (500, 600, 700). **Mono:** IBM Plex Mono (400, 500).
 
-**Character:** the Windows system face, used as a tool font: neutral, compact, legible at 11–14px. Mono with tabular numbers is for anything you'd read off a desk: DMX addresses, channel values, percentages, BPM.
+Both are bundled as woff2 in `src/renderer/src/assets/fonts` with `OFL.txt`, loaded with `font-display: block`, because the stage machine may be offline. Segoe UI is the fallback. ADR 0017 lifted the old font ban.
 
 ### Hierarchy
-- **Perform** (500, 20px, 1.4): text on Perform's big controls (Blackout, Base Look, Tap, Freeze).
-- **Headline** (600, 16px, 1.4): the app name, Layer headings, dialog titles. All h1–h4 are 600 weight.
-- **Body** (400, 14px, 1.4): the default size for text, buttons and inputs. Buttons use 500.
-- **Label** (500, 12px): field labels, hints, the top bar's status text, captions.
-- **Caption** (500, 11px): badges, key hints, Fixture names on the stage plan, uppercase list group headings.
-- **Mono** (400, 14px, tabular numbers): addresses, channel values, Grand Master percent, BPM.
+- **Title** (600, 18px): the top bar. "LiveCues" in Legend, "LightCues" in Signal.
+- **Perform** (600, 20px): text on Perform's 64px controls.
+- **Body** (500, 14px): the default for text and fields.
+- **Key label** (600, 14px, 0.04em): key faces. A lit key goes up to 700.
+- **Legend** (600, 11px, 0.12em, uppercase): captions, field labels, table headers, Sidebar and tab labels, and the word in a state chip.
+- **Readout** (Mono 400, 14px, tabular figures): DMX addresses, channel values, MIDI notes, percentages, BPM and times.
 
 ### Named Rules
-**The Readout Rule.** Any number that changes or is read as a value uses the mono font with tabular figures, so it doesn't shift sideways as it changes.
+**The Silkscreen Rule.** Anything that labels the panel is a legend: small, spaced, upper-case, Legend Dim. Anything the machine reports is in Mono. Words the operator acts on (key labels) are sentence-case Sans.
 
-**The No Bundled Font Rule.** Don't add a web font. Text stays in the Windows system face, and any new font asset must be MIT compatible (OFL-1.1 is) and work offline. ADR 0017 lifted the old licence barrier; the family fonts arrive with the family styling.
+**The Readout Rule.** Any number that changes or is read as a value is Mono with tabular figures, so it does not shift as it changes.
 
 ## Layout
 
-Fixed app shell: a 176px Sidebar on the left, then a 44px top bar, the view, and the Fallback Panel strip at the bottom. Only the view scrolls. The top bar and the strip stay put, and the window never scrolls. Views fill the space and scroll their own columns.
+Fixed app shell: a 176px Sidebar, a 44px top bar, the view, and the Fallback Panel strip at the bottom. Only the view scrolls.
 
-Spacing uses a 4px base (4, 8, 12, 16, 24, 32). 8px is by far the most used gap, 12–16px for panel padding, 24px for dialog padding. Controls are 32px high by default and 44px when large. Perform uses 64px controls and 160×52px Scene buttons, in a fill-in grid.
-
-The layout is for desktop windows. The one breakpoint is 1280px: below it, side columns such as the Preview in Show and Perform become a panel over the view.
+Spacing uses a 4px base (4, 8, 12, 16, 24, 32). Sizes stay as they are: 32px controls, 44px large, 52px Scene buttons (160px wide), 64px Perform controls. The one breakpoint is 1280px: below it, side columns such as the Preview become a panel over the view.
 
 ### Named Rules
 **The Fixed Frame Rule.** The Sidebar, top bar and Fallback Panel never scroll away. Recovery controls stay visible in every view.
 
 ## Elevation & Depth
 
-Flat. Depth comes from the four surface steps (Booth Black → Desk Panel → Raised Panel → Lifted Panel) and 1px hairlines. The only shadow is `--shadow-overlay` (`0 12px 32px rgb(0 0 0 / 50%)`), used on dialogs, popovers, menus, tooltips and toasts, over a 60% black backdrop for dialogs. Today a shadow means "this floats above the app". Subtle shadows on in-page cards are open for later, as long as they stay dark and low-glare.
+Flat. Depth is three tones (Bar, Chassis, Display) and 1px Edge and Line rules. Overlays are separated by a Bar or Chassis face and an Edge line, over a 60% black backdrop for dialogs.
 
 ### Named Rules
-**The Tonal Step Rule.** To raise something, move it one surface step lighter and give it a hairline. Use a shadow only when it floats over other content.
+**The Flat-Panel Rule.** No shadows, blur or gradients. The only exceptions are a lit LED's 6px halo and inset hard lines.
+
+**The Sunk-Is-On Rule.** A pressed-in look is reserved for state. A key sinks only while something it controls is on.
 
 ## Shapes
 
-Small, even radii: 4px for tabs, menu items, list rows and key hints; 6px for buttons, inputs and the stage plan; 10px for Layer panels and dialogs; pills for badges, status dots and the fader. Borders are 1px hairlines everywhere. Two state edges are thicker: the 3px left edge of a toast, and the 3px window frame for Blackout (red) and Blind (amber), drawn over everything.
+Every corner is square (`--radius-*` are 0). The **key** (any button that acts) has its top right corner cut at 8px (`--chamfer`) with `clip-path`. The focus ring is 2px Signal drawn inside the key.
+
+State shapes are drawn, never typed: a disc (live), ring (warning), triangle (playing) and square (idle). A 3px edge marks selection and the window frame for Blackout and Blind.
 
 ## Components
 
-Controls are like labelled hardware: plain, bordered, with the key printed on them and a clear on/off state.
+### Keys
+- **Normal:** Key face, Legend label, hover lifts to Key Hover. 32px high, 44px large.
+- **Pressed:** inverts to a Legend face with Chassis text.
+- **Lit:** Signal face, Signal Ink label at 700. At most one per view.
+- **Quiet:** no face, an Edge outline.
+- **Sunk:** Chassis face, 2px inset LED Red outline, LED Red label.
+- **Disabled:** 40% opacity.
+- **Key hint:** the keyboard key (B, 0, 1 to 9, T, F) printed in Legend Dim at the right of the key.
 
-### Buttons
-- **Shape:** gently rounded (6px), 32px high with 12px side padding; large is 44px with 16px padding and 16px text.
-- **Primary:** Cue Blue fill, Booth Black text. One per area at most.
-- **Secondary:** Raised Panel fill with a hairline border. The default for most actions and for every Scene button.
-- **Ghost:** no fill, Label Grey text, for toolbars and icon buttons.
-- **Danger:** Blackout Red fill, Booth Black text.
-- **Hover / Focus:** one surface step lighter and a stronger border, in 120ms. Focus is a 2px Cue Blue ring, separated by a 2px Booth Black gap.
-- **Toggle on (`aria-pressed`):** secondary buttons get a Live Green outline (1px border plus 1px inset). Ghost icon toggles turn Cue Blue.
-- **Disabled:** 45% opacity.
-
-### Key hints
-A small bordered box (Hairline Strong border, 4px radius, 11px Label Grey text) printed inside a button with its keyboard key: B, 0, 1–9, T, F. Used on the Fallback Panel and Perform controls and on Scene buttons.
-
-### Badges
-Pill-shaped, 20px high, 11px medium text. The fill is the 16% soft tint and the text is the solid hue: neutral, blue, green, amber or red.
-
-### Cards / Containers
-- **Layer panel:** Desk Panel fill, hairline border, 10px radius, 12px padding, 16px headline.
-- **Dialog:** Raised Panel fill, hairline, 10px radius, 24px padding, max 480px wide, overlay shadow over a 60% black backdrop.
-- **Popover / Menu:** Raised Panel, hairline, 6px radius, overlay shadow. Highlighted menu item uses Lifted Panel.
-
-### Inputs / Fields
-- **Style:** Desk Panel fill, hairline border, 6px radius, 32px high. Label above in 12px Label Grey. Hints below in 12px Label Faint.
-- **Focus:** the border turns Cue Blue, plus the focus ring.
-- **Error:** Blackout Red border and 12px red message. **Disabled:** 50% opacity.
-- **Select:** the same field with an inline chevron, drawn as a data URI so nothing loads from the network.
+### Fields
+A Display slot with a 1px Edge, 32px high, 8px padding. Label above as a legend. Focus draws the 2px Signal ring. Error uses an LED Red border and a message beside a triangle. Values are Mono.
 
 ### Navigation
-- **Sidebar items:** 32px rows, 18px icons, Label Grey medium text. Hover goes Raised Panel with white text. The current view is a Cue Blue Soft fill with Cue Blue text.
-- **Tabs:** 32px, Label Grey; the selected tab gets white text and a 2px Cue Blue underline sitting on the hairline.
+- **Sidebar:** legend caps. The selected view gets Active Wash and a 3px Signal edge.
+- **Tabs:** legend caps in Legend Dim. The selected tab is Legend with a 3px Signal underline.
 
-### Scene button (signature)
-A secondary button at 160×52px minimum, with the name left-aligned and wrapping to two lines rather than cut off, and the key hint on the right. When live: Live Green outline, Live Green Soft fill, and a green dot before the name, so it reads from across the stage.
+### State chip
+A drawn shape, a gap, then an upper-case legend word. It never relies on colour alone.
 
-### Live-state frame (signature)
-A 3px border around the whole window, drawn above everything and ignoring clicks: amber during Blind, red during Blackout (red wins). It shows the state of the real lights from any view.
+### Scene list and editor
+A Scene button is a key at 160 by 52px: name left, wrapping to two lines, key hint on the right. The **live Scene** uses the family's active-row language: Active Wash face, 3px Signal edge, an LED Green triangle and the name at 700. There is no green fill. The Scene editor's Rules and Layers are Bar panels with a Line border; their numbers are Mono.
 
-### Toast
-Bottom right, max 380px wide. Raised Panel, hairline, 6px radius, overlay shadow, with a 3px left edge and icon in the signal hue (blue info, green success, red error).
+### Perform
+Gig-size: 64px controls, 20px text, 52px Scene buttons. The same shapes and tokens as the rest of the app, only bigger. Blackout and Base Look sit among them.
+
+### Fallback Panel
+A Bar strip at the bottom of every view, with Line above it. It holds Blackout, Blind, Freeze, Grand Master and the Scene keys, each with its key hint. It never scrolls away.
+
+### Blackout
+At rest it is a plain key with an LED Red mark and the word BLACKOUT. When engaged it is sunk: Chassis face, 2px inset LED Red outline, a red disc and BLACKOUT. It has no red fill. The window frame goes red.
+
+### Blind
+Blind is Warn Amber. At rest a plain key. When on, an amber ring and BLIND in a state chip, and the window frame goes amber (Blackout wins).
+
+### Preview and Stage Plan
+The content is exempt from the palette. Beam colours and intensity are data, drawn as they are. The chrome (floor, grid, Zone lines, labels) uses tokens. Selection is a Signal edge.
+
+### Dialog and Toast
+Dialogs are Chassis with an Edge line, 24px padding, at most 480px wide, over a 60% black backdrop. A toast sits bottom right with a 3px edge and a drawn shape in the state colour.
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** take every colour, size and spacing value from the tokens in `src/renderer/src/ui/tokens.css`. Add a token rather than hard-coding a value.
-- **Do** use the 16% soft tints for fills behind state and keep solid signal colour to small marks.
-- **Do** put numbers that change in mono with tabular figures.
-- **Do** print the keyboard key on any control that has one, using the key hint.
-- **Do** keep Perform's targets at gig size (64px controls, 52px Scene buttons).
-- **Do** raise surfaces by one tonal step plus a hairline.
+- **Do** take every colour, size and spacing from the tokens in `src/renderer/src/ui/tokens.css`. Add a token rather than hard-coding a value.
+- **Do** pair every state colour with a drawn shape and an upper-case word.
+- **Do** put values the machine reports in Mono with tabular figures.
+- **Do** print the keyboard key on any control that has one.
+- **Do** keep Perform's targets at gig size.
+- **Do** keep hex values identical to the sibling apps.
 
 ### Don't:
-- **Don't** add a light theme surface, a bright panel, or any large solid-colour area. The screen is in a dark room.
+- **Don't** light more than one key per view, or fill a key red or green.
+- **Don't** add shadows, blur, gradients, rounded corners or illustrations.
+- **Don't** use colour alone to report state.
+- **Don't** add a light theme surface or any large bright area.
 - **Don't** load fonts, icons or images from the network. Everything ships with the app.
-- **Don't** use the signal colours for decoration or branding.
-- **Don't** add gradients, textures or illustrations to the app.
 - **Don't** let the Sidebar, top bar or Fallback Panel scroll out of view.

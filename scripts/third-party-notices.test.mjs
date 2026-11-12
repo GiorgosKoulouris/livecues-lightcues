@@ -20,6 +20,8 @@ describe('buildNotices', () => {
     appDir = mkdtempSync(join(tmpdir(), 'notices-app-'));
     projectDir = mkdtempSync(join(tmpdir(), 'notices-project-'));
     writeFiles(projectDir, {
+      'src/renderer/src/assets/fonts/OFL.txt':
+        'IBM Plex Sans: Copyright 2019 IBM Corp.\n\nSIL OPEN FONT LICENSE Version 1.1\n',
       'examples/README.md':
         '# Examples\n\n## Fixture data\n\nFrom Open Fixture Library:\n\n```\nMIT License\n\nCopyright (c) 2017 Florian & Felix Edelmann\n```\n',
     });
@@ -101,6 +103,21 @@ describe('buildNotices', () => {
     expect(notices).toContain('Open Fixture Library fixture data\nLicense: MIT\n');
     expect(notices).toMatch(/\n\nMIT License\n\nCopyright \(c\) 2017 Florian & Felix Edelmann\n$/);
     expect(notices).not.toContain('From Open Fixture Library:');
+  });
+
+  it('credits the bundled IBM Plex fonts with the OFL text', () => {
+    const notices = buildNotices({ appDir, projectDir, inventory: { ships: [] } });
+
+    expect(notices).toContain('IBM Plex Sans and IBM Plex Mono fonts\nLicense: OFL-1.1\n');
+    expect(notices).toContain('SIL OPEN FONT LICENSE Version 1.1');
+  });
+
+  it('fails if the fonts lost their OFL text', () => {
+    rmSync(join(projectDir, 'src/renderer/src/assets/fonts'), { recursive: true });
+
+    expect(() => buildNotices({ appDir, projectDir, inventory: { ships: [] } })).toThrow(
+      NoticesError,
+    );
   });
 
   it('fails if the examples README lost the fixture data license', () => {

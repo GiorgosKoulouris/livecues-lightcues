@@ -42,8 +42,8 @@ LightCues runs a band's lighting at live shows from a Windows laptop. The DAW or
 - The update check only checks. It shows a notice in the Sidebar, never in Perform, and downloads nothing (ADR 0012).
 - Terminology is fixed by [CONTEXT.md](CONTEXT.md). UI copy uses its capitalised terms and avoids the listed alternatives.
 - Dark theme only. Tokens keep a light theme possible later (ADR 0003).
-- Icons are bundled, because the app must work offline. No web fonts or CDN assets.
-- Text uses the Windows system font (Segoe UI) for now. The family fonts (IBM Plex, OFL-1.1) are bundled once the family styling lands, and any bundled asset must be MIT compatible (ADR 0017).
+- Icons are bundled, because the app must work offline. No CDN assets: fonts are bundled files.
+- Text is set in the bundled IBM Plex Sans and Mono (OFL-1.1), with Segoe UI as the fallback. Any bundled asset must be MIT compatible (ADR 0017).
 - The installer is not code-signed yet.
 
 ## Brand Commitments
