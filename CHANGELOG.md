@@ -21,7 +21,7 @@ What changed in each LightCues release. The format follows [Keep a Changelog](ht
 
 ### Changed
 
-- The interface now uses the LiveCues family palette and the IBM Plex Sans and Mono fonts, bundled with the app, with square corners and no shadows. Controls are restyled in later changes.
+- The interface now uses the LiveCues family palette and the IBM Plex Sans and Mono fonts, bundled with the app, with square corners and no shadows. Buttons are now keys with a cut corner, and fields, lists, tabs, dialogs, toasts and badges follow the same style. Views are restyled in later changes.
 - The licence is now MIT. Releases up to v0.1.2 stay under GPL-3.0-only.
 - LightCues now installs to `%LOCALAPPDATA%\Programs\LiveCues\LightCues` and keeps its data, the Profile Library, settings and logs, in `%APPDATA%\LiveCues\LightCues`. Data in the old `%APPDATA%\LightCues` is not moved.
 - Venue Patches and Shows saved by this version do not open in older versions of LightCues, as they can hold House Lights, House Presets, strobe and the new Effect settings. Older files still open.

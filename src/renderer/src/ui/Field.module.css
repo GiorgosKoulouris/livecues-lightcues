@@ -6,47 +6,51 @@
 }
 
 .label {
-  color: var(--text-muted);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
+  color: var(--legend-dim);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .input {
   height: var(--control-height);
   padding: 0 var(--space-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface-1);
+  border: 1px solid var(--edge);
+  border-radius: 0;
+  background: var(--display);
   transition: border-color var(--duration-fast);
 }
 
 .input:hover {
-  border-color: var(--border-strong);
+  border-color: var(--legend-dim);
 }
 
 .input:focus-visible {
-  border-color: var(--accent);
+  border-color: var(--signal);
 }
 
 .input[aria-invalid='true'] {
-  border-color: var(--danger);
+  border-color: var(--led-red);
 }
 
 .input:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
 }
 
-.mono {
+.mono,
+.input[type='number'] {
   font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .error {
-  color: var(--danger);
+  color: var(--led-red);
   font-size: var(--text-sm);
 }
 
 .hint {
-  color: var(--text-faint);
+  color: var(--legend-dim);
   font-size: var(--text-sm);
 }
 
@@ -60,7 +64,7 @@
   left: var(--space-2);
   width: var(--icon-sm);
   height: var(--icon-sm);
-  color: var(--text-faint);
+  color: var(--legend-dim);
   transform: translateY(-50%);
   pointer-events: none;
 }
@@ -68,4 +72,15 @@
 .searchInput {
   width: 100%;
   padding-left: calc(var(--space-2) * 2 + var(--icon-sm));
+}
+
+/* An error is a triangle and a message. */
+.error::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: var(--space-2);
+  background: var(--led-red);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
 }

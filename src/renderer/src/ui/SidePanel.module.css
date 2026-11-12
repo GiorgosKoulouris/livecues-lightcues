@@ -22,10 +22,9 @@
     display: flex;
     width: var(--side-width);
     padding: var(--space-3);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    background: var(--surface-2);
-    box-shadow: var(--shadow-overlay);
+    border: 1px solid var(--edge);
+    border-radius: 0;
+    background: var(--chassis);
   }
 
   .toggle {
