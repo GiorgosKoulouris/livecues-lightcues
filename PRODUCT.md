@@ -49,6 +49,7 @@ LightCues runs a band's lighting at live shows from a Windows laptop. The DAW or
 ## Brand Commitments
 
 - Name: **LightCues**, part of a **LiveCues** family (data folder `%APPDATA%\LiveCues\LightCues`, install folder `LiveCues\LightCues`).
+- Siblings: VideoCues (`livecues-videocues`, also a Windows desktop app) and Reaper Remote (`livecues-reaper-remote`). This repo is `livecues-lightcues`. The three share one look, set out in DESIGN.md.
 - App icon: [build/icon.svg](build/icon.svg).
 - Voice, as in the README: short, plain sentences, second person, concrete actions, named controls in bold. No marketing claims.
 
