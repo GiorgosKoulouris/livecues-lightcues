@@ -156,7 +156,7 @@ LightCues looks like a lighting desk at the back of a dark room. Every control i
 
 The system is dense and made for a pro. It assumes the user knows DMX, fits a lot on one screen like a console does, and uses small type (11–16px) with tight 4px-step spacing. Perform is the exception. Its controls grow to gig size (64px high, 20px text) so they can be read and hit from arm's length.
 
-Structure comes from tonal steps and 1px hairlines, not from decoration. There is no gradient, texture, illustration or brand flourish anywhere in the app. Fonts and icons are local (Segoe UI from Windows, bundled Lucide icons), because the app must run offline and stay GPL-3.0 compatible.
+Structure comes from tonal steps and 1px hairlines, not from decoration. There is no gradient, texture, illustration or brand flourish anywhere in the app. Fonts and icons are local (Segoe UI from Windows, bundled Lucide icons), because the app must run offline and stay MIT compatible.
 
 **Key Characteristics:**
 - Dark only, with a glare budget: near-black base, greys for text, colour only for state.
@@ -212,7 +212,7 @@ A cool blue-grey neutral ramp with four saturated signal colours, each tied to o
 ### Named Rules
 **The Readout Rule.** Any number that changes or is read as a value uses the mono font with tabular figures, so it doesn't shift sideways as it changes.
 
-**The No Bundled Font Rule.** Don't add a web font. Text stays in the Windows system face, and any new font asset must be GPL-3.0 compatible and work offline.
+**The No Bundled Font Rule.** Don't add a web font. Text stays in the Windows system face, and any new font asset must be MIT compatible (OFL-1.1 is) and work offline. ADR 0017 lifted the old licence barrier; the family fonts arrive with the family styling.
 
 ## Layout
 

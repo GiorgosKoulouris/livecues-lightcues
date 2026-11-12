@@ -447,7 +447,7 @@
   ],
   "narrative": {
     "northStar": "The Front-of-House Desk",
-    "overview": "LightCues looks like a lighting desk at the back of a dark room. Every control is labelled, numbers are exact, and nothing glows unless it has to. The screen sits in a dark venue during the show, so the base is near-black and text steps down to muted greys. Colour is kept for state: what is selected, what is live, what is dark, what is unseen.\n\nThe system is dense and made for a pro. It assumes the user knows DMX, fits a lot on one screen like a console does, and uses small type (11–16px) with tight 4px-step spacing. Perform is the exception. Its controls grow to gig size (64px high, 20px text) so they can be read and hit from arm's length.\n\nStructure comes from tonal steps and 1px hairlines, not from decoration. There is no gradient, texture, illustration or brand flourish anywhere in the app. Fonts and icons are local (Segoe UI from Windows, bundled Lucide icons), because the app must run offline and stay GPL-3.0 compatible.",
+    "overview": "LightCues looks like a lighting desk at the back of a dark room. Every control is labelled, numbers are exact, and nothing glows unless it has to. The screen sits in a dark venue during the show, so the base is near-black and text steps down to muted greys. Colour is kept for state: what is selected, what is live, what is dark, what is unseen.\n\nThe system is dense and made for a pro. It assumes the user knows DMX, fits a lot on one screen like a console does, and uses small type (11–16px) with tight 4px-step spacing. Perform is the exception. Its controls grow to gig size (64px high, 20px text) so they can be read and hit from arm's length.\n\nStructure comes from tonal steps and 1px hairlines, not from decoration. There is no gradient, texture, illustration or brand flourish anywhere in the app. Fonts and icons are local (Segoe UI from Windows, bundled Lucide icons), because the app must run offline and stay MIT compatible.",
     "keyCharacteristics": [
       "Dark only, with a glare budget: near-black base, greys for text, colour only for state.",
       "One hue per meaning: blue for action, green for live, red for Blackout, amber for Blind.",
@@ -473,7 +473,7 @@
       },
       {
         "name": "The No Bundled Font Rule",
-        "body": "Don't add a web font. Text stays in the Windows system face, and any new font asset must be GPL-3.0 compatible and work offline.",
+        "body": "Don't add a web font. Text stays in the Windows system face, and any new font asset must be MIT compatible (OFL-1.1 is) and work offline. ADR 0017 lifted the old licence barrier; the family fonts arrive with the family styling.",
         "section": "typography"
       },
       {

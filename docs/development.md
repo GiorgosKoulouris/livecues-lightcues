@@ -93,7 +93,7 @@ The installer ships `resources/THIRD_PARTY_NOTICES.txt`: the name, version, lice
 
 Packaging fails when a package:
 
-- has a license off the allow list in [scripts/security-scan/licenses.mjs](../scripts/security-scan/licenses.mjs) (GPL-3.0-only compatible). Replace the package, or add the license to the list if it is compatible.
+- has a license off the allow list in [scripts/security-scan/licenses.mjs](../scripts/security-scan/licenses.mjs) (compatible with MIT for distribution). Replace the package, or add the license to the list if it is compatible.
 - ships no LICENSE, COPYING or NOTICE file. Copy the upstream license file to `build/licenses/<name>@<version>.txt`. The version is in the name, so an update is checked again.
 
 ## Security scan

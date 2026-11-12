@@ -109,7 +109,7 @@ function header() {
   return [
     'LightCues third-party notices',
     '',
-    'LightCues is licensed under GPL-3.0-only (LICENSE.txt). It includes the',
+    'LightCues is licensed under the MIT license (LICENSE.txt). It includes the',
     'third-party software below, each under its own license. The notices of the',
     'Electron runtime are in LICENSE.electron.txt and LICENSES.chromium.html,',
     'next to LightCues.exe.',

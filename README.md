@@ -120,6 +120,6 @@ Bug reports and Fixture requests welcome as [GitHub Issues](https://github.com/G
 
 ## License
 
-Copyright (C) 2026 Georgios Koulouris
+Copyright (c) 2026 Georgios Koulouris
 
-LightCues is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License, version 3, as published by the Free Software Foundation. It is distributed without any warranty. See [LICENSE](LICENSE).
+LightCues is released under the [MIT license](LICENSE). Releases up to and including v0.1.2 were released under GPL-3.0-only and stay under it. See [ADR 0017](docs/adr/0017-mit-licence.md).

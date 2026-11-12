@@ -1,6 +1,8 @@
-// The licenses a shipped package may have: compatible with GPL-3.0-only, the
-// app's license. Shared by the scan's license check and the third-party
-// notices (scripts/third-party-notices.mjs). GPL-2.0-only is not compatible.
+// The licenses a shipped package may have: compatible with MIT for
+// distribution, the app's license. Permissive licenses, plus MPL-2.0 (file-level
+// copyleft) and OFL-1.1 (bundled fonts). Strong copyleft is not on the list.
+// Shared by the scan's license check and the third-party notices
+// (scripts/third-party-notices.mjs).
 export const ALLOWED_LICENSES = [
   '0BSD',
   'Apache-2.0',
@@ -8,15 +10,10 @@ export const ALLOWED_LICENSES = [
   'BSD-2-Clause',
   'BSD-3-Clause',
   'CC0-1.0',
-  'GPL-3.0-only',
-  'GPL-3.0-or-later',
   'ISC',
-  'LGPL-2.1-only',
-  'LGPL-2.1-or-later',
-  'LGPL-3.0-only',
-  'LGPL-3.0-or-later',
   'MIT',
   'MPL-2.0',
+  'OFL-1.1',
   'Python-2.0',
   'Unlicense',
   'Zlib',

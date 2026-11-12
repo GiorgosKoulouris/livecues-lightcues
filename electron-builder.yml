@@ -1,6 +1,6 @@
 # Windows installer. Run `npm run package`; output goes to dist/.
 appId: io.github.giorgoskoulouris.lightcues
-copyright: Copyright (C) 2026 Georgios Koulouris. Licensed under GPL-3.0-only.
+copyright: Copyright (c) 2026 Georgios Koulouris. Licensed under the MIT license.
 directories:
   output: dist
 files:

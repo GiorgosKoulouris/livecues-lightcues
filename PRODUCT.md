@@ -22,7 +22,7 @@ LightCues runs a band's lighting at live shows from a Windows laptop. The DAW or
 
 - **Venue-independent Shows.** Scenes aim at Zones (a fixed stage grid) and Roles (Wash, Spot/Beam, Blinder, …), never at single Fixtures. A new venue means re-patching, not re-programming. Conventional consoles tie cues to fixture numbers. (ADR 0001.)
 - **DAW-driven, hands-free.** Each song's MIDI notes trigger Scenes. Go, Flash and Release modes.
-- **Free and open source.** GPL-3.0-only, no paid tiers, works fully offline.
+- **Free and open source.** MIT, no paid tiers, works fully offline.
 
 ## Operating Context
 
@@ -43,7 +43,7 @@ LightCues runs a band's lighting at live shows from a Windows laptop. The DAW or
 - Terminology is fixed by [CONTEXT.md](CONTEXT.md). UI copy uses its capitalised terms and avoids the listed alternatives.
 - Dark theme only. Tokens keep a light theme possible later (ADR 0003).
 - Icons are bundled, because the app must work offline. No web fonts or CDN assets.
-- Text uses the Windows system font (Segoe UI). No bundled font: any bundled asset must be GPL-3.0 compatible (Inter's OFL-1.1 was rejected for this reason).
+- Text uses the Windows system font (Segoe UI) for now. The family fonts (IBM Plex, OFL-1.1) are bundled once the family styling lands, and any bundled asset must be MIT compatible (ADR 0017).
 - The installer is not code-signed yet.
 
 ## Brand Commitments
@@ -64,7 +64,7 @@ LightCues runs a band's lighting at live shows from a Windows laptop. The DAW or
 2. **The gig must not stop.** A failure (MIDI lost, Output unplugged) holds the current look and is shown clearly. Recovery controls are always one key away.
 3. **Perform stays calm.** Nothing non-essential appears in Perform: no update notices, no prompts.
 4. **Speak the lighting tech's language.** Use DMX and CONTEXT.md terms exactly. Do not water them down.
-5. **Offline and free.** No network dependency for any core function, and nothing that conflicts with GPL-3.0.
+5. **Offline and free.** No network dependency for any core function, and nothing that conflicts with the MIT licence.
 
 ## Accessibility & Inclusion
 

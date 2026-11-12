@@ -200,7 +200,7 @@ describe('shippedLicenses', () => {
     const licenses = shippedLicenses(
       { ships: [{ ...left, path: 'node_modules/left-pad' }] },
       {
-        osvApp: { results: [{ packages: [{ package: left, licenses: ['MIT', 'GPL-2.0-only'] }] }] },
+        osvApp: { results: [{ packages: [{ package: left, licenses: ['MIT', 'SSPL-1.0'] }] }] },
       },
     );
 

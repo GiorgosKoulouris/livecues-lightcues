@@ -8,7 +8,7 @@ What it covers:
 - **Source code**: semgrep over `src/`, with registry packs and the custom Electron rules in [security/semgrep/](../security/semgrep/).
 - **Electron hardening**: `webPreferences`, CSP, preload and IPC, navigation and window-open handlers, `shell.openExternal`, file paths from untrusted input. Part rules, part Claude's review.
 - **Electron runtime**: the installed Electron against the Electron releases feed. Chromium and Node fixes rarely show up as npm advisories.
-- **Licenses** of shipped packages, against GPL-3.0-only.
+- **Licenses** of shipped packages, against MIT compatibility.
 
 ## Prerequisites
 
@@ -101,7 +101,7 @@ Each finding has a reason for its relevance and a suggested fix: a target versio
 
 **Electron runtime.** The installed version, whether its major is still supported (the latest 3 stable majors), the latest patch of that major, and the newer patches with security fixes. Electron lists Chromium fixes as "Backported fixes from upstream …", with no CVE ids. Those count. If the feed could not be fetched, the section says the check was skipped.
 
-**Licenses.** Shipped packages only. Licenses compatible with GPL-3.0-only are counted. Anything else, or a missing license, is listed.
+**Licenses.** Shipped packages only. Licenses compatible with MIT for distribution are counted. Anything else, or a missing license, is listed.
 
 ## Accepting a risk
 
