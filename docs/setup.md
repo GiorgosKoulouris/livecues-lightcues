@@ -58,8 +58,8 @@ Not needed for engine work. The engine is testable without hardware.
 ## 6. Project
 
 ```powershell
-git clone https://github.com/GiorgosKoulouris/LightCues.git LightCues
-cd LightCues
+git clone https://github.com/GiorgosKoulouris/livecues-lightcues.git
+cd livecues-lightcues
 npm install
 npm run dev
 ```

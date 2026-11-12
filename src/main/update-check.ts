@@ -3,8 +3,8 @@
 import type { UpdateAvailable, UpdateCheckOutcome } from '../shared/protocol';
 
 const LATEST_RELEASE_API =
-  'https://api.github.com/repos/GiorgosKoulouris/LightCues/releases/latest';
-const RELEASES_PATH = '/GiorgosKoulouris/LightCues/releases/';
+  'https://api.github.com/repos/GiorgosKoulouris/livecues-lightcues/releases/latest';
+const RELEASES_PATH = '/GiorgosKoulouris/livecues-lightcues/releases/';
 // `vX.Y.Z`, maybe with a prerelease suffix.
 const VERSION_TAG = /^v?(\d+\.\d+\.\d+(?:-[\w.]+)?)$/;
 

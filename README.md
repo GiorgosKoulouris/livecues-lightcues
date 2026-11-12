@@ -23,7 +23,7 @@ Building from source: [docs/development.md](docs/development.md).
 
 ## Install
 
-1. Download `LightCues-Setup-<version>.exe` from the [Releases page](https://github.com/GiorgosKoulouris/LightCues/releases).
+1. Download `LightCues-Setup-<version>.exe` from the [Releases page](https://github.com/GiorgosKoulouris/livecues-lightcues/releases).
 2. Run it. By default it installs for your user only, without admin rights.
 3. The installer is not code-signed yet. On the blue SmartScreen warning, choose **More info** → **Run anyway**.
 
@@ -116,7 +116,7 @@ LightCues writes one log file per day to `%APPDATA%\LightCues\logs\`, named `lig
 
 ## Contributing
 
-Bug reports and Fixture requests welcome as [GitHub Issues](https://github.com/GiorgosKoulouris/LightCues/issues/new/choose). Pull requests by arrangement: open an issue first. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Bug reports and Fixture requests welcome as [GitHub Issues](https://github.com/GiorgosKoulouris/livecues-lightcues/issues/new/choose). Pull requests by arrangement: open an issue first. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

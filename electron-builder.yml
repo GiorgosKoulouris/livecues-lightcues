@@ -45,4 +45,4 @@ nsis:
 publish:
   provider: github
   owner: GiorgosKoulouris
-  repo: LightCues
+  repo: livecues-lightcues

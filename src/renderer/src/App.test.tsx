@@ -97,7 +97,7 @@ const EXAMPLE = {
 
 const RELEASE: UpdateAvailable = {
   version: '0.2.0',
-  url: 'https://github.com/GiorgosKoulouris/LightCues/releases/tag/v0.2.0',
+  url: 'https://github.com/GiorgosKoulouris/livecues-lightcues/releases/tag/v0.2.0',
 };
 const APP_INFO: AppInfo = {
   appVersion: '0.2.0',

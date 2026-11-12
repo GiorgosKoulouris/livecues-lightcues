@@ -25,8 +25,8 @@ Prerequisites (Windows): Git, Node.js 22.12 or newer (see [.nvmrc](../.nvmrc)), 
 This builds `main`, the released code:
 
 ```powershell
-git clone https://github.com/GiorgosKoulouris/LightCues.git LightCues
-cd LightCues
+git clone https://github.com/GiorgosKoulouris/livecues-lightcues.git
+cd livecues-lightcues
 npm install
 npm run dev
 ```
