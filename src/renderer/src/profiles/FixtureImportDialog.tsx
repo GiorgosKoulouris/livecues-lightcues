@@ -70,12 +70,17 @@ function FixtureImportForm({
   if (report && 'imported' in report) {
     return (
       <div className={styles.form}>
-        <p>Imported {report.imported}. These features are not supported:</p>
-        <ul className={styles.unsupported}>
-          {report.unsupported.map((line, i) => (
-            <li key={i}>{line}</li>
-          ))}
-        </ul>
+        <div className={`${styles.panel} ${styles.ok}`}>
+          <p className={styles.verdict}>
+            <Mark kind="check" />
+            <span>Imported {report.imported}. These features are not supported:</span>
+          </p>
+          <ul className={styles.unsupported}>
+            {report.unsupported.map((line, i) => (
+              <li key={i}>{line}</li>
+            ))}
+          </ul>
+        </div>
         <footer className={styles.footer}>
           <Button variant="primary" onClick={onClose}>
             Done
@@ -163,12 +168,20 @@ function FixtureImportForm({
       </FieldFrame>
       {!isGdtf && <InlineInput label="Manufacturer" edit={manufacturer} />}
       {report && 'error' in report && (
-        <p role="alert" className={styles.error}>
-          {report.error}
-        </p>
+        <div role="alert" className={`${styles.panel} ${styles.warn}`}>
+          <p className={styles.verdict}>
+            <Mark kind="cross" />
+            <span>{report.error}</span>
+          </p>
+        </div>
       )}
       {report && 'kept' in report && (
-        <p className={styles.message}>Kept the hand-edited {report.kept}.</p>
+        <div className={`${styles.panel} ${styles.warn}`}>
+          <p className={styles.verdict}>
+            <Mark kind="cross" />
+            <span>Kept the hand-edited {report.kept}.</span>
+          </p>
+        </div>
       )}
       <footer className={styles.footer}>
         <Button onClick={onClose}>Cancel</Button>
@@ -177,6 +190,15 @@ function FixtureImportForm({
         </Button>
       </footer>
     </form>
+  );
+}
+
+// A drawn verdict mark. The words beside it carry the meaning.
+function Mark({ kind }: { kind: 'check' | 'cross' }) {
+  return (
+    <svg className={styles.mark} viewBox="0 0 16 16" aria-hidden="true">
+      <path d={kind === 'check' ? 'M2 8.5 6 12.5 14 3.5' : 'M3 3 13 13M13 3 3 13'} />
+    </svg>
   );
 }
 

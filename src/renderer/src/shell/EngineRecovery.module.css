@@ -1,4 +1,5 @@
-/* Over the view, below the top bar, until the app is restarted. */
+/* Over the view, below the top bar, until the app is restarted. A Display
+   panel with a Warn Amber edge: it reports a problem. */
 .banner {
   position: fixed;
   top: calc(var(--top-bar-height) + var(--space-2));
@@ -9,18 +10,19 @@
   gap: var(--space-2);
   max-width: calc(100vw - var(--space-6));
   padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
-  border: 1px solid var(--danger);
-  border-radius: var(--radius-md);
-  background: var(--surface-2);
-  box-shadow: var(--shadow-overlay);
+  border: 1px solid var(--warn-amber);
+  border-radius: 0;
+  background: var(--display);
   transform: translateX(-50%);
 }
 
-.icon {
+/* A drawn Warn Amber triangle leads the verdict. */
+.mark {
   flex: none;
   width: var(--icon-md);
   height: var(--icon-md);
-  color: var(--danger);
+  background: var(--warn-amber);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
 }
 
 .message {

@@ -6,7 +6,7 @@
 }
 
 .loading {
-  color: var(--text-faint);
+  color: var(--legend-dim);
 }
 
 /* Scene list | Scene editor | Preview and Layers. Each column scrolls on its
@@ -31,7 +31,7 @@
 
 .empty {
   padding: var(--space-6);
-  color: var(--text-faint);
+  color: var(--legend-dim);
   text-align: center;
 }
 
@@ -51,7 +51,12 @@
 }
 
 .heading {
-  font-size: var(--text-lg);
+  margin: 0;
+  color: var(--legend-dim);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 /* Below 1280px the right column is a SidePanel over the editor. */

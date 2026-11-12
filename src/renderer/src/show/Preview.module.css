@@ -7,22 +7,31 @@
 .view {
   width: 100%;
   height: auto;
-  border-radius: var(--radius-md);
-  background: var(--surface-0);
+  border-radius: 0;
+  background: var(--display);
+}
+
+/* The Preview is narrow: its labels are plain case, so that Stage Right,
+   Centre and Stage Left do not run together. */
+.view text {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-normal);
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .floor {
-  fill: var(--surface-3);
-  stroke: var(--border-strong);
+  fill: var(--key);
+  stroke: var(--edge);
 }
 
 .label {
-  fill: var(--text-faint);
+  fill: var(--legend-dim);
   font-size: var(--text-sm);
 }
 
 /* A Fixture's body, unlit. */
 .body {
-  fill: var(--surface-0);
-  stroke: var(--text-faint);
+  fill: var(--chassis);
+  stroke: var(--legend-dim);
 }

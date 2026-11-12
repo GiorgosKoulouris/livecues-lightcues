@@ -85,7 +85,7 @@ In **Show**, on the **Triggers** tab:
 ![Animation: Scenes fired one after another in Perform, with the Preview changing colour and the moving heads following](docs/images/demo.gif)
 *Scenes fired by hand with the Perform buttons, no MIDI, sped up. A MIDI Trigger fires them the same way.*
 
-Open **Perform** at the gig. It shows Blackout, Base Look, Grand Master, Tap Tempo and Freeze along the top, a House section while the Venue Patch has House Lights, every Scene button by Layer, and the Preview. The House section has **Startup** and a button per House Preset. Each fades the House Lights to its look; the last one fired stays lit. The top bar shows the MIDI Input: red means lost, and Triggers do not fire until it returns.
+Open **Perform** at the gig. It shows Blackout, Base Look, Grand Master, Tap Tempo and Freeze along the top, a House section while the Venue Patch has House Lights, every Scene button by Layer, and the Preview. The House section has **Startup** and a button per House Preset. Each fades the House Lights to its look; the last one fired stays lit. The top bar shows the MIDI Input. A red disc and "MIDI lost" mean it is lost, and Triggers do not fire until it returns.
 
 Fallback Panel keys: **B** Blackout, **0** Base Look, **1**–**9** Scene buttons, **-** / **+** Grand Master, **T** Tap Tempo, **F** Freeze, **Shift+1**–**8** House Presets. Pick the Base Look and the panel's Scene buttons in the Show settings.
 

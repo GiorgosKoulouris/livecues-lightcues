@@ -49,9 +49,9 @@ function screenRadius(pxPerMetre: number): number {
 
 describe('StagePlan', () => {
   it('draws Fixture markers the same size on screen, whatever the stage size', () => {
-    // A 4 × 3 m stage shows 4 m wide (no margin) in the 680 px less the
+    // A 4 × 3 m stage shows 4 m wide (no margin) in the 704 px less the
     // label room: 150 px per metre.
-    layOut(680, 2000);
+    layOut(704, 2000);
     const { rerender } = render(plan({ width: 4, depth: 3 }));
     const small = screenRadius(150);
 

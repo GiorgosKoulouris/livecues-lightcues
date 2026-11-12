@@ -1,11 +1,20 @@
+/* An LED Green disc with a 6px halo when lit. */
 .dot,
 .off {
   flex-shrink: 0;
   width: var(--dot-size);
   height: var(--dot-size);
-  border-radius: var(--radius-pill);
+  border-radius: 50%;
 }
 
 .dot {
-  background: var(--active);
+  background: var(--led-green);
+  box-shadow: 0 0 6px var(--led-green);
+}
+
+/* The live row's marker. A halo would follow the box, so none. */
+.triangle {
+  border-radius: 0;
+  box-shadow: none;
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
 }

@@ -53,7 +53,6 @@ export function Sidebar({
   const openLicense = useOpenLicense();
   return (
     <nav aria-label="Views" className={styles.sidebar}>
-      <p className={styles.app}>LightCues</p>
       {VIEWS.map(({ id, label }) => {
         const Icon = ICONS[id];
         return (
@@ -66,6 +65,9 @@ export function Sidebar({
             >
               <Icon aria-hidden />
               {label}
+              <span className={styles.hint} aria-hidden>
+                {viewShortcut(id)}
+              </span>
             </button>
           </Tooltip>
         );

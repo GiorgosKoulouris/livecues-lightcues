@@ -40,6 +40,6 @@
 .note {
   order: 1;
   width: 100%;
-  color: var(--warning);
+  color: var(--warn-amber);
   font-size: var(--text-sm);
 }

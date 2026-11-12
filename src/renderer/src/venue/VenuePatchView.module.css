@@ -6,7 +6,7 @@
 }
 
 .loading {
-  color: var(--text-faint);
+  color: var(--legend-dim);
 }
 
 /* The tab's content, then the channel monitor while it is open. */
@@ -35,7 +35,7 @@
 
 .empty {
   padding: var(--space-6);
-  color: var(--text-faint);
+  color: var(--legend-dim);
   text-align: center;
 }
 

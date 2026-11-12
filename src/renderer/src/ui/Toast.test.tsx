@@ -26,6 +26,11 @@ afterEach(() => {
 });
 
 describe('Toast', () => {
+  it('names its status with a word, not colour alone', () => {
+    notify({ tone: 'error', message: 'Save failed' });
+    expect(screen.getByRole('alert')).toHaveTextContent('Error');
+  });
+
   it('announces a success and hides it after a moment', () => {
     vi.useFakeTimers();
     notify({ tone: 'success', message: 'Show saved' });

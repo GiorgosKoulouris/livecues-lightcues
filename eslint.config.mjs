@@ -13,6 +13,9 @@ export default defineConfig(
       // Semgrep rule fixtures: deliberately insecure, never compiled.
       'security/semgrep/**',
       'test-results/**',
+      // Installed agent skill bundles (minified third-party code).
+      '.claude/**',
+      '.github/skills/**',
       'coverage/**',
     ],
   },

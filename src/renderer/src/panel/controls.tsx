@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import type { HouseFired, TempoSource } from '../../../shared/protocol';
 import { beatsText, type HousePreset, type Scene, type Show } from '../../../shared/show';
 import { isActive } from '../show/scenes';
@@ -26,32 +26,36 @@ export function Key({ children }: { children: ReactNode }) {
   return <kbd className={styles.key}>{children}</kbd>;
 }
 
-// Turns Blackout on or off; red while on.
+// Turns Blackout on or off. At rest a plain key with a red disc; engaged it is
+// sunk, with a red outline and word.
 export function BlackoutButton({ show, playback, className }: ControlProps) {
   return (
     <Button
       size="lg"
-      variant={playback.blackout ? 'danger' : 'secondary'}
+      variant={playback.blackout ? 'sunk' : 'secondary'}
       className={cx(styles.blackout, className)}
       aria-pressed={playback.blackout}
       onClick={() => runPanelAction({ type: 'blackout' }, show, playback)}
     >
-      Blackout <Key>{SHORTCUTS.blackout}</Key>
+      <span aria-hidden className={styles.disc} />
+      <span className={styles.legend}>Blackout</span>
+      <Key>{SHORTCUTS.blackout}</Key>
     </Button>
   );
 }
 
 // Turns Freeze on or off, which holds every movement Effect where it is.
+// Engaged it is sunk with a Warn Amber outline and ring.
 export function FreezeButton({ show, playback, className }: ControlProps) {
   return (
     <Button
       size="lg"
-      variant={playback.freeze ? 'primary' : 'secondary'}
       className={cx(styles.freeze, className)}
       aria-pressed={playback.freeze}
       onClick={() => runPanelAction({ type: 'freeze' }, show, playback)}
     >
-      Freeze <Key>{SHORTCUTS.freeze}</Key>
+      {playback.freeze && <span aria-hidden className={styles.ring} />}
+      <span className={styles.legend}>Freeze</span> <Key>{SHORTCUTS.freeze}</Key>
     </Button>
   );
 }
@@ -112,7 +116,7 @@ export function TapTempoButton({
       className={cx(styles.tapTempo, className)}
       onClick={() => window.engine.send({ type: 'tapTempo' })}
     >
-      Tap <Key>{SHORTCUTS.tapTempo}</Key>
+      <span className={styles.legend}>Tap</span> <Key>{SHORTCUTS.tapTempo}</Key>
       {tempo && <span className={styles.bpm}>{Math.round(tempo.bpm)} BPM</span>}
       {source && <span className={styles.source}>{source}</span>}
     </Button>
@@ -137,6 +141,7 @@ export function GrandMasterFader({
       </span>
       <input
         type="range"
+        style={{ '--fill': `${Math.round(playback.grandMaster * 100)}%` } as CSSProperties}
         min={0}
         max={1}
         step={0.01}

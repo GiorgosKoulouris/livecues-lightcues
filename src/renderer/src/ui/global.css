@@ -1,3 +1,44 @@
+/* IBM Plex, bundled so the app works offline (OFL, assets/fonts/OFL.txt). */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: block;
+  src: url('../assets/fonts/ibm-plex-sans-latin-500-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-display: block;
+  src: url('../assets/fonts/ibm-plex-sans-latin-600-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url('../assets/fonts/ibm-plex-sans-latin-700-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('../assets/fonts/ibm-plex-mono-latin-400-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: block;
+  src: url('../assets/fonts/ibm-plex-mono-latin-500-normal.woff2') format('woff2');
+}
+
 /* Reset and base styles. */
 *,
 *::before,
@@ -13,9 +54,10 @@ body,
 
 body {
   margin: 0;
-  background: var(--surface-0);
-  color: var(--text);
+  background: var(--chassis);
+  color: var(--legend);
   font-family: var(--font-sans);
+  font-weight: var(--weight-normal);
   font-size: var(--text-md);
   line-height: var(--line-height);
   -webkit-font-smoothing: antialiased;
@@ -54,7 +96,7 @@ svg {
 }
 
 a {
-  color: var(--accent);
+  color: var(--signal);
 }
 
 :focus-visible {
@@ -63,7 +105,7 @@ a {
 }
 
 ::selection {
-  background: var(--accent-soft);
+  background: var(--active-wash);
 }
 
 code,

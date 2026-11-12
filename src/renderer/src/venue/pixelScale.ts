@@ -5,8 +5,8 @@ export const FIXTURE_MARKER_RADIUS = 7;
 // Gap between a label and what it names, in screen pixels.
 export const LABEL_GAP = 6;
 // Kept clear around a view for its labels, in screen pixels, whatever the
-// view's scale.
-export const LABEL_ROOM = 40;
+// view's scale. Wide enough for a legend-caps "FRONT" beside the plan.
+export const LABEL_ROOM = 52;
 
 // Used until the SVG has been laid out.
 const FALLBACK_PIXELS_PER_UNIT = 40;

@@ -156,6 +156,7 @@ function SortableItem({
     transform,
     transition,
     isDragging,
+    isOver,
   } = useSortable({ id });
 
   const handle = (
@@ -175,6 +176,7 @@ function SortableItem({
     <li
       ref={setNodeRef}
       className={cx(styles.item, isDragging && styles.dragging, className)}
+      data-over={isOver && !isDragging ? 'true' : undefined}
       style={{ transform: CSS.Translate.toString(transform), transition }}
     >
       {children(handle)}

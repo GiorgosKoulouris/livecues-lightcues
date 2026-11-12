@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import type { OutputStatus } from '../../../shared/protocol';
 import { addressedInUniverse, fixtureMode, type VenuePatch } from '../../../shared/venue-patch';
 import { cx } from '../ui/cx';
@@ -95,9 +95,10 @@ function Grid({
                 key={channel}
                 className={styles.cell}
                 data-zero={value === 0 || undefined}
+                style={{ '--level': value / 255 } as CSSProperties}
                 onMouseEnter={() => onHover(channel)}
               >
-                {value}
+                <span>{value}</span>
               </div>
             );
           })}

@@ -6,16 +6,42 @@
   cursor: pointer;
 }
 
+/* A Display slot; a checked tick is a Signal fill. */
 .box {
+  appearance: none;
+  display: inline-grid;
+  place-content: center;
+  flex-shrink: 0;
   width: 16px;
   height: 16px;
   margin: 0;
-  accent-color: var(--accent);
+  border: 1px solid var(--edge);
+  border-radius: 0;
+  background: var(--display);
   cursor: pointer;
+}
+
+.box:hover {
+  border-color: var(--legend-dim);
+}
+
+.box:checked {
+  border-color: var(--signal);
+  background: var(--signal);
+}
+
+.box:checked::after {
+  content: '';
+  width: 8px;
+  height: 4px;
+  margin-top: -2px;
+  border-bottom: 2px solid var(--signal-ink);
+  border-left: 2px solid var(--signal-ink);
+  transform: rotate(-45deg);
 }
 
 .box:disabled,
 .box:disabled + * {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: not-allowed;
 }
