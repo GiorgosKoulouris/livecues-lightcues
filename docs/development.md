@@ -31,7 +31,7 @@ npm install
 npm run dev
 ```
 
-The window opens on the Venue Patch view. The top bar's right end shows a green dot and "Engine": the engine process is running. Hover it for the reply time and uptime.
+The window opens on the Venue Patch view. The top bar's right end shows a green disc and "Engine": the engine process is running. Hover it for the reply time and uptime.
 
 Run the tests:
 

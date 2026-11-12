@@ -66,7 +66,7 @@ npm run dev
 
 This builds `main`. To work on `dev`, see [Contributing](development.md#contributing).
 
-The top bar's right end should show a green dot and "Engine": the engine process is running.
+The top bar's right end should show a green disc and "Engine": the engine process is running.
 
 `serialport` and `@julusian/midi` ship N-API prebuilds (win32-x64 included). N-API binaries load in both Node and Electron, so there is no rebuild step: the same install serves `npm test` and `npm run dev`. A native module without N-API prebuilds needs a `postinstall` step that rebuilds it for Electron. If that fails, the cause is usually step 2.
 
