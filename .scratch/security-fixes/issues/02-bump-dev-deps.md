@@ -1,6 +1,6 @@
 # Bump dev-only dependencies with advisories
 
-Status: ready-for-agent
+Status: resolved
 
 ## Fix
 
@@ -18,3 +18,7 @@ Lockfile bumps, lowest fixed version:
 - No new `overrides` unless a transitive dependency forces one, and then with a comment.
 
 ## Comments
+
+### 2026-11-12: done
+
+`undici` 7.30.2 and `zod` 4.6.7 by `npm update`. `glob` and `minimatch` come from `@electron/asar`, `@electron/universal`, `app-builder-lib`, `eslint` and `typescript-eslint`, which still ask for the old majors, so `package.json` `overrides` pin `glob@13.0.6` to 14.0.5 and `minimatch` 9.0.9 and 10.2.6 to 11.0.8 (the estree package is scoped, since its range needs a scoped key). Drop the overrides when those packages ship fixed ranges. `npm audit` shows 0. `npm run check`, `build` and the pack step (to `win-unpacked`) pass; the NSIS step needs wine, which this container lacks.
