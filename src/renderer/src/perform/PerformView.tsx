@@ -160,7 +160,7 @@ function LayerSection({ group, playback }: { group: LayerGroup; playback: Playba
               onClick={() => window.engine.send(pressScene(playback.active, scene))}
             >
               <span className={styles.name}>
-                <ActiveDot on={isActive(playback.active, scene)} />
+                <ActiveDot on={isActive(playback.active, scene)} shape="triangle" />
                 {scene.name}
               </span>
               <SpeedLimitBadge scene={scene} playback={playback} />

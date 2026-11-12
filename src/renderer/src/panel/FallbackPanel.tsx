@@ -3,7 +3,6 @@ import { showHousePresets, type Show } from '../../../shared/show';
 import { isActive } from '../show/scenes';
 import type { PlaybackState } from '../show/usePlayback';
 import { Button } from '../ui/Button';
-import { cx } from '../ui/cx';
 import {
   BaseLookButton,
   BlackoutButton,
@@ -28,7 +27,7 @@ interface FallbackPanelProps {
 // Manual control that needs no MIDI: Blackout, the Base Look, the Grand
 // Master, Tap Tempo, Freeze, the Show's Scene buttons and its House Presets,
 // each showing its keyboard shortcut (`usePanelKeys`). Docked as a strip below
-// every view but Perform; red while Blackout is on.
+// every view but Perform. Blackout's key is sunk while it is on.
 export function FallbackPanel({ show, playback, tempo, house }: FallbackPanelProps) {
   if (!show || !playback) {
     return (
@@ -43,10 +42,7 @@ export function FallbackPanel({ show, playback, tempo, house }: FallbackPanelPro
   const housePresets = showHousePresets(show);
 
   return (
-    <section
-      aria-label="Fallback Panel"
-      className={cx(styles.strip, playback.blackout && styles.blackout)}
-    >
+    <section aria-label="Fallback Panel" className={styles.strip}>
       <BlackoutButton show={show} playback={playback} />
       <BaseLookButton show={show} playback={playback} className={styles.baseLook} />
       <GrandMasterFader playback={playback} />
