@@ -39,6 +39,8 @@ nsis:
   allowToChangeInstallationDirectory: true
   license: LICENSE
   artifactName: ${productName}-Setup-${version}.${ext}
+  # Installs to ...\LiveCues\LightCues (ADR 0016).
+  include: build/installer.nsh
 # CI uploads the files to the GitHub Release (.github/workflows/release.yml).
 # This provider only makes electron-builder write latest.yml and the blockmap
 # for a future auto-updater. `npm run package` passes --publish never.

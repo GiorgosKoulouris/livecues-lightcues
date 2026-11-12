@@ -24,12 +24,12 @@ Building from source: [docs/development.md](docs/development.md).
 ## Install
 
 1. Download `LightCues-Setup-<version>.exe` from the [Releases page](https://github.com/GiorgosKoulouris/livecues-lightcues/releases).
-2. Run it. By default it installs for your user only, without admin rights.
+2. Run it. By default it installs for your user only, without admin rights, in `%LOCALAPPDATA%\Programs\LiveCues\LightCues`.
 3. The installer is not code-signed yet. On the blue SmartScreen warning, choose **More info** → **Run anyway**.
 
 LightCues checks GitHub for a new release once a day and shows a notice in the Sidebar, never in Perform. It downloads nothing: install the new version over the old one. To turn the check off, untick **Check on startup** at the bottom of the Sidebar. The button beside it checks now.
 
-The Profile Library and the chosen MIDI Input are kept in `%APPDATA%\LightCues`. Shows and Venue Patches are saved where you choose.
+The Profile Library and the chosen MIDI Input are kept in `%APPDATA%\LiveCues\LightCues`. Shows and Venue Patches are saved where you choose.
 
 ## First Show
 
@@ -107,7 +107,7 @@ The Output list in **Rig setup** shows only USB serial devices with an FTDI chip
 
 ### Logs
 
-LightCues writes one log file per day to `%APPDATA%\LightCues\logs\`, named `lightcues-YYYY-MM-DD.log`. The last 14 days are kept. Attach the log from the day of the problem to a bug report. Logs hold file paths but no Show or Venue Patch contents.
+LightCues writes one log file per day to `%APPDATA%\LiveCues\LightCues\logs\`, named `lightcues-YYYY-MM-DD.log`. The last 14 days are kept. Attach the log from the day of the problem to a bug report. Logs hold file paths but no Show or Venue Patch contents.
 
 ## Links
 
