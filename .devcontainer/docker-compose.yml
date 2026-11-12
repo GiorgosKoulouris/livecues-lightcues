@@ -1,21 +1,31 @@
+# Project name: prefixes the volumes (lvlc_node_modules, ...).
+name: lvlc
+
 services:
   app:
-    container_name: lightcues-devcontainer
+    container_name: lvlc
 
-    # Built by initializeCommand in devcontainer.json, not by Compose.
-    image: lightcues-devcontainer:latest
-    pull_policy: never
+    build:
+      context: .
+      dockerfile: Dockerfile
     volumes:
       - ..:/workspaces:cached
       # Linux node_modules lives in a volume so it never clobbers the
       # Windows-built native modules in the host checkout.
       - node_modules:/workspaces/node_modules
+      # npm download cache: rebuilds reinstall from disk, not the network.
+      - npm_cache:/home/node/.npm
+      # Claude Code state survives rebuilds. Skills come from the host.
+      - claude:/home/node/.claude
+      - ${CLAUDE_SKILLS_DIR:-D:/Projects/Other/ClaudeSkills}:/home/node/.claude/skills
 
     environment:
       # The container runs engine/logic work and tests, not the Electron app.
       ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
-    
+
     tty: true
 
 volumes:
   node_modules:
+  npm_cache:
+  claude:
