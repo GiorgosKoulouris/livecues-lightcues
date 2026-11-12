@@ -2,7 +2,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { licensePath } from './licenses';
 
-const RESOURCES = join('C:', 'Program Files', 'LightCues', 'resources');
+const RESOURCES = join('C:', 'Program Files', 'LiveCues', 'LightCues', 'resources');
 
 describe('licensePath', () => {
   it('maps each license file to its fixed path in the resources folder', () => {

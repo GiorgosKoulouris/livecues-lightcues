@@ -4,12 +4,12 @@
   "version": "0.1.2",
   "private": true,
   "description": "Windows lighting controller for live music shows",
-  "license": "GPL-3.0-only",
+  "license": "MIT",
   "author": "Georgios Koulouris",
-  "homepage": "https://github.com/GiorgosKoulouris/LightCues",
+  "homepage": "https://github.com/GiorgosKoulouris/livecues-lightcues",
   "repository": {
     "type": "git",
-    "url": "https://github.com/GiorgosKoulouris/LightCues.git"
+    "url": "https://github.com/GiorgosKoulouris/livecues-lightcues.git"
   },
   "main": "./out/main/index.js",
   "scripts": {

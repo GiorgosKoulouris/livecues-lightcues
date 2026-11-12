@@ -58,8 +58,8 @@ Not needed for engine work. The engine is testable without hardware.
 ## 6. Project
 
 ```powershell
-git clone https://github.com/GiorgosKoulouris/LightCues.git LightCues
-cd LightCues
+git clone https://github.com/GiorgosKoulouris/livecues-lightcues.git
+cd livecues-lightcues
 npm install
 npm run dev
 ```
@@ -94,7 +94,7 @@ The UI talks to the engine over a direct MessagePort; main only hands out the po
 
 ### Logs
 
-Main and the engine write one log file per day to `%APPDATA%\LightCues\logs\`, named `lightcues-YYYY-MM-DD.log`. The last 14 days are kept. Engine lines start with `[engine]`. Start here after a crash: the engine logs its start and its exit code. Logs hold file paths but no Show, Venue Patch or other file contents.
+Main and the engine write one log file per day to `%APPDATA%\LiveCues\LightCues\logs\`, named `lightcues-YYYY-MM-DD.log`. The last 14 days are kept. Engine lines start with `[engine]`. Start here after a crash: the engine logs its start and its exit code. Logs hold file paths but no Show, Venue Patch or other file contents.
 
 `npm run dev` also prints every line to the terminal.
 

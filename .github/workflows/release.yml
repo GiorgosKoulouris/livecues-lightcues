@@ -59,7 +59,7 @@ jobs:
         env:
           VERSION: ${{ steps.tag.outputs.version }}
         run: |
-          if ! node scripts/changelog-section.mjs "$VERSION" > "$RUNNER_TEMP/notes.md"; then
+          if ! sh scripts/changelog-section.sh "$VERSION" > "$RUNNER_TEMP/notes.md"; then
             echo "::error file=CHANGELOG.md::No release notes for $VERSION. Add a '## [$VERSION]' section."
             exit 1
           fi

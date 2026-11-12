@@ -97,13 +97,13 @@ const EXAMPLE = {
 
 const RELEASE: UpdateAvailable = {
   version: '0.2.0',
-  url: 'https://github.com/GiorgosKoulouris/LightCues/releases/tag/v0.2.0',
+  url: 'https://github.com/GiorgosKoulouris/livecues-lightcues/releases/tag/v0.2.0',
 };
 const APP_INFO: AppInfo = {
   appVersion: '0.2.0',
   electronVersion: '44.7.0',
   windowsVersion: '10.0.22631',
-  logFolder: 'C:\\Users\\sam\\AppData\\Roaming\\LightCues\\logs',
+  logFolder: 'C:\\Users\\sam\\AppData\\Roaming\\LiveCues\\LightCues\\logs',
 };
 
 let licenses: { open: ReturnType<typeof vi.fn<LicensesBridge['open']>> };

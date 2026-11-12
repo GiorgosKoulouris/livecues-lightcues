@@ -4,7 +4,7 @@ A few seconds after launch, main asks the GitHub Releases API for the latest rel
 
 The notice never shows in Perform; it waits until the user leaves it. A setting, "Check on startup", turns the startup check off; it is on by default. A button beside it checks at once, whatever the setting, and says when the app is up to date or the check failed. The request carries nothing beyond what any HTTPS request does. Failures of the startup check are silent and go to the log. The last check and the release it found are kept in `update-check.json` in `userData`, so a launch within the day still shows the notice without a request.
 
-Main makes the request, not the renderer, so the renderer's CSP and navigation guards stay as they are. Main opens only this project's release pages (`https://github.com/GiorgosKoulouris/LightCues/releases/…`), whatever the renderer asks.
+Main makes the request, not the renderer, so the renderer's CSP and navigation guards stay as they are. Main opens only this project's release pages (`https://github.com/GiorgosKoulouris/livecues-lightcues/releases/…`), whatever the renderer asks.
 
 `latest.yml` and the blockmap stay in each release (ADR 0006), so an updater can still be added later.
 

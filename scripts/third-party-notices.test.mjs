@@ -36,6 +36,12 @@ describe('buildNotices', () => {
     ...extra,
   });
 
+  it('says LightCues is licensed under MIT', () => {
+    const notices = buildNotices({ appDir, projectDir, inventory: { ships: [] } });
+
+    expect(notices).toContain('LightCues is licensed under the MIT license (LICENSE.txt).');
+  });
+
   it('includes each package’s license id and license files', () => {
     writeFiles(appDir, {
       'node_modules/fflate/package.json': { name: 'fflate', version: '0.8.3', license: 'MIT' },
@@ -132,17 +138,17 @@ describe('buildNotices', () => {
 
   it('fails if a package’s license is not on the allow list, or missing', () => {
     writeFiles(appDir, {
-      'node_modules/gpl2/package.json': { name: 'gpl2', version: '1.0.0', license: 'GPL-2.0-only' },
-      'node_modules/gpl2/LICENSE': 'GPL v2\n',
+      'node_modules/sspl/package.json': { name: 'sspl', version: '1.0.0', license: 'SSPL-1.0' },
+      'node_modules/sspl/LICENSE': 'SSPL\n',
       'node_modules/none/package.json': { name: 'none', version: '1.0.0' },
       'node_modules/none/LICENSE': 'Some text\n',
     });
-    const inventory = { ships: [ship('gpl2', '1.0.0'), ship('none', '1.0.0')] };
+    const inventory = { ships: [ship('sspl', '1.0.0'), ship('none', '1.0.0')] };
 
     const build = () => buildNotices({ appDir, projectDir, inventory });
 
     expect(build).toThrow(NoticesError);
-    expect(build).toThrow(/gpl2@1\.0\.0: license GPL-2\.0-only is not allowed/);
+    expect(build).toThrow(/sspl@1\.0\.0: license SSPL-1\.0 is not allowed/);
     expect(build).toThrow(/none@1\.0\.0: license missing is not allowed/);
   });
 

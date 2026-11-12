@@ -2,13 +2,13 @@
 
 ## Supported versions
 
-Only the [latest release](https://github.com/GiorgosKoulouris/LightCues/releases/latest) gets security fixes. Update before you report.
+Only the [latest release](https://github.com/GiorgosKoulouris/livecues-lightcues/releases/latest) gets security fixes. Update before you report.
 
 ## Reporting a vulnerability
 
 Report it privately, not as an issue:
 
-1. Open the [Security tab](https://github.com/GiorgosKoulouris/LightCues/security).
+1. Open the [Security tab](https://github.com/GiorgosKoulouris/livecues-lightcues/security).
 2. Click **Report a vulnerability**.
 3. Describe the problem, the steps to reproduce it, and what an attacker could do with it. Add your LightCues and Windows versions.
 

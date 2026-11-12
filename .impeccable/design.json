@@ -1,0 +1,506 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-12T02:06:59.974Z",
+  "title": "Design System: LightCues",
+  "extensions": {
+    "colorMeta": {
+      "booth-black": {
+        "role": "neutral",
+        "displayName": "Booth Black",
+        "canonical": "#0e1014",
+        "oklch": "oklch(17.3% 0.009 264.3)",
+        "tonalRamp": [
+          "#0e1014",
+          "#15181e",
+          "#1c2028",
+          "#262b35",
+          "#2f3541",
+          "#444c5b",
+          "#9aa2b1",
+          "#e3e6eb"
+        ]
+      },
+      "desk-panel": {
+        "role": "neutral",
+        "displayName": "Desk Panel",
+        "canonical": "#15181e",
+        "oklch": "oklch(20.9% 0.013 264.2)",
+        "tonalRamp": [
+          "#0e1014",
+          "#15181e",
+          "#1c2028",
+          "#262b35",
+          "#2f3541",
+          "#444c5b",
+          "#9aa2b1",
+          "#e3e6eb"
+        ]
+      },
+      "raised-panel": {
+        "role": "neutral",
+        "displayName": "Raised Panel",
+        "canonical": "#1c2028",
+        "oklch": "oklch(24.3% 0.016 264.2)",
+        "tonalRamp": [
+          "#0e1014",
+          "#15181e",
+          "#1c2028",
+          "#262b35",
+          "#2f3541",
+          "#444c5b",
+          "#9aa2b1",
+          "#e3e6eb"
+        ]
+      },
+      "lifted-panel": {
+        "role": "neutral",
+        "displayName": "Lifted Panel",
+        "canonical": "#262b35",
+        "oklch": "oklch(28.8% 0.02 264.2)",
+        "tonalRamp": [
+          "#0e1014",
+          "#15181e",
+          "#1c2028",
+          "#262b35",
+          "#2f3541",
+          "#444c5b",
+          "#9aa2b1",
+          "#e3e6eb"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#2f3541",
+        "oklch": "oklch(32.8% 0.023 264.2)",
+        "tonalRamp": [
+          "#0e1014",
+          "#15181e",
+          "#1c2028",
+          "#262b35",
+          "#2f3541",
+          "#444c5b",
+          "#9aa2b1",
+          "#e3e6eb"
+        ]
+      },
+      "hairline-strong": {
+        "role": "neutral",
+        "displayName": "Hairline Strong",
+        "canonical": "#444c5b",
+        "oklch": "oklch(41.5% 0.027 263)",
+        "tonalRamp": [
+          "#0e1014",
+          "#15181e",
+          "#1c2028",
+          "#262b35",
+          "#2f3541",
+          "#444c5b",
+          "#9aa2b1",
+          "#e3e6eb"
+        ]
+      },
+      "label-white": {
+        "role": "neutral",
+        "displayName": "Label White",
+        "canonical": "#e3e6eb",
+        "oklch": "oklch(92.4% 0.008 260.7)",
+        "tonalRamp": [
+          "#0e1014",
+          "#15181e",
+          "#1c2028",
+          "#262b35",
+          "#2f3541",
+          "#444c5b",
+          "#9aa2b1",
+          "#e3e6eb"
+        ]
+      },
+      "label-grey": {
+        "role": "neutral",
+        "displayName": "Label Grey",
+        "canonical": "#9aa2b1",
+        "oklch": "oklch(71.1% 0.024 263.2)",
+        "tonalRamp": [
+          "#0e1014",
+          "#15181e",
+          "#1c2028",
+          "#262b35",
+          "#2f3541",
+          "#444c5b",
+          "#9aa2b1",
+          "#e3e6eb"
+        ]
+      },
+      "label-faint": {
+        "role": "neutral",
+        "displayName": "Label Faint",
+        "canonical": "#6b7383",
+        "oklch": "oklch(55.4% 0.027 264.3)",
+        "tonalRamp": [
+          "#0e1014",
+          "#15181e",
+          "#1c2028",
+          "#262b35",
+          "#2f3541",
+          "#444c5b",
+          "#9aa2b1",
+          "#e3e6eb"
+        ]
+      },
+      "cue-blue": {
+        "role": "primary",
+        "displayName": "Cue Blue",
+        "canonical": "#5b9dff",
+        "oklch": "oklch(69.7% 0.16 258.2)",
+        "tonalRamp": [
+          "oklch(15% 0.024 258.2)",
+          "oklch(26.4% 0.073 258.2)",
+          "oklch(37.9% 0.121 258.2)",
+          "oklch(49.3% 0.16 258.2)",
+          "oklch(60.7% 0.16 258.2)",
+          "oklch(72.1% 0.16 258.2)",
+          "oklch(83.6% 0.115 258.2)",
+          "oklch(95% 0.067 258.2)"
+        ]
+      },
+      "cue-blue-hover": {
+        "role": "primary",
+        "displayName": "Cue Blue Hover",
+        "canonical": "#7aafff",
+        "oklch": "oklch(75% 0.129 258.4)",
+        "tonalRamp": [
+          "oklch(15% 0.019 258.4)",
+          "oklch(26.4% 0.059 258.4)",
+          "oklch(37.9% 0.098 258.4)",
+          "oklch(49.3% 0.129 258.4)",
+          "oklch(60.7% 0.129 258.4)",
+          "oklch(72.1% 0.129 258.4)",
+          "oklch(83.6% 0.093 258.4)",
+          "oklch(95% 0.054 258.4)"
+        ]
+      },
+      "live-green": {
+        "role": "secondary",
+        "displayName": "Live Green",
+        "canonical": "#3ddc97",
+        "oklch": "oklch(79.7% 0.164 159.7)",
+        "tonalRamp": [
+          "oklch(15% 0.025 159.7)",
+          "oklch(26.4% 0.074 159.7)",
+          "oklch(37.9% 0.124 159.7)",
+          "oklch(49.3% 0.164 159.7)",
+          "oklch(60.7% 0.164 159.7)",
+          "oklch(72.1% 0.164 159.7)",
+          "oklch(83.6% 0.118 159.7)",
+          "oklch(95% 0.068 159.7)"
+        ]
+      },
+      "blackout-red": {
+        "role": "tertiary",
+        "displayName": "Blackout Red",
+        "canonical": "#ff4d4f",
+        "oklch": "oklch(67.3% 0.214 24.5)",
+        "tonalRamp": [
+          "oklch(15% 0.032 24.5)",
+          "oklch(26.4% 0.097 24.5)",
+          "oklch(37.9% 0.163 24.5)",
+          "oklch(49.3% 0.214 24.5)",
+          "oklch(60.7% 0.214 24.5)",
+          "oklch(72.1% 0.214 24.5)",
+          "oklch(83.6% 0.155 24.5)",
+          "oklch(95% 0.089 24.5)"
+        ]
+      },
+      "blackout-red-hover": {
+        "role": "tertiary",
+        "displayName": "Blackout Red Hover",
+        "canonical": "#ff6b6d",
+        "oklch": "oklch(71.2% 0.181 22.1)",
+        "tonalRamp": [
+          "oklch(15% 0.027 22.1)",
+          "oklch(26.4% 0.082 22.1)",
+          "oklch(37.9% 0.137 22.1)",
+          "oklch(49.3% 0.181 22.1)",
+          "oklch(60.7% 0.181 22.1)",
+          "oklch(72.1% 0.181 22.1)",
+          "oklch(83.6% 0.131 22.1)",
+          "oklch(95% 0.075 22.1)"
+        ]
+      },
+      "blind-amber": {
+        "role": "tertiary",
+        "displayName": "Blind Amber",
+        "canonical": "#ffb020",
+        "oklch": "oklch(81.3% 0.165 75)",
+        "tonalRamp": [
+          "oklch(15% 0.025 75)",
+          "oklch(26.4% 0.075 75)",
+          "oklch(37.9% 0.125 75)",
+          "oklch(49.3% 0.165 75)",
+          "oklch(60.7% 0.165 75)",
+          "oklch(72.1% 0.165 75)",
+          "oklch(83.6% 0.119 75)",
+          "oklch(95% 0.069 75)"
+        ]
+      },
+      "cue-blue-soft": {
+        "role": "primary",
+        "displayName": "Cue Blue Soft",
+        "canonical": "16% tint of cue-blue",
+        "tonalRamp": [
+          "oklch(15% 0.024 258.2)",
+          "oklch(26.4% 0.073 258.2)",
+          "oklch(37.9% 0.121 258.2)",
+          "oklch(49.3% 0.16 258.2)",
+          "oklch(60.7% 0.16 258.2)",
+          "oklch(72.1% 0.16 258.2)",
+          "oklch(83.6% 0.115 258.2)",
+          "oklch(95% 0.067 258.2)"
+        ]
+      },
+      "live-green-soft": {
+        "role": "secondary",
+        "displayName": "Live Green Soft",
+        "canonical": "16% tint of live-green",
+        "tonalRamp": [
+          "oklch(15% 0.025 159.7)",
+          "oklch(26.4% 0.074 159.7)",
+          "oklch(37.9% 0.124 159.7)",
+          "oklch(49.3% 0.164 159.7)",
+          "oklch(60.7% 0.164 159.7)",
+          "oklch(72.1% 0.164 159.7)",
+          "oklch(83.6% 0.118 159.7)",
+          "oklch(95% 0.068 159.7)"
+        ]
+      },
+      "blackout-red-soft": {
+        "role": "tertiary",
+        "displayName": "Blackout Red Soft",
+        "canonical": "16% tint of blackout-red",
+        "tonalRamp": [
+          "oklch(15% 0.032 24.5)",
+          "oklch(26.4% 0.097 24.5)",
+          "oklch(37.9% 0.163 24.5)",
+          "oklch(49.3% 0.214 24.5)",
+          "oklch(60.7% 0.214 24.5)",
+          "oklch(72.1% 0.214 24.5)",
+          "oklch(83.6% 0.155 24.5)",
+          "oklch(95% 0.089 24.5)"
+        ]
+      },
+      "blind-amber-soft": {
+        "role": "tertiary",
+        "displayName": "Blind Amber Soft",
+        "canonical": "16% tint of blind-amber",
+        "tonalRamp": [
+          "oklch(15% 0.025 75)",
+          "oklch(26.4% 0.075 75)",
+          "oklch(37.9% 0.125 75)",
+          "oklch(49.3% 0.165 75)",
+          "oklch(60.7% 0.165 75)",
+          "oklch(72.1% 0.165 75)",
+          "oklch(83.6% 0.119 75)",
+          "oklch(95% 0.069 75)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "perform": {
+        "displayName": "Perform",
+        "purpose": "Text on Perform's 64px gig-size controls."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "App name, Layer headings, dialog titles."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default text, buttons (at 500) and inputs."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Field labels, hints, status text, captions."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Badges, key hints, stage plan Fixture names, group headings."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "DMX addresses, channel values, percentages, BPM, with tabular figures."
+      }
+    },
+    "shadows": [
+      {
+        "name": "shadow-overlay",
+        "value": "0 12px 32px rgb(0 0 0 / 50%)",
+        "purpose": "Dialogs, popovers, menus, tooltips and toasts only."
+      },
+      {
+        "name": "focus-ring",
+        "value": "0 0 0 2px #0e1014, 0 0 0 4px #5b9dff",
+        "purpose": "Keyboard focus on every control."
+      },
+      {
+        "name": "backdrop",
+        "value": "rgb(0 0 0 / 60%)",
+        "purpose": "Behind dialogs."
+      }
+    ],
+    "motion": [
+      {
+        "name": "duration-fast",
+        "value": "120ms",
+        "purpose": "Background and border colour changes on hover. No other motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "side-panel",
+        "value": "1280px",
+        "purpose": "Below this, side columns such as the Preview become a panel over the view."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one main action in an area, such as Map or Save in a dialog.",
+      "html": "<button class=\"ds-btn ds-btn-primary\">Map Trigger</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:32px;padding:0 12px;border:1px solid transparent;border-radius:6px;font:500 14px/1.4 'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif;white-space:nowrap;cursor:pointer;transition:background 120ms,border-color 120ms;}.ds-btn:focus-visible{outline:none;box-shadow:0 0 0 2px #0e1014,0 0 0 4px #5b9dff;}.ds-btn-primary{background:#5b9dff;color:#0e1014;}.ds-btn-primary:hover{background:#7aafff;}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "The default action button, bordered like desk hardware.",
+      "html": "<button class=\"ds-btn ds-btn-secondary\">Add Fixture</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:32px;padding:0 12px;border:1px solid transparent;border-radius:6px;font:500 14px/1.4 'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif;white-space:nowrap;cursor:pointer;transition:background 120ms,border-color 120ms;}.ds-btn:focus-visible{outline:none;box-shadow:0 0 0 2px #0e1014,0 0 0 4px #5b9dff;}.ds-btn-secondary{background:#1c2028;border-color:#2f3541;color:#e3e6eb;}.ds-btn-secondary:hover{background:#262b35;border-color:#444c5b;}.ds-btn-secondary:active{background:#15181e;}"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Toolbar and icon actions that stay quiet until hovered.",
+      "html": "<button class=\"ds-btn ds-btn-ghost\">Clear</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:32px;padding:0 12px;border:1px solid transparent;border-radius:6px;font:500 14px/1.4 'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif;white-space:nowrap;cursor:pointer;transition:background 120ms,border-color 120ms;}.ds-btn:focus-visible{outline:none;box-shadow:0 0 0 2px #0e1014,0 0 0 4px #5b9dff;}.ds-btn-ghost{background:transparent;color:#9aa2b1;}.ds-btn-ghost:hover{background:#1c2028;color:#e3e6eb;}"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Destructive confirms, such as deleting a Scene.",
+      "html": "<button class=\"ds-btn ds-btn-danger\">Delete Scene</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:32px;padding:0 12px;border:1px solid transparent;border-radius:6px;font:500 14px/1.4 'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif;white-space:nowrap;cursor:pointer;transition:background 120ms,border-color 120ms;}.ds-btn:focus-visible{outline:none;box-shadow:0 0 0 2px #0e1014,0 0 0 4px #5b9dff;}.ds-btn-danger{background:#ff4d4f;color:#0e1014;}.ds-btn-danger:hover{background:#ff6b6d;}"
+    },
+    {
+      "name": "Scene Button",
+      "kind": "custom",
+      "refersTo": "scene-button",
+      "description": "A Perform Scene button with its key hint; live state is a green outline, soft green fill and dot.",
+      "html": "<div class=\"ds-scenes\"><button class=\"ds-scene\" aria-pressed=\"true\"><span class=\"ds-scene-name\"><span class=\"ds-dot\"></span>Verse: warm, amber centre</span><span class=\"ds-key\">2</span></button><button class=\"ds-scene\" aria-pressed=\"false\"><span class=\"ds-scene-name\">Chorus: full red</span><span class=\"ds-key\">3</span></button></div>",
+      "css": ".ds-scenes{display:grid;grid-template-columns:repeat(2,160px);gap:8px;}.ds-scene{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:52px;padding:8px 12px;border:1px solid #2f3541;border-radius:6px;background:#1c2028;color:#e3e6eb;font:500 14px/1.4 'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif;text-align:left;cursor:pointer;transition:background 120ms,border-color 120ms;}.ds-scene:hover{background:#262b35;border-color:#444c5b;}.ds-scene:focus-visible{outline:none;box-shadow:0 0 0 2px #0e1014,0 0 0 4px #5b9dff;}.ds-scene[aria-pressed=true]{border-color:#3ddc97;box-shadow:inset 0 0 0 1px #3ddc97;background:rgb(61 220 151 / 16%);}.ds-scene-name{display:flex;align-items:center;gap:8px;}.ds-dot{width:8px;height:8px;border-radius:999px;background:#3ddc97;flex-shrink:0;}.ds-key{padding:0 4px;border:1px solid var(--border-strong,#444c5b);border-radius:4px;color:var(--text-muted,#9aa2b1);font-size:11px;font-weight:500;line-height:16px;}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Labelled input; mono for DMX addresses.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-label\">DMX address</span><input class=\"ds-input\" value=\"101\"><span class=\"ds-hint\">1–512</span></label>",
+      "css": ".ds-field{display:flex;flex-direction:column;gap:4px;width:200px;font-family:'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif;}.ds-label{color:#9aa2b1;font-size:12px;font-weight:500;}.ds-hint{color:#6b7383;font-size:12px;}.ds-input{height:32px;padding:0 8px;border:1px solid #2f3541;border-radius:6px;background:#15181e;color:#e3e6eb;font:14px ui-monospace,Consolas,'Cascadia Mono',monospace;transition:border-color 120ms;}.ds-input:hover{border-color:#444c5b;}.ds-input:focus-visible{outline:none;border-color:#5b9dff;box-shadow:0 0 0 2px #0e1014,0 0 0 4px #5b9dff;}"
+    },
+    {
+      "name": "Sidebar Navigation",
+      "kind": "nav",
+      "refersTo": "nav-item",
+      "description": "The four views; current view in soft Cue Blue.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-item\" href=\"#\">Show</a><a class=\"ds-nav-item\" href=\"#\">Venue Patch</a><a class=\"ds-nav-item\" href=\"#\">Profile Library</a><a class=\"ds-nav-item ds-current\" href=\"#\" aria-current=\"page\">Perform</a></nav>",
+      "css": ".ds-nav{display:flex;flex-direction:column;gap:4px;width:176px;padding:12px 8px;background:#15181e;border-right:1px solid #2f3541;font-family:'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif;}.ds-nav-item{display:flex;align-items:center;height:32px;padding:0 8px;border-radius:6px;color:#9aa2b1;font-size:14px;font-weight:500;text-decoration:none;}.ds-nav-item:hover{background:#1c2028;color:#e3e6eb;}.ds-nav-item:focus-visible{outline:none;box-shadow:0 0 0 2px #0e1014,0 0 0 4px #5b9dff;}.ds-current,.ds-current:hover{background:rgb(91 157 255 / 16%);color:#5b9dff;}"
+    },
+    {
+      "name": "Tabs",
+      "kind": "nav",
+      "refersTo": "tab",
+      "description": "View tabs with a Cue Blue underline on the hairline.",
+      "html": "<div class=\"ds-tabs\" role=\"tablist\"><button class=\"ds-tab\" role=\"tab\" aria-selected=\"true\">Scenes</button><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\">Triggers</button></div>",
+      "css": ".ds-tabs{display:flex;gap:4px;border-bottom:1px solid #2f3541;font-family:'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif;}.ds-tab{height:32px;margin-bottom:-1px;padding:0 12px;border:0;border-bottom:2px solid transparent;border-radius:4px 4px 0 0;background:none;color:#9aa2b1;font-size:14px;font-weight:500;cursor:pointer;}.ds-tab:hover{color:#e3e6eb;}.ds-tab:focus-visible{outline:none;box-shadow:0 0 0 2px #0e1014,0 0 0 4px #5b9dff;}.ds-tab[aria-selected=true]{border-bottom-color:#5b9dff;color:#e3e6eb;}"
+    },
+    {
+      "name": "Status Badges",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "Pill badges: soft tint fill, solid hue text.",
+      "html": "<div class=\"ds-badges\"><span class=\"ds-badge ds-b-neutral\">No MIDI Input</span><span class=\"ds-badge ds-b-active\">Sending</span><span class=\"ds-badge ds-b-warning\">Blind</span><span class=\"ds-badge ds-b-danger\">Not connected</span></div>",
+      "css": ".ds-badges{display:flex;gap:8px;}.ds-badge{display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:999px;font:500 11px 'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif;white-space:nowrap;}.ds-b-neutral{background:#262b35;color:#9aa2b1;}.ds-b-active{background:rgb(61 220 151 / 16%);color:#3ddc97;}.ds-b-warning{background:rgb(255 176 32 / 16%);color:#ffb020;}.ds-b-danger{background:rgb(255 77 79 / 16%);color:#ff4d4f;}"
+    },
+    {
+      "name": "Layer Panel",
+      "kind": "card",
+      "refersTo": "layer-panel",
+      "description": "A Perform Layer group: Desk Panel, hairline, 10px radius.",
+      "html": "<section class=\"ds-layer\"><div class=\"ds-layer-bar\"><h3 class=\"ds-layer-h\">Movement</h3><button class=\"ds-layer-clear\">Clear</button></div><p class=\"ds-layer-empty\">Scene buttons go here.</p></section>",
+      "css": ".ds-layer{display:flex;flex-direction:column;gap:8px;width:360px;padding:12px;border:1px solid #2f3541;border-radius:10px;background:#15181e;color:#e3e6eb;font-family:'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif;}.ds-layer-bar{display:flex;align-items:center;justify-content:space-between;}.ds-layer-h{margin:0;font-size:16px;font-weight:600;}.ds-layer-empty{margin:0;color:#6b7383;font-size:14px;}.ds-layer-clear{height:32px;padding:0 12px;border:1px solid #2f3541;border-radius:6px;background:#1c2028;color:#e3e6eb;font-weight:500;font-size:14px;font-family:inherit;cursor:pointer;}.ds-layer-clear:hover{background:#262b35;border-color:#444c5b;}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Front-of-House Desk",
+    "overview": "LightCues looks like a lighting desk at the back of a dark room. Every control is labelled, numbers are exact, and nothing glows unless it has to. The screen sits in a dark venue during the show, so the base is near-black and text steps down to muted greys. Colour is kept for state: what is selected, what is live, what is dark, what is unseen.\n\nThe system is dense and made for a pro. It assumes the user knows DMX, fits a lot on one screen like a console does, and uses small type (11–16px) with tight 4px-step spacing. Perform is the exception. Its controls grow to gig size (64px high, 20px text) so they can be read and hit from arm's length.\n\nStructure comes from tonal steps and 1px hairlines, not from decoration. There is no gradient, texture, illustration or brand flourish anywhere in the app. Fonts and icons are local (Segoe UI from Windows, bundled Lucide icons), because the app must run offline and stay MIT compatible.",
+    "keyCharacteristics": [
+      "Dark only, with a glare budget: near-black base, greys for text, colour only for state.",
+      "One hue per meaning: blue for action, green for live, red for Blackout, amber for Blind.",
+      "Dense, 4px-step layout. Perform scales up to gig size.",
+      "Flat: tonal layers and hairlines. Shadows only on overlays.",
+      "Hardware-style controls: bordered, labelled, keys printed on the buttons."
+    ],
+    "rules": [
+      {
+        "name": "The Signal Colour Rule",
+        "body": "Each signal hue currently has one meaning: blue is action or selection, green is live, red is Blackout or danger, amber is Blind or a warning. This is the house convention, not a hard law. Break it only with a clear reason, and never for decoration.",
+        "section": "colors"
+      },
+      {
+        "name": "The Glare Budget Rule",
+        "body": "No large bright areas. Fills behind state use the 16% soft tints, not the solid hue. Solid signal colour goes on small marks (dots, outlines, thin frames) and on the few primary or danger buttons.",
+        "section": "colors"
+      },
+      {
+        "name": "The Readout Rule",
+        "body": "Any number that changes or is read as a value uses the mono font with tabular figures, so it doesn't shift sideways as it changes.",
+        "section": "typography"
+      },
+      {
+        "name": "The No Bundled Font Rule",
+        "body": "Don't add a web font. Text stays in the Windows system face, and any new font asset must be MIT compatible (OFL-1.1 is) and work offline. ADR 0017 lifted the old licence barrier; the family fonts arrive with the family styling.",
+        "section": "typography"
+      },
+      {
+        "name": "The Fixed Frame Rule",
+        "body": "The Sidebar, top bar and Fallback Panel never scroll away. Recovery controls stay visible in every view.",
+        "section": "layout"
+      },
+      {
+        "name": "The Tonal Step Rule",
+        "body": "To raise something, move it one surface step lighter and give it a hairline. Use a shadow only when it floats over other content.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do take every colour, size and spacing value from the tokens in `src/renderer/src/ui/tokens.css`. Add a token rather than hard-coding a value.",
+      "Do use the 16% soft tints for fills behind state and keep solid signal colour to small marks.",
+      "Do put numbers that change in mono with tabular figures.",
+      "Do print the keyboard key on any control that has one, using the key hint.",
+      "Do keep Perform's targets at gig size (64px controls, 52px Scene buttons).",
+      "Do raise surfaces by one tonal step plus a hairline."
+    ],
+    "donts": [
+      "Don't add a light theme surface, a bright panel, or any large solid-colour area. The screen is in a dark room.",
+      "Don't load fonts, icons or images from the network. Everything ships with the app.",
+      "Don't use the signal colours for decoration or branding.",
+      "Don't add gradients, textures or illustrations to the app.",
+      "Don't let the Sidebar, top bar or Fallback Panel scroll out of view."
+    ]
+  }
+}

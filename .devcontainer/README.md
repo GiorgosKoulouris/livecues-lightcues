@@ -6,6 +6,8 @@ Not for: running the Electron app, USB DMX Outputs, rtpMIDI, or Windows packagin
 
 `node_modules` is a named Docker volume, so Linux and Windows native builds stay separate.
 
+Other named volumes: `npm_cache` (`~/.npm`, speeds up reinstalls) and `claude` (`~/.claude`, Claude Code state). Claude skills are bind-mounted from the host folder in `CLAUDE_SKILLS_DIR` (default `D:/Projects/Other/ClaudeSkills`).
+
 `ELECTRON_SKIP_BINARY_DOWNLOAD=1` is set here so the container never downloads Electron. Don't set it on the Windows host. If `npm run dev` there fails with `Electron uninstall`, see [docs/setup.md §9](../docs/setup.md#9-troubleshooting).
 
 ## Security scan tools

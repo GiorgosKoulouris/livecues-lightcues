@@ -23,13 +23,13 @@ Building from source: [docs/development.md](docs/development.md).
 
 ## Install
 
-1. Download `LightCues-Setup-<version>.exe` from the [Releases page](https://github.com/GiorgosKoulouris/LightCues/releases).
-2. Run it. By default it installs for your user only, without admin rights.
+1. Download `LightCues-Setup-<version>.exe` from the [Releases page](https://github.com/GiorgosKoulouris/livecues-lightcues/releases).
+2. Run it. By default it installs for your user only, without admin rights, in `%LOCALAPPDATA%\Programs\LiveCues\LightCues`.
 3. The installer is not code-signed yet. On the blue SmartScreen warning, choose **More info** → **Run anyway**.
 
 LightCues checks GitHub for a new release once a day and shows a notice in the Sidebar, never in Perform. It downloads nothing: install the new version over the old one. To turn the check off, untick **Check on startup** at the bottom of the Sidebar. The button beside it checks now.
 
-The Profile Library and the chosen MIDI Input are kept in `%APPDATA%\LightCues`. Shows and Venue Patches are saved where you choose.
+The Profile Library and the chosen MIDI Input are kept in `%APPDATA%\LiveCues\LightCues`. Shows and Venue Patches are saved where you choose.
 
 ## First Show
 
@@ -107,7 +107,7 @@ The Output list in **Rig setup** shows only USB serial devices with an FTDI chip
 
 ### Logs
 
-LightCues writes one log file per day to `%APPDATA%\LightCues\logs\`, named `lightcues-YYYY-MM-DD.log`. The last 14 days are kept. Attach the log from the day of the problem to a bug report. Logs hold file paths but no Show or Venue Patch contents.
+LightCues writes one log file per day to `%APPDATA%\LiveCues\LightCues\logs\`, named `lightcues-YYYY-MM-DD.log`. The last 14 days are kept. Attach the log from the day of the problem to a bug report. Logs hold file paths but no Show or Venue Patch contents.
 
 ## Links
 
@@ -116,10 +116,10 @@ LightCues writes one log file per day to `%APPDATA%\LightCues\logs\`, named `lig
 
 ## Contributing
 
-Bug reports and Fixture requests welcome as [GitHub Issues](https://github.com/GiorgosKoulouris/LightCues/issues/new/choose). Pull requests by arrangement: open an issue first. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Bug reports and Fixture requests welcome as [GitHub Issues](https://github.com/GiorgosKoulouris/livecues-lightcues/issues/new/choose). Pull requests by arrangement: open an issue first. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-Copyright (C) 2026 Georgios Koulouris
+Copyright (c) 2026 Georgios Koulouris
 
-LightCues is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License, version 3, as published by the Free Software Foundation. It is distributed without any warranty. See [LICENSE](LICENSE).
+LightCues is released under the [MIT license](LICENSE). Releases up to and including v0.1.2 were released under GPL-3.0-only and stay under it. See [ADR 0017](docs/adr/0017-mit-licence.md).

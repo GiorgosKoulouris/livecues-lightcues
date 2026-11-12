@@ -65,6 +65,13 @@ import { createLog, lineSplitter } from './log';
 import { isAppPage } from './navigation';
 import { createUpdateCheck, isReleasePageUrl } from './update-check';
 
+// User data goes in %APPDATA%\LiveCues\LightCues, not Electron's default
+// %APPDATA%\LightCues (ADR 0016). This runs before anything reads userData.
+// A --user-data-dir switch, as the e2e test passes, still wins.
+if (!app.commandLine.hasSwitch('user-data-dir')) {
+  app.setPath('userData', join(app.getPath('appData'), 'LiveCues', 'LightCues'));
+}
+
 const VENUE_FILTERS = [{ name: 'LightCues Venue Patch', extensions: ['lcvenue'] }];
 const SHOW_FILTERS = [{ name: 'LightCues Show', extensions: ['lcshow'] }];
 const LIBRARY_FILTERS = [{ name: 'LightCues Profile Library', extensions: ['lclibrary'] }];

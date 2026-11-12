@@ -1,6 +1,6 @@
 # Dependabot version updates: monthly, PRs against `dev`. Merging them, the
 # security PRs on `main`, and the `global-agent` override (no ignore rule
-# needed): docs/development.md § CI. Staging: docs/agents/staging.md step 1.
+# needed): docs/development.md § CI. Promote: docs/agents/promote.md.
 version: 2
 updates:
   - package-ecosystem: npm

@@ -116,7 +116,7 @@ From `raw/electron.json`:
 
 ## Licenses
 
-Shipped packages only (`raw/licenses.json`). The app is GPL-3.0-only. The compatible licenses are the allow list in `scripts/security-scan/licenses.mjs`, which packaging also enforces (`docs/development.md` § Third-party notices). Flag every row with `allowed: false`: a license off the list, `UNKNOWN`, or none found. Show a table of the flagged ones and a count per license for the rest.
+Shipped packages only (`raw/licenses.json`). The app is MIT. The compatible licenses are the allow list in `scripts/security-scan/licenses.mjs`, which packaging also enforces (`docs/development.md` § Third-party notices). Flag every row with `allowed: false`: a license off the list, `UNKNOWN`, or none found. Show a table of the flagged ones and a count per license for the rest.
 
 ## Accepted risks
 
