@@ -2,6 +2,8 @@
 
 Lights for your gig that follow your DAW, at any venue.
 
+[![Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FGiorgosKoulouris%2Flivecues-lightcues%2Fbadges%2Fcoverage.json)](https://github.com/GiorgosKoulouris/livecues-lightcues/actions/workflows/coverage.yml)
+
 ![Perform view: Scene buttons grouped by Layer, with Verse and Circle movement active, and the Preview showing the stage from above and from the front](docs/images/perform.png)
 *Perform, the view for the gig. Verse plays on the Looks Layer and Circle movement on the Movement Layer.*
 
@@ -122,4 +124,4 @@ Bug reports and Fixture requests welcome as [GitHub Issues](https://github.com/G
 
 Copyright (c) 2026 Georgios Koulouris
 
-LightCues is released under the [MIT license](LICENSE). Releases up to and including v0.1.2 were released under GPL-3.0-only and stay under it. See [ADR 0017](docs/adr/0017-mit-licence.md).
+LightCues is released under the [MIT license](LICENSE). Releases up to and including v0.1.1 were released under GPL-3.0-only and stay under it. See [ADR 0017](docs/adr/0017-mit-licence.md).

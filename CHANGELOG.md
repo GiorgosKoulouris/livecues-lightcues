@@ -4,6 +4,8 @@ What changed in each LightCues release. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-11-12
+
 ### Added
 
 - House Lights: patch the venue's own lights, such as the bar, in House Groups in the Venue Patch's new **House** tab. They start at full white, or at the Startup look you set, and Scenes, Blackout, the Grand Master, Freeze and Blind never reach them.
@@ -21,8 +23,9 @@ What changed in each LightCues release. The format follows [Keep a Changelog](ht
 
 ### Changed
 
-- The interface now uses the LiveCues family palette and the IBM Plex Sans and Mono fonts, bundled with the app, with square corners and no shadows. Buttons are now keys with a cut corner, and fields, lists, tabs, dialogs, toasts and badges follow the same style. Views are restyled in later changes.
-- The licence is now MIT. Releases up to v0.1.2 stay under GPL-3.0-only.
+- The interface now uses the LiveCues family palette and the IBM Plex Sans and Mono fonts, bundled with the app, with square corners and no shadows. Buttons are now keys with a cut corner. Every view, the sidebar, fields, lists, tabs, dialogs, toasts and badges follow the same style. In Perform and on the Fallback Panel, Blackout and Freeze sink while engaged, the Grand Master is a fader, and the live Scene's button is lit.
+- New app icon in the LiveCues family style.
+- The licence is now MIT. Releases up to v0.1.1 stay under GPL-3.0-only.
 - LightCues now installs to `%LOCALAPPDATA%\Programs\LiveCues\LightCues` and keeps its data, the Profile Library, settings and logs, in `%APPDATA%\LiveCues\LightCues`. Data in the old `%APPDATA%\LightCues` is not moved.
 - Venue Patches and Shows saved by this version do not open in older versions of LightCues, as they can hold House Lights, House Presets, strobe and the new Effect settings. Older files still open.
 - Strobe speeds given as slow and fast in Open Fixture Library files now import as 1 to 20 Hz, in the right direction, so a fast-to-slow strobe channel no longer runs backwards. Re-import the Fixture Profile and apply it again to pick this up.
@@ -30,6 +33,12 @@ What changed in each LightCues release. The format follows [Keep a Changelog](ht
 - GDTF channels whose meaning depends on another channel now import the meaning that applies at that channel's default. Re-import the Fixture Profile and apply it again to pick this up.
 - The fixture import report names the value each channel it cannot drive is held at. In the Profile editor, a channel with an unsupported range shows "held at default" by its default value, as that is what LightCues sends there. Re-import the Fixture Profile to see the held values in the report.
 - The fixture import report warns when an Open Fixture Library file has cyan, magenta or yellow but no red, green or blue, as it may be a CMY fixture that mixes colour subtractively. LightCues still drives cyan, magenta and yellow as additive emitters. Re-import the Fixture Profile to see the warning.
+
+### Security
+
+- Electron updated to 44.9.1.
+- The GDTF import reads files with an XML parser updated for a security advisory.
+- The app now also blocks redirects away from its own page, as it already did for navigation.
 
 ## [0.1.1] - 2026-10-12
 

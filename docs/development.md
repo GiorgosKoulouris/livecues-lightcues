@@ -50,7 +50,7 @@ npm test
 | `npm run icon` | Regenerate `build/icon.ico` from `build/icon.svg`. |
 | `npm test` | Run the test suite (Vitest). |
 | `npm run test:watch` | Run Vitest in watch mode. |
-| `npm run coverage` | Run the tests with coverage. Prints a summary and writes an HTML report to `coverage/`. Not part of `check`. |
+| `npm run coverage` | Run the tests with coverage. Prints a summary and writes an HTML report and `coverage-summary.json` to `coverage/`. CI runs it too: see [CI](#ci). Not part of `check`. |
 | `npm run e2e` | Build, then launch the app and run the end-to-end tests in [e2e/](../e2e/) (Playwright). Opens the example, fires a Scene and checks the Virtual Output's frame in the channel monitor. Not part of `check`, not run in CI. Windows host only: run it there before promoting. |
 | `npm run typecheck` | Typecheck engine, Electron side and renderer separately. |
 | `npm run lint` | ESLint. Also blocks Electron/UI imports in `src/engine` and `src/shared`. |
@@ -72,13 +72,15 @@ GitHub Actions on `windows-latest` ([.github/workflows/](../.github/workflows/))
 | Pull request to `main` | `npm run check` |
 | Push to `dev` | Nothing |
 
+Coverage has its own workflow, [coverage.yml](../.github/workflows/coverage.yml): `npm run coverage` on pushes to `main`, pull requests to `main` and by hand. It never fails on a number. The run's summary page shows a table, and the HTML report is an artifact kept 14 days. A push to `main` also writes `coverage.json` to the orphan `badges` branch (one commit, force-pushed each run), which the README badge reads through shields.io. Run `npm run coverage` locally for the same report in `coverage/`.
+
 `stage` is the squashed batch on its way to `main`, made by `/branch-flow promote`. See [agents/promote.md](agents/promote.md). Releases: [agents/releasing.md](agents/releasing.md).
 
 Actions are pinned by commit SHA, with the version in a trailing comment.
 
 ### Dependabot
 
-[.github/dependabot.yml](../.github/dependabot.yml) opens monthly PRs against `dev`. npm gets two grouped PRs: dev dependencies and runtime. GitHub Actions get one PR each.
+[.github/dependabot.yml](../.github/dependabot.yml) opens weekly PRs against `dev`. npm gets two grouped PRs: dev dependencies and runtime. GitHub Actions get one PR each.
 
 - No CI runs on `dev`. Run `npm run check` on the PR branch before merging, then pull `dev`.
 - Merge or close open Dependabot PRs before a promote ([agents/promote.md](agents/promote.md)).

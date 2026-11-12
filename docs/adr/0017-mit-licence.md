@@ -1,6 +1,6 @@
 # LightCues is MIT licensed
 
-New releases of LightCues are MIT licensed. v0.1.2 and earlier were released under GPL-3.0-only and stay under it: a licence granted for a release cannot be taken back.
+New releases of LightCues are MIT licensed. v0.1.1 and earlier were released under GPL-3.0-only and stay under it: a licence granted for a release cannot be taken back.
 
 Why:
 
