@@ -43,3 +43,4 @@ Branches run dev → stage → main. All commits go on `dev`. `stage` and `main`
 - Glossary: CONTEXT.md
 - Release-notes: scripts/changelog-section.sh
 - Promote-notes: docs/agents/promote.md
+- Ship: pr

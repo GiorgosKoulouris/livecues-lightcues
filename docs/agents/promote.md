@@ -10,6 +10,7 @@ The branch-flow skill runs the flow and the changelog. These are this repo's ext
 ## Pushing
 
 - **Rulesets.** `dev` and `stage` block force pushes and deletion for everyone but the repository admin. The force push after promote and the `stage` delete after ship need the user's admin credentials. If GitHub rejects one, stop and tell the user. Don't work around it.
+- **main takes pull requests only** (`Ship: pr`). Ship opens a `stage` → `main` pull request. Merge it with **Create a merge commit**, the only method the main ruleset allows, then rerun ship to sync `dev`.
 
 ## Before ship
 
