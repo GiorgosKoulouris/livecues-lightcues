@@ -1,6 +1,6 @@
 import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { isAppPage } from './navigation';
+import { isAppPage, restrictContents, type NavigationEvent } from './navigation';
 
 describe('isAppPage', () => {
   describe('packaged build', () => {
@@ -56,5 +56,39 @@ describe('isAppPage', () => {
 
   it('denies a URL that does not parse', () => {
     expect(isAppPage('not a url', 'http://localhost:5173/')).toBe(false);
+  });
+});
+
+describe('restrictContents', () => {
+  const pageUrl = 'http://localhost:5173/';
+
+  function setup() {
+    const listeners = new Map<string, (event: NavigationEvent) => void>();
+    let openHandler: (() => { action: string }) | undefined;
+    restrictContents(
+      {
+        setWindowOpenHandler: (handler) => (openHandler = handler),
+        on: (name, listener) => listeners.set(name, listener),
+      },
+      pageUrl,
+    );
+    function blocked(name: string, url: string): boolean {
+      let prevented = false;
+      listeners.get(name)?.({ url, preventDefault: () => (prevented = true) });
+      return prevented;
+    }
+    return { blocked, openHandler: () => openHandler?.() };
+  }
+
+  it('denies new windows', () => {
+    expect(setup().openHandler()).toEqual({ action: 'deny' });
+  });
+
+  it.each(['will-navigate', 'will-redirect'])('%s blocks another page', (name) => {
+    expect(setup().blocked(name, 'https://example.com/')).toBe(true);
+  });
+
+  it.each(['will-navigate', 'will-redirect'])('%s allows the app page', (name) => {
+    expect(setup().blocked(name, 'http://localhost:5173/index.html')).toBe(false);
   });
 });
