@@ -20,9 +20,9 @@
   align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--bar);
 }
 
 .header > :nth-child(1),
@@ -53,11 +53,16 @@
 }
 
 .heading {
-  font-size: var(--text-lg);
+  margin: 0;
+  color: var(--legend-dim);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .hint {
-  color: var(--text-faint);
+  color: var(--legend-dim);
   font-size: var(--text-sm);
   font-weight: var(--weight-normal);
 }
@@ -75,14 +80,14 @@
 
 .empty {
   padding: var(--space-4);
-  color: var(--text-faint);
+  color: var(--legend-dim);
   text-align: center;
 }
 
 .card {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--bar);
 }
 
 .cardHeader {
@@ -90,12 +95,17 @@
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-1) var(--space-2);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
 }
 
 .cardTitle {
   flex: 1;
-  font-size: var(--text-md);
+  margin: 0;
+  color: var(--legend-dim);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .cardBody {
@@ -125,17 +135,20 @@
 .legend {
   margin-bottom: var(--space-2);
   padding: 0;
-  color: var(--text-muted);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
+  color: var(--legend-dim);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .link {
   padding: 0;
   border: 0;
   background: none;
-  color: var(--accent);
+  color: var(--legend);
   font-size: var(--text-sm);
+  text-decoration: underline;
   cursor: pointer;
 }
 
@@ -148,11 +161,56 @@
 .slider {
   flex: 1;
   min-width: 0;
-  accent-color: var(--accent);
+  accent-color: var(--signal);
 }
 
 .percent {
   min-width: 4ch;
   font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   text-align: right;
+}
+
+.colourSetting {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.colourSetting > :last-child {
+  width: 100%;
+}
+
+/* Colour or Colour Effect: tab-style legends, the picked one underlined. */
+.switch {
+  display: inline-flex;
+  gap: var(--space-1);
+  border-bottom: 1px solid var(--line);
+}
+
+.switchOption {
+  height: var(--control-height);
+  margin-bottom: -1px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  background: none;
+  color: var(--legend-dim);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.switchOption:hover {
+  color: var(--legend);
+}
+
+.switchPicked,
+.switchPicked:hover {
+  border-bottom-color: var(--signal);
+  color: var(--legend);
 }

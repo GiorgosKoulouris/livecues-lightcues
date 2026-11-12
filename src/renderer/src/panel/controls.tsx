@@ -1,13 +1,14 @@
-import type { ReactNode } from 'react';
-import type { TempoSource } from '../../../shared/protocol';
-import type { Show } from '../../../shared/show';
+import type { CSSProperties, ReactNode } from 'react';
+import type { HouseFired, TempoSource } from '../../../shared/protocol';
+import { beatsText, type HousePreset, type Scene, type Show } from '../../../shared/show';
 import { isActive } from '../show/scenes';
 import type { PlaybackState } from '../show/usePlayback';
+import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { cx } from '../ui/cx';
 import styles from './controls.module.css';
 import { runPanelAction } from './usePanelKeys';
-import { SHORTCUTS } from './shortcuts';
+import { housePresetKey, SHORTCUTS } from './shortcuts';
 import type { TempoState } from './useTempo';
 
 // The Fallback Panel's controls, shared by its strip and the Perform view,
@@ -25,32 +26,36 @@ export function Key({ children }: { children: ReactNode }) {
   return <kbd className={styles.key}>{children}</kbd>;
 }
 
-// Turns Blackout on or off; red while on.
+// Turns Blackout on or off. At rest a plain key with a red disc; engaged it is
+// sunk, with a red outline and word.
 export function BlackoutButton({ show, playback, className }: ControlProps) {
   return (
     <Button
       size="lg"
-      variant={playback.blackout ? 'danger' : 'secondary'}
+      variant={playback.blackout ? 'sunk' : 'secondary'}
       className={cx(styles.blackout, className)}
       aria-pressed={playback.blackout}
       onClick={() => runPanelAction({ type: 'blackout' }, show, playback)}
     >
-      Blackout <Key>{SHORTCUTS.blackout}</Key>
+      <span aria-hidden className={styles.disc} />
+      <span className={styles.legend}>Blackout</span>
+      <Key>{SHORTCUTS.blackout}</Key>
     </Button>
   );
 }
 
 // Turns Freeze on or off, which holds every movement Effect where it is.
+// Engaged it is sunk with a Warn Amber outline and ring.
 export function FreezeButton({ show, playback, className }: ControlProps) {
   return (
     <Button
       size="lg"
-      variant={playback.freeze ? 'primary' : 'secondary'}
       className={cx(styles.freeze, className)}
       aria-pressed={playback.freeze}
       onClick={() => runPanelAction({ type: 'freeze' }, show, playback)}
     >
-      Freeze <Key>{SHORTCUTS.freeze}</Key>
+      {playback.freeze && <span aria-hidden className={styles.ring} />}
+      <span className={styles.legend}>Freeze</span> <Key>{SHORTCUTS.freeze}</Key>
     </Button>
   );
 }
@@ -71,6 +76,19 @@ export function BaseLookButton({ show, playback, className }: ControlProps) {
       <span className={styles.name}>Base Look{baseLook && `: ${baseLook.name}`}</span>
       <Key>{SHORTCUTS.baseLook}</Key>
     </Button>
+  );
+}
+
+// On a Scene button in Perform and on the Fallback Panel, while the Scene is
+// active and the Speed limit slows it. The tooltip names the length it runs
+// at.
+export function SpeedLimitBadge({ scene, playback }: { scene: Scene; playback: PlaybackState }) {
+  const length = isActive(playback.active, scene) ? playback.limited?.[scene.layer] : undefined;
+  if (length === undefined) return null;
+  return (
+    <Badge tone="warning" title={`Speed limit: movement Effects run at ${beatsText(length)}`}>
+      Limited
+    </Badge>
   );
 }
 
@@ -98,7 +116,7 @@ export function TapTempoButton({
       className={cx(styles.tapTempo, className)}
       onClick={() => window.engine.send({ type: 'tapTempo' })}
     >
-      Tap <Key>{SHORTCUTS.tapTempo}</Key>
+      <span className={styles.legend}>Tap</span> <Key>{SHORTCUTS.tapTempo}</Key>
       {tempo && <span className={styles.bpm}>{Math.round(tempo.bpm)} BPM</span>}
       {source && <span className={styles.source}>{source}</span>}
     </Button>
@@ -123,6 +141,7 @@ export function GrandMasterFader({
       </span>
       <input
         type="range"
+        style={{ '--fill': `${Math.round(playback.grandMaster * 100)}%` } as CSSProperties}
         min={0}
         max={1}
         step={0.01}
@@ -133,5 +152,30 @@ export function GrandMasterFader({
       />
       <output className={styles.percent}>{Math.round(playback.grandMaster * 100)}%</output>
     </label>
+  );
+}
+
+// Fires a House Preset, with its key: Shift and its place, `index` + 1.
+// Pressed while it is the one fired last, during its fade too.
+export function HousePresetButton({
+  preset,
+  index,
+  fired,
+  className,
+}: {
+  preset: HousePreset;
+  index: number;
+  fired: HouseFired | undefined;
+  className?: string;
+}) {
+  return (
+    <Button
+      size="lg"
+      className={className}
+      aria-pressed={fired?.type === 'preset' && fired.id === preset.id}
+      onClick={() => window.engine.send({ type: 'fireHousePreset', id: preset.id })}
+    >
+      <span className={styles.name}>{preset.name}</span> <Key>{housePresetKey(index)}</Key>
+    </Button>
   );
 }

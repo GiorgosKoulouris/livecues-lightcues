@@ -2,7 +2,13 @@ import { act, cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EngineCommand, EngineEvent, ShowEdit } from '../../../shared/protocol';
-import type { Scene, Show } from '../../../shared/show';
+import {
+  moveHousePreset,
+  putHousePreset,
+  removeHousePreset,
+  type Scene,
+  type Show,
+} from '../../../shared/show';
 import { emptyPatch } from '../../../shared/venue-patch';
 import { installFakeEngine, type FakeEngine } from '../test-engine';
 import { stubListLayout } from '../test-layout';
@@ -120,6 +126,14 @@ function applied(current: Show, edit: ShowEdit): Show {
       return { ...current, baseLook: edit.sceneId };
     case 'setPanelScenes':
       return { ...current, panelScenes: edit.sceneIds };
+    case 'putHousePreset': {
+      const put = putHousePreset(current, edit.preset);
+      return 'show' in put ? put.show : current;
+    }
+    case 'moveHousePreset':
+      return moveHousePreset(current, edit.id, edit.to);
+    case 'removeHousePreset':
+      return removeHousePreset(current, edit.id);
     default:
       return current;
   }
@@ -295,6 +309,26 @@ describe('Scene editor', () => {
     expect(put.scene.rules[0]).toEqual({ target: {}, intensity: 0.5 });
   });
 
+  it("sets a Rule's strobe rate, and leaves it to others when not set", async () => {
+    await selectWarm();
+    const rule = () => {
+      const put = edits().at(-1);
+      if (put?.type !== 'putScene') throw new Error('No Scene put');
+      return put.scene.rules[0];
+    };
+    const strobe = screen.getAllByRole('combobox', { name: 'Strobe' })[0]!;
+    expect(strobe).toHaveValue('');
+
+    await userEvent.selectOptions(strobe, 'Fast (12 Hz)');
+    expect(rule()).toEqual({ target: {}, intensity: 0.5, strobe: 'Fast' });
+    await userEvent.selectOptions(strobe, '1/4 beat');
+    expect(rule()).toEqual({ target: {}, intensity: 0.5, strobe: 0.25 });
+    await userEvent.selectOptions(strobe, 'Off');
+    expect(rule()).toEqual({ target: {}, intensity: 0.5, strobe: 'Off' });
+    await userEvent.selectOptions(strobe, 'Not set');
+    expect(rule()).toEqual({ target: {}, intensity: 0.5 });
+  });
+
   it("sets a Rule's movement Effect: shape, size with quick picks, length and Spread", async () => {
     await selectWarm();
     const rule = () => {
@@ -310,7 +344,7 @@ describe('Scene editor', () => {
     expect(rule()).toEqual({
       target: {},
       intensity: 0.5,
-      effect: { shape: 'Circle', size: 12, length: 4, spread: 'In sync' },
+      movementEffect: { shape: 'Circle', size: 12, length: 4, spread: 'In sync' },
     });
 
     const sizes = within(screen.getByRole('group', { name: 'Quick sizes' }));
@@ -319,26 +353,199 @@ describe('Scene editor', () => {
       'true',
     );
     await userEvent.click(sizes.getByRole('button', { name: 'Large 25°' }));
-    expect(rule()?.effect?.size).toBe(25);
+    expect(rule()?.movementEffect).toMatchObject({ size: 25 });
     const size = screen.getByRole('textbox', { name: 'Size (°)' });
     await userEvent.clear(size);
     await userEvent.type(size, '7.5');
-    expect(rule()?.effect?.size).toBe(7.5);
+    expect(rule()?.movementEffect).toMatchObject({ size: 7.5 });
 
     await userEvent.selectOptions(screen.getByLabelText('Length (beats)'), '16');
-    expect(rule()?.effect?.length).toBe(16);
+    expect(rule()?.movementEffect).toMatchObject({ length: 16 });
     await userEvent.selectOptions(screen.getByLabelText('Spread'), 'Mirrored');
-    expect(rule()?.effect).toEqual({ shape: 'Circle', size: 7.5, length: 16, spread: 'Mirrored' });
+    expect(rule()?.movementEffect).toEqual({
+      shape: 'Circle',
+      size: 7.5,
+      length: 16,
+      spread: 'Mirrored',
+    });
 
     // A new shape keeps the rest.
     await userEvent.selectOptions(effect, 'Ballyhoo');
-    expect(rule()?.effect).toEqual({
+    expect(rule()?.movementEffect).toEqual({
       shape: 'Ballyhoo',
       size: 7.5,
       length: 16,
       spread: 'Mirrored',
     });
     await userEvent.selectOptions(effect, 'Not set');
+    expect(rule()).toEqual({ target: {}, intensity: 0.5 });
+  });
+
+  it("sets a Rule's movement Effect to None, and its length to 1/4 beat", async () => {
+    await selectWarm();
+    const rule = () => {
+      const put = edits().at(-1);
+      if (put?.type !== 'putScene') throw new Error('No Scene put');
+      return put.scene.rules[0];
+    };
+    const effect = screen.getAllByLabelText('Movement Effect')[0]!;
+
+    await userEvent.selectOptions(effect, 'None');
+    expect(rule()).toEqual({ target: {}, intensity: 0.5, movementEffect: 'None' });
+    expect(screen.queryByLabelText('Length (beats)')).toBeNull();
+
+    await userEvent.selectOptions(effect, 'Pan sweep');
+    await userEvent.selectOptions(screen.getByLabelText('Length (beats)'), '1/4');
+    expect(rule()?.movementEffect).toEqual({
+      shape: 'Pan sweep',
+      size: 12,
+      length: 0.25,
+      spread: 'In sync',
+    });
+    await userEvent.selectOptions(screen.getByLabelText('Length (beats)'), '1/2');
+    expect(rule()?.movementEffect).toMatchObject({ length: 0.5 });
+  });
+
+  it('says when the Speed limit slows a movement Effect at the current Tempo', async () => {
+    await selectWarm();
+    const tempo = (bpm: number) => engine.emit({ type: 'tempo', bpm, source: 'tap' });
+    const note = () => screen.queryByText(/at current Tempo/);
+    // A 12° Pan sweep fits 300°/s at 1/4 beat up to about 60 BPM.
+    tempo(50);
+    await userEvent.selectOptions(screen.getAllByLabelText('Movement Effect')[0]!, 'Pan sweep');
+    await userEvent.selectOptions(screen.getByLabelText('Length (beats)'), '1/4');
+    expect(note()).toBeNull();
+
+    tempo(100);
+    expect(note()).toHaveTextContent('Limited to 1/2 beat at current Tempo');
+    tempo(140);
+    expect(note()).toHaveTextContent('Limited to 1 beat at current Tempo');
+    tempo(50);
+    expect(note()).toBeNull();
+  });
+
+  it('says when the Speed limit shrinks a movement Effect at 16 beats', async () => {
+    await selectWarm();
+    engine.emit({ type: 'tempo', bpm: 200, source: 'tap' });
+    await userEvent.selectOptions(screen.getAllByLabelText('Movement Effect')[0]!, 'Ballyhoo');
+    await userEvent.selectOptions(screen.getByLabelText('Length (beats)'), '16');
+    const size = screen.getByRole('textbox', { name: 'Size (°)' });
+    await userEvent.clear(size);
+    await userEvent.type(size, '180');
+    // Its tilt peaks at 1.8 × 2π × size × 200/60/16 °/s.
+    expect(screen.getByText(/at current Tempo/)).toHaveTextContent(
+      'Limited to 16 beats and 127.3° at current Tempo',
+    );
+  });
+
+  it("adds a Pulse to a Rule's intensity Effect, with depth, length and Spread, or None", async () => {
+    await selectWarm();
+    const rule = () => {
+      const put = edits().at(-1);
+      if (put?.type !== 'putScene') throw new Error('No Scene put');
+      return put.scene.rules[0];
+    };
+    const effect = screen.getAllByLabelText('Intensity Effect')[0]!;
+    expect(effect).toHaveValue('');
+
+    await userEvent.selectOptions(effect, 'Pulse');
+    expect(rule()).toEqual({
+      target: {},
+      intensity: 0.5,
+      intensityEffect: { shape: 'Pulse', depth: 1, length: 1, spread: 'In sync' },
+    });
+
+    const settings = within(screen.getByRole('group', { name: 'Intensity Effect settings' }));
+    const depth = settings.getByRole('textbox', { name: 'Depth (%)' });
+    await userEvent.clear(depth);
+    await userEvent.type(depth, '50');
+    expect(rule()?.intensityEffect).toMatchObject({ depth: 0.5 });
+    await userEvent.selectOptions(settings.getByLabelText('Length (beats)'), '1/2');
+    await userEvent.selectOptions(settings.getByLabelText('Spread'), 'Left→Right');
+    expect(rule()?.intensityEffect).toEqual({
+      shape: 'Pulse',
+      depth: 0.5,
+      length: 0.5,
+      spread: 'Left→Right',
+    });
+
+    // A new shape keeps the rest.
+    await userEvent.selectOptions(effect, 'Chase');
+    expect(rule()?.intensityEffect).toMatchObject({ shape: 'Chase', depth: 0.5 });
+
+    await userEvent.selectOptions(effect, 'None');
+    expect(rule()).toEqual({ target: {}, intensity: 0.5, intensityEffect: 'None' });
+    expect(screen.queryByRole('group', { name: 'Intensity Effect settings' })).toBeNull();
+    await userEvent.selectOptions(effect, 'Not set');
+    expect(rule()).toEqual({ target: {}, intensity: 0.5 });
+  });
+
+  it("sets a two-colour Step as a Rule's colour Effect, in place of its colour", async () => {
+    await selectWarm();
+    const rule = () => {
+      const put = edits().at(-1);
+      if (put?.type !== 'putScene') throw new Error('No Scene put');
+      return put.scene.rules[0];
+    };
+    const switcher = within(screen.getAllByRole('group', { name: 'Colour or Colour Effect' })[0]!);
+    expect(switcher.getByRole('button', { name: 'Colour' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await userEvent.selectOptions(screen.getAllByLabelText('Colour')[0]!, 'Swatch');
+    expect(rule()).toMatchObject({ colour: { swatch: 'White' } });
+
+    // Switching drops the colour.
+    await userEvent.click(switcher.getByRole('button', { name: 'Colour Effect' }));
+    expect(rule()).toEqual({ target: {}, intensity: 0.5 });
+    const effect = screen.getAllByLabelText('Colour Effect')[0]!;
+    expect(effect).toHaveValue('');
+
+    await userEvent.selectOptions(effect, 'Step');
+    expect(rule()).toEqual({
+      target: {},
+      intensity: 0.5,
+      colourEffect: {
+        shape: 'Step',
+        colours: [{ swatch: 'Red' }, { swatch: 'Blue' }],
+        length: 2,
+        spread: 'In sync',
+      },
+    });
+
+    const settings = within(screen.getByRole('group', { name: 'Colour Effect settings' }));
+    await userEvent.selectOptions(settings.getAllByLabelText('Swatch')[1]!, 'Green');
+    await userEvent.selectOptions(settings.getByLabelText('Length (beats)'), '1');
+    await userEvent.selectOptions(settings.getByLabelText('Spread'), 'Alternate');
+    expect(rule()?.colourEffect).toEqual({
+      shape: 'Step',
+      colours: [{ swatch: 'Red' }, { swatch: 'Green' }],
+      length: 1,
+      spread: 'Alternate',
+    });
+
+    // 2 to 4 colours.
+    expect(settings.queryByRole('button', { name: 'Remove Colour 1' })).toBeNull();
+    await userEvent.click(settings.getByRole('button', { name: 'Add colour' }));
+    await userEvent.click(settings.getByRole('button', { name: 'Add colour' }));
+    expect(rule()?.colourEffect).toMatchObject({ colours: { length: 4 } });
+    expect(settings.queryByRole('button', { name: 'Add colour' })).toBeNull();
+    await userEvent.click(settings.getByRole('button', { name: 'Remove Colour 1' }));
+    expect(rule()?.colourEffect).toMatchObject({
+      colours: [{ swatch: 'Green' }, { swatch: 'White' }, { swatch: 'White' }],
+    });
+
+    // Fade keeps the colours; Rainbow takes none.
+    await userEvent.selectOptions(effect, 'Fade');
+    expect(rule()?.colourEffect).toMatchObject({ shape: 'Fade', colours: { length: 3 } });
+    await userEvent.selectOptions(effect, 'Rainbow');
+    expect(rule()?.colourEffect).toEqual({ shape: 'Rainbow', length: 1, spread: 'Alternate' });
+
+    await userEvent.selectOptions(effect, 'None');
+    expect(rule()).toEqual({ target: {}, intensity: 0.5, colourEffect: 'None' });
+
+    // Switching back drops the colour Effect.
+    await userEvent.click(switcher.getByRole('button', { name: 'Colour' }));
     expect(rule()).toEqual({ target: {}, intensity: 0.5 });
   });
 
@@ -444,5 +651,106 @@ describe('Triggers', () => {
     expect(table).toHaveTextContent('Warm');
     await userEvent.selectOptions(screen.getByLabelText('MIDI Input'), 'nanoKEY');
     expect(sentOf('selectMidiInput')).toEqual([{ type: 'selectMidiInput', name: 'nanoKEY' }]);
+  });
+});
+
+describe('New Trigger', () => {
+  it("warns when the note is a House Preset's", async () => {
+    show = {
+      ...SHOW,
+      housePresets: [{ id: 'dim', name: 'Dim', fade: 2, note: { channel: 1, note: 62 } }],
+    };
+    await renderView();
+    await userEvent.click(screen.getByRole('tab', { name: 'Triggers' }));
+    const form = within(screen.getByRole('region', { name: 'New Trigger' }));
+
+    const note = form.getByLabelText('Note');
+    await userEvent.clear(note);
+    await userEvent.type(note, '62{Enter}');
+    expect(form.getByText(/note of House Preset Dim/)).toBeInTheDocument();
+    expect(form.getByRole('button', { name: 'Map' })).toBeDisabled();
+  });
+});
+
+describe('House Presets', () => {
+  const housePresets = () => within(screen.getByRole('list', { name: 'House Presets' }));
+
+  async function openTriggers() {
+    await renderView();
+    await userEvent.click(screen.getByRole('tab', { name: 'Triggers' }));
+  }
+
+  it('adds, renames and removes a House Preset', async () => {
+    await openTriggers();
+    expect(screen.getByText(/No House Presets yet/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add House Preset' }));
+    expect(edits()).toEqual([
+      { type: 'putHousePreset', preset: { id: 'house-1', name: 'House Preset 1', fade: 2 } },
+    ]);
+
+    const name = await housePresets().findByLabelText('Name of House Preset 1');
+    await userEvent.clear(name);
+    await userEvent.type(name, 'Dim{Enter}');
+    expect(edits().at(-1)).toEqual({
+      type: 'putHousePreset',
+      preset: { id: 'house-1', name: 'Dim', fade: 2 },
+    });
+
+    await userEvent.click(housePresets().getByRole('button', { name: 'Remove House Preset Dim' }));
+    expect(edits().at(-1)).toEqual({ type: 'removeHousePreset', id: 'house-1' });
+    expect(await screen.findByText('Removed Dim')).toBeInTheDocument();
+    expect(screen.getByText(/No House Presets yet/)).toBeInTheDocument();
+  });
+
+  it('sets the fade, and a note typed in, learned or cleared', async () => {
+    show = { ...SHOW, housePresets: [{ id: 'dim', name: 'Dim', fade: 2 }] };
+    await openTriggers();
+
+    const fade = housePresets().getByLabelText('Fade of Dim (s)');
+    await userEvent.clear(fade);
+    await userEvent.type(fade, '4.5{Enter}');
+    expect(edits().at(-1)).toEqual({
+      type: 'putHousePreset',
+      preset: { id: 'dim', name: 'Dim', fade: 4.5 },
+    });
+
+    // Note 60 on channel 1 is the Trigger's, so it takes the next free one.
+    await userEvent.click(housePresets().getByRole('button', { name: 'Add a note to Dim' }));
+    expect(edits().at(-1)).toEqual({
+      type: 'putHousePreset',
+      preset: { id: 'dim', name: 'Dim', fade: 4.5, note: { channel: 1, note: 61 } },
+    });
+
+    const note = await housePresets().findByLabelText('Note of Dim');
+    await userEvent.clear(note);
+    await userEvent.type(note, '70{Enter}');
+    expect(edits().at(-1)).toMatchObject({ preset: { note: { channel: 1, note: 70 } } });
+
+    await userEvent.click(housePresets().getByRole('button', { name: 'Learn a note for Dim' }));
+    expect(sentOf('learnTrigger')).toHaveLength(1);
+    engine.emit({ type: 'triggerLearned', note: { channel: 3, note: 40 } });
+    expect(edits().at(-1)).toMatchObject({ preset: { note: { channel: 3, note: 40 } } });
+    expect(sentOf('cancelLearn')).toHaveLength(1);
+
+    await userEvent.click(housePresets().getByRole('button', { name: 'Clear the note of Dim' }));
+    expect(edits().at(-1)).toEqual({
+      type: 'putHousePreset',
+      preset: { id: 'dim', name: 'Dim', fade: 4.5 },
+    });
+  });
+
+  it('reorders House Presets with the keyboard, and adds no more than eight', async () => {
+    const eight = Array.from({ length: 8 }, (_, i) => ({ id: `p${i}`, name: `P${i}`, fade: 0 }));
+    show = { ...SHOW, housePresets: eight };
+    await openTriggers();
+
+    housePresets().getByRole('button', { name: 'Move P1' }).focus();
+    await userEvent.keyboard(' ');
+    await userEvent.keyboard('{ArrowUp}');
+    await userEvent.keyboard(' ');
+    await act(async () => {});
+    expect(edits()).toEqual([{ type: 'moveHousePreset', id: 'p1', to: 0 }]);
+    expect(screen.getByRole('button', { name: 'Add House Preset' })).toBeDisabled();
   });
 });

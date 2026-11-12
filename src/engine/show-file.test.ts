@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Show } from '../shared/show';
+import type { Rule, Show } from '../shared/show';
 import { loadShowFile, saveShowFile } from './show-file';
 
 // Uses every part of the model, optional ones included.
@@ -37,7 +37,32 @@ const show: Show = {
         { target: { roles: ['Spot/Beam'] }, direction: 'Audience' },
         {
           target: { roles: ['Spot/Beam'] },
-          effect: { shape: 'Circle', size: 12, length: 4, spread: 'Left→Right' },
+          movementEffect: { shape: 'Circle', size: 12, length: 4, spread: 'Left→Right' },
+        },
+        { target: { roles: ['Strobe'] }, strobe: 'Fast' },
+        { target: { roles: ['Spot/Beam'] }, strobe: 0.25 },
+        { target: { roles: ['Wash'] }, movementEffect: 'None' },
+        { target: { roles: ['Wash'] }, intensityEffect: 'None', colourEffect: 'None' },
+        {
+          target: { roles: ['Effect'] },
+          movementEffect: { shape: 'Pan sweep', size: 5, length: 0.25, spread: 'In sync' },
+        },
+        {
+          target: { roles: ['Wash'] },
+          intensityEffect: { shape: 'Chase', depth: 0.5, length: 1, spread: 'Mirrored' },
+        },
+        {
+          target: { roles: ['Wash'] },
+          colourEffect: {
+            shape: 'Step',
+            colours: [{ swatch: 'Red' }, { hue: 200, saturation: 0.5 }],
+            length: 2,
+            spread: 'Alternate',
+          },
+        },
+        {
+          target: { roles: ['Pixel/Bar'] },
+          colourEffect: { shape: 'Rainbow', length: 16, spread: 'Left→Right' },
         },
       ],
     },
@@ -51,17 +76,52 @@ const show: Show = {
   defaultColour: { hue: 30, saturation: 0.2 },
   defaultDirection: 'Centre',
   panelScenes: ['hit', 'verse'],
+  housePresets: [
+    { id: 'dim', name: 'Dim', fade: 3 },
+    { id: 'up', name: 'Up', fade: 5, note: { channel: 2, note: 10 } },
+  ],
 };
 
+// `show` as version 4 had it, without House Presets, strobe, None or
+// sub-beat lengths.
+function asV4Show({ housePresets, ...rest }: Show): Show {
+  void housePresets;
+  const inV4 = ({ strobe, movementEffect, intensityEffect, colourEffect }: Rule) =>
+    strobe === undefined &&
+    movementEffect !== 'None' &&
+    (typeof movementEffect !== 'object' || movementEffect.length >= 1) &&
+    intensityEffect === undefined &&
+    colourEffect === undefined;
+  return {
+    ...rest,
+    scenes: rest.scenes.map((scene) => ({ ...scene, rules: scene.rules.filter(inV4) })),
+  };
+}
+
+// A Show as an older file holds it: the movement Effect as `effect`.
+function asOldFile(version: number, { scenes, ...rest }: Show): object {
+  return {
+    version,
+    ...rest,
+    scenes: scenes.map((scene) => ({
+      ...scene,
+      rules: scene.rules.map(({ movementEffect, ...rule }) =>
+        movementEffect === undefined ? rule : { ...rule, effect: movementEffect },
+      ),
+    })),
+  };
+}
+
 // `show` as an older version had it, without Directions or movement Effects.
-function withoutDirections({ defaultDirection, ...rest }: Show): Show {
+function withoutDirections(full: Show): Show {
+  const { defaultDirection, ...rest } = asV4Show(full);
   void defaultDirection;
   return {
     ...rest,
     scenes: rest.scenes.map((scene) => ({
       ...scene,
       rules: scene.rules.filter(
-        (rule) => rule.direction === undefined && rule.effect === undefined,
+        (rule) => rule.direction === undefined && rule.movementEffect === undefined,
       ),
     })),
   };
@@ -75,8 +135,8 @@ describe('.lcshow file', () => {
   it('rejects a file of an unknown version', () => {
     const saved = JSON.parse(saveShowFile(show));
 
-    expect(() => loadShowFile(JSON.stringify({ ...saved, version: 5 }))).toThrow(
-      'Unsupported Show version: 5',
+    expect(() => loadShowFile(JSON.stringify({ ...saved, version: 6 }))).toThrow(
+      'Unsupported Show version: 6',
     );
     expect(() => loadShowFile(JSON.stringify({ ...show }))).toThrow(
       'Unsupported Show version: undefined',
@@ -108,8 +168,39 @@ describe('.lcshow file', () => {
     const v3 = withoutDirections(show);
 
     expect(loadShowFile(JSON.stringify({ version: 3, ...v3 }))).toEqual(v3);
-    expect(() => loadShowFile(JSON.stringify({ version: 3, ...show }))).toThrow(
+    expect(() => loadShowFile(JSON.stringify(asOldFile(3, asV4Show(show))))).toThrow(
       'Invalid Show:\nunknown field "defaultDirection"\nunknown field "scenes[1].rules[1].direction"\nunknown field "scenes[1].rules[2].effect"',
+    );
+  });
+
+  it('loads a version 4 file, which has no House Presets or strobe', () => {
+    const v4 = asV4Show(show);
+
+    expect(loadShowFile(JSON.stringify(asOldFile(4, v4)))).toEqual(v4);
+    expect(() => loadShowFile(JSON.stringify(asOldFile(4, show)))).toThrow(
+      [
+        'Invalid Show:',
+        'unknown field "housePresets"',
+        'unknown field "scenes[1].rules[3].strobe"',
+        'unknown field "scenes[1].rules[4].strobe"',
+        'unknown field "scenes[1].rules[6].intensityEffect"',
+        'unknown field "scenes[1].rules[6].colourEffect"',
+      ].join('\n'),
+    );
+  });
+
+  it("reads a version 4 Rule's effect as its movement Effect, and version 5's as unknown", () => {
+    const v4 = asV4Show(show);
+
+    expect(loadShowFile(JSON.stringify(asOldFile(4, v4))).scenes[1]!.rules[2]).toEqual({
+      target: { roles: ['Spot/Beam'] },
+      movementEffect: { shape: 'Circle', size: 12, length: 4, spread: 'Left→Right' },
+    });
+    expect(() => loadShowFile(JSON.stringify(asOldFile(5, v4)))).toThrow(
+      'Invalid Show:\nunknown field "scenes[1].rules[2].effect"',
+    );
+    expect(() => loadShowFile(JSON.stringify({ version: 4, ...v4 }))).toThrow(
+      'Invalid Show:\nunknown field "scenes[1].rules[2].movementEffect"',
     );
   });
 
@@ -142,8 +233,14 @@ describe('.lcshow file', () => {
     delete saved.scenes[0].rules[0].target;
 
     expect(() => loadShowFile(JSON.stringify(saved))).toThrow(
-      'Invalid Show:\na Layer, Scene, Rule or Trigger is missing fields',
+      'Invalid Show:\na Layer, Scene, Rule, Trigger or House Preset is missing fields',
     );
+    expect(() =>
+      loadShowFile(JSON.stringify({ ...show, version: 5, housePresets: [null] })),
+    ).toThrow('Invalid Show:\na Layer, Scene, Rule, Trigger or House Preset is missing fields');
+    expect(() =>
+      loadShowFile(JSON.stringify({ ...show, version: 5, housePresets: 'Dim' })),
+    ).toThrow('Invalid Show: housePresets must be a list');
     expect(() => loadShowFile('null')).toThrow(/^Invalid Show: /);
     expect(() => loadShowFile('{"version": 1,')).toThrow(/^Invalid Show: /);
   });
@@ -158,8 +255,13 @@ describe('.lcshow file', () => {
     const saved = JSON.parse(saveShowFile(show));
     saved.scenes[0].rules[1].fixtureId = 'par-1';
     saved.scenes[0].rules[1].target.zones[0].dmx = 255;
-    saved.scenes[1].rules[2].effect.phase = 0.5;
+    saved.scenes[1].rules[2].movementEffect.phase = 0.5;
+    saved.scenes[1].rules[8].intensityEffect.phase = 0.5;
+    saved.scenes[1].rules[9].colourEffect.phase = 0.5;
+    saved.scenes[1].rules[9].colourEffect.colours[1].value = 1;
     saved.triggers[2].velocity = 100;
+    saved.housePresets[0].look = 'dim';
+    saved.housePresets[1].note.velocity = 100;
     saved.defaultColour.value = 1;
     saved.author = 'someone';
 
@@ -170,8 +272,13 @@ describe('.lcshow file', () => {
         'unknown field "defaultColour.value"',
         'unknown field "scenes[0].rules[1].fixtureId"',
         'unknown field "scenes[0].rules[1].target.zones[0].dmx"',
-        'unknown field "scenes[1].rules[2].effect.phase"',
+        'unknown field "scenes[1].rules[2].movementEffect.phase"',
+        'unknown field "scenes[1].rules[8].intensityEffect.phase"',
+        'unknown field "scenes[1].rules[9].colourEffect.phase"',
+        'unknown field "scenes[1].rules[9].colourEffect.colours[1].value"',
         'unknown field "triggers[2].velocity"',
+        'unknown field "housePresets[0].look"',
+        'unknown field "housePresets[1].note.velocity"',
       ].join('\n'),
     );
   });

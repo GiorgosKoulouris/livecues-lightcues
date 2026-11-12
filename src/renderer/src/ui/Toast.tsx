@@ -1,4 +1,4 @@
-import { CircleAlert, CircleCheck, Info, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import {
   createContext,
   useCallback,
@@ -39,7 +39,7 @@ export function useToast() {
   return toast;
 }
 
-const ICONS = { info: Info, success: CircleCheck, error: CircleAlert };
+const WORDS = { info: 'Info', success: 'Done', error: 'Error' };
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastEntry[]>([]);
@@ -68,7 +68,6 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
 // onDismiss must be stable, or each render would restart the timer.
 function ToastItem({ toast, onDismiss }: { toast: ToastEntry; onDismiss: (id: number) => void }) {
-  const Icon = ICONS[toast.tone];
   const hasAction = toast.action !== undefined;
 
   useEffect(() => {
@@ -82,7 +81,10 @@ function ToastItem({ toast, onDismiss }: { toast: ToastEntry; onDismiss: (id: nu
       role={toast.tone === 'error' ? 'alert' : 'status'}
       className={cx(styles.toast, styles[toast.tone])}
     >
-      <Icon className={styles.icon} aria-hidden />
+      <span className={styles.status}>
+        <span className={styles.shape} aria-hidden />
+        {WORDS[toast.tone]}
+      </span>
       <div className={styles.message}>{toast.message}</div>
       {toast.action && (
         <Button

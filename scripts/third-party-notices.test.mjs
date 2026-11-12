@@ -20,6 +20,8 @@ describe('buildNotices', () => {
     appDir = mkdtempSync(join(tmpdir(), 'notices-app-'));
     projectDir = mkdtempSync(join(tmpdir(), 'notices-project-'));
     writeFiles(projectDir, {
+      'src/renderer/src/assets/fonts/OFL.txt':
+        'IBM Plex Sans: Copyright 2019 IBM Corp.\n\nSIL OPEN FONT LICENSE Version 1.1\n',
       'examples/README.md':
         '# Examples\n\n## Fixture data\n\nFrom Open Fixture Library:\n\n```\nMIT License\n\nCopyright (c) 2017 Florian & Felix Edelmann\n```\n',
     });
@@ -34,6 +36,12 @@ describe('buildNotices', () => {
     version,
     path: `node_modules/${name}`,
     ...extra,
+  });
+
+  it('says LightCues is licensed under MIT', () => {
+    const notices = buildNotices({ appDir, projectDir, inventory: { ships: [] } });
+
+    expect(notices).toContain('LightCues is licensed under the MIT license (LICENSE.txt).');
   });
 
   it('includes each package’s license id and license files', () => {
@@ -97,6 +105,21 @@ describe('buildNotices', () => {
     expect(notices).not.toContain('From Open Fixture Library:');
   });
 
+  it('credits the bundled IBM Plex fonts with the OFL text', () => {
+    const notices = buildNotices({ appDir, projectDir, inventory: { ships: [] } });
+
+    expect(notices).toContain('IBM Plex Sans and IBM Plex Mono fonts\nLicense: OFL-1.1\n');
+    expect(notices).toContain('SIL OPEN FONT LICENSE Version 1.1');
+  });
+
+  it('fails if the fonts lost their OFL text', () => {
+    rmSync(join(projectDir, 'src/renderer/src/assets/fonts'), { recursive: true });
+
+    expect(() => buildNotices({ appDir, projectDir, inventory: { ships: [] } })).toThrow(
+      NoticesError,
+    );
+  });
+
   it('fails if the examples README lost the fixture data license', () => {
     writeFiles(projectDir, { 'examples/README.md': '# Examples\n\n## Fixture data\n\nMIT.\n' });
 
@@ -132,17 +155,17 @@ describe('buildNotices', () => {
 
   it('fails if a package’s license is not on the allow list, or missing', () => {
     writeFiles(appDir, {
-      'node_modules/gpl2/package.json': { name: 'gpl2', version: '1.0.0', license: 'GPL-2.0-only' },
-      'node_modules/gpl2/LICENSE': 'GPL v2\n',
+      'node_modules/sspl/package.json': { name: 'sspl', version: '1.0.0', license: 'SSPL-1.0' },
+      'node_modules/sspl/LICENSE': 'SSPL\n',
       'node_modules/none/package.json': { name: 'none', version: '1.0.0' },
       'node_modules/none/LICENSE': 'Some text\n',
     });
-    const inventory = { ships: [ship('gpl2', '1.0.0'), ship('none', '1.0.0')] };
+    const inventory = { ships: [ship('sspl', '1.0.0'), ship('none', '1.0.0')] };
 
     const build = () => buildNotices({ appDir, projectDir, inventory });
 
     expect(build).toThrow(NoticesError);
-    expect(build).toThrow(/gpl2@1\.0\.0: license GPL-2\.0-only is not allowed/);
+    expect(build).toThrow(/sspl@1\.0\.0: license SSPL-1\.0 is not allowed/);
     expect(build).toThrow(/none@1\.0\.0: license missing is not allowed/);
   });
 

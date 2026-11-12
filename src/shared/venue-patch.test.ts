@@ -14,11 +14,21 @@ import {
   isMovingFixture,
   putFixture,
   putFixtures,
+  patchHouse,
+  putHouseGroup,
+  putHouseLight,
   putUniverse,
   removeFixtures,
+  removeHouseGroup,
+  removeHouseLights,
   removeUniverse,
+  setHouseLook,
   setStage,
+  setStartupLook,
   suggestZone,
+  validatePatch,
+  type HouseLight,
+  type HouseLook,
   type PatchedFixture,
   type StageBounds,
   type VenuePatch,
@@ -601,5 +611,277 @@ describe('Mounting', () => {
     expect(isMovingFixture(patch, both!)).toBe(true);
     expect(isMovingFixture(patch, tiltOnly!)).toBe(true);
     expect(isMovingFixture(patch, still!)).toBe(false);
+  });
+});
+
+// A dimmer-only Profile, as many house lights are.
+const dimmer: FixtureProfile = {
+  id: 'acme/dimmer',
+  manufacturer: 'Acme',
+  model: 'Dimmer',
+  defaultRole: 'Wash',
+  modes: [
+    {
+      name: '1ch',
+      channels: [
+        {
+          kind: 'control',
+          name: 'Dimmer',
+          defaultValue: 0,
+          ranges: [{ from: 0, to: 255, capability: { type: 'intensity' } }],
+        },
+      ],
+    },
+  ],
+};
+
+function houseLight(overrides: Partial<HouseLight> = {}): HouseLight {
+  return {
+    id: 'h1',
+    name: 'Bar 1',
+    group: 'bar',
+    profileId: 'acme/dimmer',
+    mode: '1ch',
+    universe: 1,
+    address: 100,
+    ...overrides,
+  };
+}
+
+function ok(result: ReturnType<typeof putHouseLight>): VenuePatch {
+  if ('errors' in result) throw new Error(result.errors.join('\n'));
+  return result.patch;
+}
+
+// A patch with a Bar House Group holding `lights`.
+function withBar(patch: VenuePatch, ...lights: HouseLight[]): VenuePatch {
+  patch = ok(putHouseGroup(patch, { id: 'bar', name: 'Bar' }));
+  for (const light of lights) patch = ok(putHouseLight(patch, light, dimmer));
+  return patch;
+}
+
+describe('House Lights', () => {
+  it('has no House Groups, House Lights or Startup look in a new patch', () => {
+    expect(patchHouse(emptyPatch(stage))).toEqual({ groups: [], lights: [] });
+  });
+
+  it('adds a House Group and a House Light in it, embedding its Profile', () => {
+    const patch = withBar(emptyPatch(stage), houseLight());
+
+    expect(patchHouse(patch)).toEqual({
+      groups: [{ id: 'bar', name: 'Bar' }],
+      lights: [houseLight()],
+    });
+    expect(patch.profiles).toEqual([dimmer]);
+    expect(patch.fixtures).toEqual([]);
+  });
+
+  it('renames a House Group and edits a House Light in place', () => {
+    let patch = withBar(emptyPatch(stage), houseLight(), houseLight({ id: 'h2', address: 101 }));
+
+    patch = ok(putHouseGroup(patch, { id: 'bar', name: 'Back bar' }));
+    patch = ok(putHouseLight(patch, houseLight({ name: 'Bar left', address: 110 })));
+
+    expect(patchHouse(patch).groups).toEqual([{ id: 'bar', name: 'Back bar' }]);
+    expect(patchHouse(patch).lights.map((l) => [l.name, l.address])).toEqual([
+      ['Bar left', 110],
+      ['Bar 1', 101],
+    ]);
+  });
+
+  it('rejects a House Light in a Group the patch lacks', () => {
+    expect(
+      putHouseLight(withBar(emptyPatch(stage)), houseLight({ group: 'ceiling' }), dimmer),
+    ).toEqual({ errors: ['"Bar 1": House Group "ceiling" is not in the patch'] });
+  });
+
+  it('rejects a House Light in a Universe, Profile or mode the patch lacks', () => {
+    const patch = withBar(emptyPatch(stage));
+
+    expect(putHouseLight(patch, houseLight({ universe: 2 }), dimmer)).toEqual({
+      errors: ['"Bar 1": Universe 2 is not in the patch'],
+    });
+    expect(putHouseLight(patch, houseLight({ mode: '3ch' }), dimmer)).toEqual({
+      errors: ['"Bar 1": mode "3ch" is not in Profile "acme/dimmer"'],
+    });
+    expect(putHouseLight(patch, houseLight({ profileId: 'acme/spot' }))).toEqual({
+      errors: ['"Bar 1": Profile "acme/spot" is not in the patch'],
+    });
+  });
+
+  it('checks House Lights and stage Fixtures together for overlaps', () => {
+    // Par 1 occupies 1.1–1.3.
+    const patch = withBar(patched(emptyPatch(stage), fixture()));
+
+    expect(putHouseLight(patch, houseLight({ address: 3 }), dimmer)).toEqual({
+      errors: ['"Bar 1" (1.3–1.3) overlaps "Par 1" (1.1–1.3)'],
+    });
+    const lit = ok(putHouseLight(patch, houseLight({ address: 4 }), dimmer));
+    expect(putFixture(lit, fixture({ id: 'f2', name: 'Par 2', address: 2 }))).toEqual({
+      errors: [
+        '"Par 2" (1.2–1.4) overlaps "Par 1" (1.1–1.3)',
+        '"Bar 1" (1.4–1.4) overlaps "Par 2" (1.2–1.4)',
+      ],
+    });
+    expect(addressProblem(lit, fixture({ address: 2 }))).toBe('Overlaps Bar 1 (1.4–1.4)');
+    expect(addressProblem(lit, houseLight({ id: 'h2', address: 3 }))).toBe(
+      'Overlaps Par 1 (1.1–1.3)',
+    );
+  });
+
+  it('rejects a House Light with the id of a stage Fixture', () => {
+    const patch = withBar(patched(emptyPatch(stage), fixture()));
+
+    expect(putHouseLight(patch, houseLight({ id: 'f1' }), dimmer)).toEqual({
+      errors: ['Fixture id "f1" is used twice'],
+    });
+  });
+
+  it('removes House Lights, dropping a Profile copy no one uses', () => {
+    const patch = withBar(emptyPatch(stage), houseLight(), houseLight({ id: 'h2', address: 101 }));
+
+    const one = removeHouseLights(patch, ['h1']);
+    expect(patchHouse(one).lights.map((l) => l.id)).toEqual(['h2']);
+    expect(one.profiles).toEqual([dimmer]);
+    expect(removeHouseLights(one, ['h2']).profiles).toEqual([]);
+  });
+
+  it('removes a House Group with its House Lights and its part of the Startup look', () => {
+    let patch = withBar(emptyPatch(stage), houseLight());
+    patch = ok(putHouseGroup(patch, { id: 'ceiling', name: 'Ceiling' }));
+    patch = ok(putHouseLight(patch, houseLight({ id: 'h2', group: 'ceiling', address: 200 })));
+    const look: HouseLook = {
+      bar: { intensity: 0.5, colour: { swatch: 'Amber' } },
+      ceiling: { intensity: 1, colour: { swatch: 'White' } },
+    };
+    patch = ok(setStartupLook(patch, look));
+
+    const removed = removeHouseGroup(patch, 'bar');
+
+    expect(patchHouse(removed)).toEqual({
+      groups: [{ id: 'ceiling', name: 'Ceiling' }],
+      lights: [houseLight({ id: 'h2', group: 'ceiling', address: 200 })],
+      startupLook: { ceiling: look.ceiling },
+    });
+  });
+
+  it('removes a House Group from every house look, dropping a look it leaves empty', () => {
+    let patch = withBar(emptyPatch(stage), houseLight());
+    patch = ok(putHouseGroup(patch, { id: 'ceiling', name: 'Ceiling' }));
+    const bar = { intensity: 0.2, colour: { swatch: 'Amber' } } as const;
+    const ceiling = { intensity: 0, colour: { swatch: 'White' } } as const;
+    patch = ok(setHouseLook(patch, 'dim', { bar, ceiling }));
+    patch = ok(setHouseLook(patch, 'bar-only', { bar }));
+
+    expect(patchHouse(removeHouseGroup(patch, 'bar')).looks).toEqual({ dim: { ceiling } });
+    const none = removeHouseGroup(removeHouseGroup(patch, 'bar'), 'ceiling');
+    expect(patchHouse(none).looks).toBeUndefined();
+  });
+
+  it('removes the House Lights of a removed Universe', () => {
+    const two = putUniverse(emptyPatch(stage), { number: 2 });
+    if ('errors' in two) throw new Error(two.errors.join('\n'));
+    const patch = withBar(two.patch, houseLight(), houseLight({ id: 'h2', universe: 2 }));
+
+    expect(patchHouse(removeUniverse(patch, 2)).lights.map((l) => l.id)).toEqual(['h1']);
+  });
+
+  it('sets and clears the Startup look', () => {
+    const patch = withBar(emptyPatch(stage), houseLight());
+    const look: HouseLook = { bar: { intensity: 0.3, colour: { hue: 30, saturation: 0.5 } } };
+
+    const lit = ok(setStartupLook(patch, look));
+    expect(patchHouse(lit).startupLook).toEqual(look);
+    expect(patchHouse(ok(setStartupLook(lit, undefined)))).toEqual(patchHouse(patch));
+  });
+
+  it('rejects a Startup look for an unknown Group, or with a bad intensity or colour', () => {
+    const patch = withBar(emptyPatch(stage));
+    const white = { swatch: 'White' } as const;
+
+    expect(setStartupLook(patch, { ceiling: { intensity: 1, colour: white } })).toEqual({
+      errors: ['Startup look: House Group "ceiling" is not in the patch'],
+    });
+    expect(setStartupLook(patch, { bar: { intensity: 1.5, colour: white } })).toEqual({
+      errors: ['Startup look: "Bar" intensity must be from 0 to 1'],
+    });
+    expect(
+      setStartupLook(patch, { bar: { intensity: 1, colour: { hue: 400, saturation: 1 } } }),
+    ).toEqual({
+      errors: ['Startup look: "Bar" hue must be from 0 to under 360'],
+    });
+  });
+
+  it('rejects two House Groups with one id', () => {
+    const patch = withBar(emptyPatch(stage));
+
+    expect(
+      validatePatch({
+        ...patch,
+        house: {
+          ...patchHouse(patch),
+          groups: [
+            { id: 'bar', name: 'Bar' },
+            { id: 'bar', name: 'Bar 2' },
+          ],
+        },
+      }),
+    ).toEqual(['House Group id "bar" is used twice']);
+  });
+});
+
+describe('House looks', () => {
+  const amber = { intensity: 0.2, colour: { swatch: 'Amber' } } as const;
+  const white = { intensity: 1, colour: { swatch: 'White' } } as const;
+
+  it('has none in a new patch', () => {
+    expect(patchHouse(withBar(emptyPatch(stage))).looks).toBeUndefined();
+  });
+
+  it('sets a look per House Preset id, and replaces it', () => {
+    let patch = withBar(emptyPatch(stage));
+
+    patch = ok(setHouseLook(patch, 'dim', { bar: amber }));
+    patch = ok(setHouseLook(patch, 'up', { bar: white }));
+    expect(patchHouse(patch).looks).toEqual({ dim: { bar: amber }, up: { bar: white } });
+
+    patch = ok(setHouseLook(patch, 'dim', { bar: { ...amber, intensity: 0.1 } }));
+    expect(patchHouse(patch).looks?.dim).toEqual({ bar: { ...amber, intensity: 0.1 } });
+    // In place, so the looks keep their order.
+    expect(Object.keys(patchHouse(patch).looks ?? {})).toEqual(['dim', 'up']);
+  });
+
+  it('keeps the Startup look apart', () => {
+    const patch = ok(setStartupLook(withBar(emptyPatch(stage)), { bar: white }));
+
+    const house = patchHouse(ok(setHouseLook(patch, 'dim', { bar: amber })));
+    expect(house.startupLook).toEqual({ bar: white });
+    expect(house.looks).toEqual({ dim: { bar: amber } });
+  });
+
+  it('removes a look when cleared or left with no Group', () => {
+    const plain = withBar(emptyPatch(stage));
+    const patch = ok(setHouseLook(ok(setHouseLook(plain, 'dim', { bar: amber })), 'up', {}));
+    expect(patchHouse(patch).looks).toEqual({ dim: { bar: amber } });
+
+    expect(patchHouse(ok(setHouseLook(patch, 'dim', undefined)))).toEqual(patchHouse(plain));
+    expect(patchHouse(ok(setHouseLook(patch, 'dim', {})))).toEqual(patchHouse(plain));
+  });
+
+  it('rejects a look for an unknown Group, or with a bad intensity or colour', () => {
+    const patch = withBar(emptyPatch(stage));
+
+    expect(setHouseLook(patch, 'dim', { ceiling: white })).toEqual({
+      errors: ['House look "dim": House Group "ceiling" is not in the patch'],
+    });
+    expect(setHouseLook(patch, 'dim', { bar: { ...white, intensity: -1 } })).toEqual({
+      errors: ['House look "dim": "Bar" intensity must be from 0 to 1'],
+    });
+  });
+
+  it('rejects a look with no House Preset id', () => {
+    expect(setHouseLook(withBar(emptyPatch(stage)), '', { bar: white })).toEqual({
+      errors: ['A house look needs a House Preset id'],
+    });
   });
 });

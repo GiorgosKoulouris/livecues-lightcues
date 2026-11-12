@@ -1,12 +1,13 @@
-import { validateShow, type Colour, type Show } from '../shared/show';
+import { validateShow, type Colour, type Rule, type Show } from '../shared/show';
 
 // The .lcshow file: a Show as versioned JSON. Version 2 added the default
-// colour, version 3 the Fallback Panel's Scene buttons and version 4 Rule
-// Directions, movement Effects and the Default Direction; older files load
-// without them.
+// colour, version 3 the Fallback Panel's Scene buttons, version 4 Rule
+// Directions, movement Effects and the Default Direction and version 5 House
+// Presets, strobe and Effect slots; older files load without them. Version 5
+// renamed a Rule's `effect` to `movementEffect`.
 
-const VERSION = 4;
-const VERSIONS = [1, 2, 3, VERSION];
+const VERSION = 5;
+const VERSIONS = [1, 2, 3, 4, VERSION];
 
 interface ShowFile extends Show {
   version: number;
@@ -29,8 +30,27 @@ export function loadShowFile(json: string): Show {
   if (!hasParts(show)) {
     throw new Error('Invalid Show: layers, scenes and triggers are required');
   }
-  throwIfInvalid(checkMalformed(() => [...unknownFields(file as ShowFile), ...validateShow(show)]));
-  return show;
+  if (show.housePresets !== undefined && !Array.isArray(show.housePresets)) {
+    throw new Error('Invalid Show: housePresets must be a list');
+  }
+  let upgraded = show;
+  throwIfInvalid(
+    checkMalformed(() => {
+      upgraded = version < 5 ? withMovementEffects(show) : show;
+      return [...unknownFields(file as ShowFile), ...validateShow(upgraded)];
+    }),
+  );
+  return upgraded;
+}
+
+// A Show from a file before version 5, its Rules' `effect` as `movementEffect`.
+function withMovementEffects(show: Show): Show {
+  const upgrade = ({ effect, ...rule }: Rule & { effect?: Rule['movementEffect'] }): Rule =>
+    effect === undefined ? rule : { ...rule, movementEffect: effect };
+  return {
+    ...show,
+    scenes: show.scenes.map((scene) => ({ ...scene, rules: scene.rules.map(upgrade) })),
+  };
 }
 
 function throwIfInvalid(errors: string[]): void {
@@ -50,7 +70,7 @@ function checkMalformed(check: () => string[]): string[] {
   try {
     return check();
   } catch {
-    return ['a Layer, Scene, Rule or Trigger is missing fields'];
+    return ['a Layer, Scene, Rule, Trigger or House Preset is missing fields'];
   }
 }
 
@@ -75,8 +95,15 @@ function unknownFields(file: ShowFile): string[] {
     ['defaultColour'],
     ['panelScenes'],
     ['defaultDirection'],
+    ['housePresets'],
   ];
   allow(file, added.slice(0, file.version).flat(), '');
+  // The Rule fields of each version, besides the target and colour.
+  const ruleFields =
+    file.version >= 5
+      ? ['intensity', 'direction', 'strobe', 'movementEffect', 'intensityEffect', 'colourEffect']
+      : [['intensity'], [], [], ['direction', 'effect']].slice(0, file.version).flat();
+  const movementField = file.version < 5 ? 'effect' : 'movementEffect';
   if (file.version !== 1 && file.defaultColour !== undefined) {
     allowColour(file.defaultColour, 'defaultColour.');
   }
@@ -85,19 +112,41 @@ function unknownFields(file: ShowFile): string[] {
     allow(scene, ['id', 'name', 'tags', 'layer', 'fadeIn', 'rules'], `scenes[${i}].`);
     scene.rules.forEach(({ target, colour, ...rest }, j) => {
       const at = `scenes[${i}].rules[${j}].`;
-      allow(rest, file.version >= 4 ? ['intensity', 'direction', 'effect'] : ['intensity'], at);
+      allow(rest, ruleFields, at);
       allow(target, ['zones', 'roles'], `${at}target.`);
       target.zones?.forEach((zone, k) => {
         allow(zone, ['row', 'column', 'level'], `${at}target.zones[${k}].`);
       });
       if (colour !== undefined) allowColour(colour, `${at}colour.`);
-      if (rest.effect !== undefined && file.version >= 4) {
-        allow(rest.effect, ['shape', 'size', 'length', 'spread'], `${at}effect.`);
+      const effects = rest as Record<string, unknown>;
+      const allowEffect = (field: string, fields: string[]) => {
+        const effect = effects[field];
+        if (typeof effect === 'object' && effect !== null) allow(effect, fields, `${at}${field}.`);
+      };
+      if (file.version >= 4) allowEffect(movementField, ['shape', 'size', 'length', 'spread']);
+      if (file.version >= 5) {
+        allowEffect('intensityEffect', ['shape', 'depth', 'length', 'spread']);
+        allowEffect('colourEffect', ['shape', 'colours', 'length', 'spread']);
+        // validateShow reports a list or colour of the wrong type.
+        const colours: unknown = (effects.colourEffect as { colours?: unknown } | null)?.colours;
+        if (Array.isArray(colours)) {
+          colours.forEach((colour: unknown, k) => {
+            if (typeof colour === 'object' && colour !== null) {
+              allowColour(colour as Colour, `${at}colourEffect.colours[${k}].`);
+            }
+          });
+        }
       }
     });
   });
   file.triggers.forEach((trigger, i) => {
     allow(trigger, ['channel', 'note', 'scene', 'mode'], `triggers[${i}].`);
   });
+  if (file.version >= 5) {
+    file.housePresets?.forEach(({ note, ...rest }, i) => {
+      allow(rest, ['id', 'name', 'fade'], `housePresets[${i}].`);
+      if (note !== undefined) allow(note, ['channel', 'note'], `housePresets[${i}].note.`);
+    });
+  }
   return found;
 }

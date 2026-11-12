@@ -4,12 +4,19 @@ import {
   addUniverse,
   emptyPatch,
   moveFixture,
+  patchHouse,
   putFixture,
   putFixtures,
+  putHouseGroup,
+  putHouseLight,
   putUniverse,
   removeFixtures,
+  removeHouseGroup,
+  removeHouseLights,
   removeUniverse,
   setStage,
+  setHouseLook,
+  setStartupLook,
   type PatchResult,
   type StageBounds,
   type VenuePatch,
@@ -145,6 +152,27 @@ export function createVenueSession({
         }
         return { patch: removeFixtures(patch, change.ids) };
       }
+      case 'putHouseGroup':
+        return putHouseGroup(patch, change.group);
+      case 'removeHouseGroup':
+        if (!patchHouse(patch).groups.some((g) => g.id === change.id)) {
+          return { errors: [`House Group "${change.id}" is not in the patch`] };
+        }
+        return { patch: removeHouseGroup(patch, change.id) };
+      case 'putHouseLight':
+        return putHouseLight(patch, change.light, libraryProfile(change.light.profileId));
+      case 'removeHouseLights': {
+        const { lights } = patchHouse(patch);
+        const missing = change.ids.find((id) => !lights.some((l) => l.id === id));
+        if (missing !== undefined) {
+          return { errors: [`House Light id "${missing}" is not in the patch`] };
+        }
+        return { patch: removeHouseLights(patch, change.ids) };
+      }
+      case 'setStartupLook':
+        return setStartupLook(patch, change.look);
+      case 'setHouseLook':
+        return setHouseLook(patch, change.preset, change.look);
     }
   }
 
@@ -217,13 +245,27 @@ export function createVenueSession({
 }
 
 // What an edit changes, for merging quick edits into one undo step: the
-// stage, an existing Universe, or the same existing Fixtures. Adding,
+// stage, an existing Universe, the same existing Fixtures, an existing House
+// Group or House Light, the Startup look, or one house look. Adding,
 // removing and moving on the stage plan never merge.
 function mergeKey(patch: VenuePatch, change: VenueEdit): string | undefined {
   const patched = (id: string) => patch.fixtures.some((f) => f.id === id);
+  const { groups, lights } = patchHouse(patch);
   switch (change.type) {
     case 'setStage':
       return 'stage';
+    case 'setStartupLook':
+      return 'startup look';
+    case 'setHouseLook':
+      return `house look ${change.preset}`;
+    case 'putHouseGroup': {
+      const { id } = change.group;
+      return groups.some((g) => g.id === id) ? `house group ${id}` : undefined;
+    }
+    case 'putHouseLight': {
+      const { id } = change.light;
+      return lights.some((l) => l.id === id) ? `house light ${id}` : undefined;
+    }
     case 'putUniverse': {
       const { number } = change.universe;
       return patch.universes.some((u) => u.number === number) ? `universe ${number}` : undefined;

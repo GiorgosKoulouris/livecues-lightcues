@@ -30,6 +30,21 @@ describe('base components', () => {
     expect(await screen.findByRole('tooltip')).toHaveTextContent('Remove Scene');
   });
 
+  it('Button has a distinct face for each variant, including sunk', () => {
+    const variants = ['primary', 'secondary', 'ghost', 'danger', 'sunk'] as const;
+    render(
+      <>
+        {variants.map((variant) => (
+          <Button key={variant} variant={variant}>
+            {variant}
+          </Button>
+        ))}
+      </>,
+    );
+    const classes = variants.map((v) => screen.getByRole('button', { name: v }).className);
+    expect(new Set(classes).size).toBe(variants.length);
+  });
+
   it('Checkbox toggles with Space', async () => {
     const onChange = vi.fn();
     render(<Checkbox label="Fallback Panel" checked={false} onChange={onChange} />);

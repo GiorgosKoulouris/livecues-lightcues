@@ -23,6 +23,7 @@ const SHOW: Show = {
   scenes: [{ id: 'warm', name: 'Warm', tags: [], layer: 'layer-1', fadeIn: 0, rules: [] }],
   triggers: [],
   panelScenes: ['warm'],
+  housePresets: [{ id: 'dim', name: 'Show dim', fade: 3 }],
 };
 
 const playback = (more: Partial<Extract<EngineEvent, { type: 'playback' }>> = {}): EngineEvent => ({
@@ -62,6 +63,8 @@ function answer(command: EngineCommand): EngineEvent[] {
       ];
     case 'getPlayback':
       return [playback()];
+    case 'getHouse':
+      return [{ type: 'house', fired: { type: 'startup' } }];
     case 'getTempo':
       return [{ type: 'tempo', bpm: 120, source: 'default' }];
     case 'listMidiInputs':
@@ -94,13 +97,13 @@ const EXAMPLE = {
 
 const RELEASE: UpdateAvailable = {
   version: '0.2.0',
-  url: 'https://github.com/GiorgosKoulouris/LightCues/releases/tag/v0.2.0',
+  url: 'https://github.com/GiorgosKoulouris/livecues-lightcues/releases/tag/v0.2.0',
 };
 const APP_INFO: AppInfo = {
   appVersion: '0.2.0',
   electronVersion: '44.7.0',
   windowsVersion: '10.0.22631',
-  logFolder: 'C:\\Users\\sam\\AppData\\Roaming\\LightCues\\logs',
+  logFolder: 'C:\\Users\\sam\\AppData\\Roaming\\LiveCues\\LightCues\\logs',
 };
 
 let licenses: { open: ReturnType<typeof vi.fn<LicensesBridge['open']>> };
@@ -199,6 +202,20 @@ describe('App shortcuts', () => {
     ]);
     await userEvent.keyboard('{Control>}1{/Control}');
     expect(screen.getByRole('region', { name: 'Fallback Panel' })).toBeInTheDocument();
+  });
+
+  it('fires a House Preset with Shift and its number, and presses the one the engine reports', async () => {
+    await renderApp();
+    const dim = screen.getByRole('button', { name: /Show dim/ });
+    expect(dim).toHaveAttribute('aria-pressed', 'false');
+
+    await userEvent.keyboard('{Shift>}1{/Shift}');
+    expect(engine.sent.at(-1)).toEqual({ type: 'fireHousePreset', id: 'dim' });
+    engine.emit({ type: 'house', fired: { type: 'preset', id: 'dim' } });
+
+    expect(dim).toHaveAttribute('aria-pressed', 'true');
+    expect(currentView()).toHaveTextContent('Venue Patch');
+    expect(panelCommands()).toEqual([]);
   });
 
   it('fires the Scene button on a bare digit without switching view', async () => {

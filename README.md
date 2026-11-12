@@ -2,6 +2,8 @@
 
 Lights for your gig that follow your DAW, at any venue.
 
+[![Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FGiorgosKoulouris%2Flivecues-lightcues%2Fbadges%2Fcoverage.json)](https://github.com/GiorgosKoulouris/livecues-lightcues/actions/workflows/coverage.yml)
+
 ![Perform view: Scene buttons grouped by Layer, with Verse and Circle movement active, and the Preview showing the stage from above and from the front](docs/images/perform.png)
 *Perform, the view for the gig. Verse plays on the Looks Layer and Circle movement on the Movement Layer.*
 
@@ -23,13 +25,13 @@ Building from source: [docs/development.md](docs/development.md).
 
 ## Install
 
-1. Download `LightCues-Setup-<version>.exe` from the [Releases page](https://github.com/GiorgosKoulouris/LightCues/releases).
-2. Run it. By default it installs for your user only, without admin rights.
+1. Download `LightCues-Setup-<version>.exe` from the [Releases page](https://github.com/GiorgosKoulouris/livecues-lightcues/releases).
+2. Run it. By default it installs for your user only, without admin rights, in `%LOCALAPPDATA%\Programs\LiveCues\LightCues`.
 3. The installer is not code-signed yet. On the blue SmartScreen warning, choose **More info** → **Run anyway**.
 
 LightCues checks GitHub for a new release once a day and shows a notice in the Sidebar, never in Perform. It downloads nothing: install the new version over the old one. To turn the check off, untick **Check on startup** at the bottom of the Sidebar. The button beside it checks now.
 
-The Profile Library and the chosen MIDI Input are kept in `%APPDATA%\LightCues`. Shows and Venue Patches are saved where you choose.
+The Profile Library and the chosen MIDI Input are kept in `%APPDATA%\LiveCues\LightCues`. Shows and Venue Patches are saved where you choose.
 
 ## First Show
 
@@ -54,7 +56,8 @@ In **Venue Patch**:
 1. In the **Rig setup** tab, set the stage width and depth. Click **Add Universe** and pick its Output, the DMX interface. Its status shows **Sending** once it works.
 2. In the **Fixtures** tab, click **Add Fixture** and pick the Profile, Mode, Universe and DMX address.
 3. Drag each Fixture to its place on the stage plan. In the inspector, check its Role and Zone. For moving heads, set how they are mounted.
-4. **Save** the Venue Patch. Make one per venue.
+4. If the venue's own lights, such as the bar, are on a Universe you drive, add them in the **House** tab: a House Group per area, then its House Lights. Set the **Startup look** they get from launch, or they stay at full white, and a look for each House Preset of the Show. Scenes, Blackout, the Grand Master, Freeze and Blind never reach them.
+5. **Save** the Venue Patch. Make one per venue.
 
 ### 3. Build a Scene
 
@@ -64,7 +67,7 @@ In **Venue Patch**:
 In **Show**, on the **Scenes** tab:
 
 1. Click **New Scene** and name it.
-2. Click **Add Rule**. Pick its Zones on the stage plans and its Roles, then set intensity, colour, Direction or an Effect. Later Rules override earlier ones.
+2. Click **Add Rule**. Pick its Zones on the stage plans and its Roles, then set intensity, colour or a colour Effect, Direction, movement and intensity Effects, or strobe. Later Rules override earlier ones.
 3. Pick the Scene's Layer. A Scene replaces the one playing in its Layer. Different Layers stack.
 
 The Preview shows the result on the stage plan. Switch to **Blind** to edit without changing the real lights.
@@ -76,16 +79,17 @@ In **Show**, on the **Triggers** tab:
 1. Choose the **MIDI Input**: your rtpMIDI session, loopMIDI port or MIDI controller's port.
 2. Click **Learn** and play the note, or type the channel and note.
 3. Pick the Scene and the mode: Go (start and stay), Flash (while held) or Release (clear the Layer). Click **Map**.
-4. **Save** the Show.
+4. For the House Lights, add House Presets under the Triggers, such as Dim and Up: a name, a fade and, if you like, a note. Each venue sets what they look like in its Venue Patch's **House** tab.
+5. **Save** the Show.
 
 ### 5. Perform
 
 ![Animation: Scenes fired one after another in Perform, with the Preview changing colour and the moving heads following](docs/images/demo.gif)
 *Scenes fired by hand with the Perform buttons, no MIDI, sped up. A MIDI Trigger fires them the same way.*
 
-Open **Perform** at the gig. It shows Blackout, Base Look, Grand Master, Tap Tempo and Freeze along the top, every Scene button by Layer, and the Preview. The top bar shows the MIDI Input: red means lost, and Triggers do not fire until it returns.
+Open **Perform** at the gig. It shows Blackout, Base Look, Grand Master, Tap Tempo and Freeze along the top, a House section while the Venue Patch has House Lights, every Scene button by Layer, and the Preview. The House section has **Startup** and a button per House Preset. Each fades the House Lights to its look; the last one fired stays lit. The top bar shows the MIDI Input. A red disc and "MIDI lost" mean it is lost, and Triggers do not fire until it returns.
 
-Fallback Panel keys: **B** Blackout, **0** Base Look, **1**–**9** Scene buttons, **-** / **+** Grand Master, **T** Tap Tempo, **F** Freeze. Pick the Base Look and the panel's Scene buttons in the Show settings.
+Fallback Panel keys: **B** Blackout, **0** Base Look, **1**–**9** Scene buttons, **-** / **+** Grand Master, **T** Tap Tempo, **F** Freeze, **Shift+1**–**8** House Presets. Pick the Base Look and the panel's Scene buttons in the Show settings.
 
 ## Troubleshooting
 
@@ -105,7 +109,7 @@ The Output list in **Rig setup** shows only USB serial devices with an FTDI chip
 
 ### Logs
 
-LightCues writes one log file per day to `%APPDATA%\LightCues\logs\`, named `lightcues-YYYY-MM-DD.log`. The last 14 days are kept. Attach the log from the day of the problem to a bug report. Logs hold file paths but no Show or Venue Patch contents.
+LightCues writes one log file per day to `%APPDATA%\LiveCues\LightCues\logs\`, named `lightcues-YYYY-MM-DD.log`. The last 14 days are kept. Attach the log from the day of the problem to a bug report. Logs hold file paths but no Show or Venue Patch contents.
 
 ## Links
 
@@ -114,10 +118,10 @@ LightCues writes one log file per day to `%APPDATA%\LightCues\logs\`, named `lig
 
 ## Contributing
 
-Bug reports and Fixture requests welcome as [GitHub Issues](https://github.com/GiorgosKoulouris/LightCues/issues/new/choose). Pull requests by arrangement: open an issue first. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Bug reports and Fixture requests welcome as [GitHub Issues](https://github.com/GiorgosKoulouris/livecues-lightcues/issues/new/choose). Pull requests by arrangement: open an issue first. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-Copyright (C) 2026 Georgios Koulouris
+Copyright (c) 2026 Georgios Koulouris
 
-LightCues is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License, version 3, as published by the Free Software Foundation. It is distributed without any warranty. See [LICENSE](LICENSE).
+LightCues is released under the [MIT license](LICENSE). Releases up to and including v0.1.1 were released under GPL-3.0-only and stay under it. See [ADR 0017](docs/adr/0017-mit-licence.md).

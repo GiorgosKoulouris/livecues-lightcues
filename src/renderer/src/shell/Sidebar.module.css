@@ -4,14 +4,8 @@
   gap: var(--space-1);
   width: var(--sidebar-width);
   padding: var(--space-3) var(--space-2);
-  background: var(--surface-1);
-  border-right: 1px solid var(--border);
-}
-
-.app {
-  padding: var(--space-1) var(--space-2) var(--space-3);
-  font-size: var(--text-lg);
-  font-weight: var(--weight-bold);
+  background: var(--bar);
+  border-right: 1px solid var(--line);
 }
 
 .item {
@@ -21,28 +15,50 @@
   height: var(--control-height);
   padding: 0 var(--space-2);
   border: none;
-  border-radius: var(--radius-md);
+  border-left: 3px solid transparent;
+  border-radius: 0;
   background: transparent;
-  color: var(--text-muted);
-  font-weight: var(--weight-medium);
+  color: var(--legend-dim);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   text-align: left;
   cursor: pointer;
 }
 
 .item svg {
+  flex: none;
   width: var(--icon-md);
   height: var(--icon-md);
 }
 
 .item:hover {
-  background: var(--surface-2);
-  color: var(--text);
+  background: var(--key-hover);
+  color: var(--legend);
 }
 
+.item:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* The selected view: Active Wash and a 3px Signal edge. */
 .current,
 .current:hover {
-  background: var(--accent-soft);
-  color: var(--accent);
+  border-left-color: var(--signal);
+  background: var(--active-wash);
+  color: var(--legend);
+}
+
+/* The Ctrl+N hint. */
+.hint {
+  margin-left: auto;
+  color: var(--legend-dim);
+  font-size: 10px;
+  font-weight: var(--weight-normal);
+  letter-spacing: 0.04em;
+  text-transform: none;
 }
 
 /* Lined up with the view items: same padding, icon size and gap. */
@@ -56,6 +72,9 @@
 .action {
   justify-content: flex-start;
   padding: 0 var(--space-2);
+  /* The label must fit the 176px Sidebar beside its icon. */
+  font-size: var(--text-sm);
+  letter-spacing: 0;
 }
 
 .action svg {
@@ -68,8 +87,8 @@
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--edge);
+  background: var(--display);
   font-size: var(--text-sm);
 }
 
@@ -79,13 +98,13 @@
 
 .setting {
   padding: 0 var(--space-2);
-  color: var(--text-muted);
+  color: var(--legend-dim);
   font-size: var(--text-sm);
 }
 
 .checkNow {
   margin: 0;
   padding: 0 var(--space-2);
-  color: var(--text-muted);
+  color: var(--legend-dim);
   font-size: var(--text-sm);
 }

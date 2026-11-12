@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import type { ShowEdit } from '../../../shared/protocol';
 import type { Scene, Show } from '../../../shared/show';
+import { useTempo } from '../panel/useTempo';
 import { FileButtons } from '../shell/FileButtons';
 import { HistoryButtons } from '../shell/HistoryButtons';
 import { useFileCommands } from '../shell/useFileCommands';
@@ -11,6 +12,7 @@ import { SidePanel, SidePanelToggle } from '../ui/SidePanel';
 import { Tabs } from '../ui/Tabs';
 import { useToast } from '../ui/Toast';
 import { useVenuePatch } from '../venue/useVenuePatch';
+import { HousePresetPanel } from './HousePresetPanel';
 import { LayerStack } from './LayerStack';
 import { ModeSwitch } from './ModeSwitch';
 import { Preview } from './Preview';
@@ -32,15 +34,16 @@ const TABS = [
 ] as const;
 
 // Edits the current Show. Scenes: the Scene list, the selected Scene's editor,
-// and the Preview with the Layer stack. Triggers: MIDI Triggers and the MIDI
-// Input. Scenes go live from here with Go; Clear empties a Layer. Removing
-// is instant, and undone with Undo. While `active`, Ctrl+N, O, S and Shift+S
+// and the Preview with the Layer stack. Triggers: MIDI Triggers, the MIDI
+// Input and the House Presets. Scenes go live from here with Go; Clear
+// empties a Layer. Removing is instant, and undone with Undo. While `active`, Ctrl+N, O, S and Shift+S
 // act on its file, Ctrl+Z and Ctrl+Shift+Z undo and redo, and Ctrl+F searches
 // the Scenes.
 export function ShowView({ active }: { active: boolean }) {
   const { show: state, edit, newShow, undo, redo, open, save } = useShow();
   const { venue } = useVenuePatch();
   const playback = usePlayback();
+  const tempo = useTempo();
   const midiInput = useMidiInput();
   const toast = useToast();
   const [tab, setTab] = useState<SubTab>('scenes');
@@ -151,6 +154,7 @@ export function ShowView({ active }: { active: boolean }) {
               scene={selected}
               show={show}
               patch={venue.patch}
+              bpm={tempo?.bpm}
               onPut={(scene) => change({ type: 'putScene', scene })}
               onGo={() => go(selected.id)}
               onRemove={() => void removeScene(selected.id)}
@@ -183,12 +187,20 @@ export function ShowView({ active }: { active: boolean }) {
           </SidePanel>
         </div>
       ) : (
-        <TriggerPanel
-          show={show}
-          status={midiInput}
-          onPut={(trigger) => void change({ type: 'putTrigger', trigger })}
-          onRemove={(note) => change({ type: 'removeTrigger', note })}
-        />
+        <div className={styles.triggers}>
+          <TriggerPanel
+            show={show}
+            status={midiInput}
+            onPut={(trigger) => void change({ type: 'putTrigger', trigger })}
+            onRemove={(note) => change({ type: 'removeTrigger', note })}
+          />
+          <HousePresetPanel
+            show={show}
+            onPut={(preset) => void change({ type: 'putHousePreset', preset })}
+            onMove={(id, to) => void change({ type: 'moveHousePreset', id, to })}
+            onRemove={(id) => change({ type: 'removeHousePreset', id })}
+          />
+        </div>
       )}
     </Tabs>
   );

@@ -75,7 +75,7 @@ body:
     id: log
     attributes:
       label: Log excerpt
-      description: 'Optional. From `%APPDATA%\LightCues\logs\lightcues-YYYY-MM-DD.log` on the day of the problem. Logs hold file paths but no Show or Venue Patch contents.'
+      description: 'Optional. From `%APPDATA%\LiveCues\LightCues\logs\lightcues-YYYY-MM-DD.log` on the day of the problem. Logs hold file paths but no Show or Venue Patch contents.'
       render: text
     validations:
       required: false

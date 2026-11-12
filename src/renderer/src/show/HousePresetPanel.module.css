@@ -1,0 +1,72 @@
+.panel {
+  /* As wide as the Trigger panel above. */
+  --house-panel-width: 960px;
+  --name-width: 220px;
+  --fade-width: 80px;
+  --channel-width: 64px;
+  --note-width: 80px;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: var(--house-panel-width);
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.heading {
+  margin: 0;
+  color: var(--legend-dim);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.hint {
+  color: var(--legend-dim);
+  font-size: var(--text-sm);
+}
+
+/* Handle, name, fade, note, remove. */
+.item {
+  display: grid;
+  grid-template-columns:
+    auto var(--name-width) var(--fade-width) minmax(0, 1fr)
+    auto;
+  align-items: start;
+  gap: var(--space-2);
+  padding: var(--space-1);
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--bar);
+}
+
+.note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.channel {
+  width: var(--channel-width);
+}
+
+.noteNumber {
+  width: var(--note-width);
+}
+
+.none {
+  align-self: center;
+  color: var(--legend-dim);
+}
+
+.empty {
+  padding: var(--space-4);
+  color: var(--legend-dim);
+}

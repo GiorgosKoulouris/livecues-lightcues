@@ -4,6 +4,42 @@ What changed in each LightCues release. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-11-12
+
+### Added
+
+- House Lights: patch the venue's own lights, such as the bar, in House Groups in the Venue Patch's new **House** tab. They start at full white, or at the Startup look you set, and Scenes, Blackout, the Grand Master, Freeze and Blind never reach them.
+- House Presets: up to 8 named slots per Show for the House Lights, such as Dim and Up, each with a fade and an optional MIDI note. Add them under the Triggers in the **Triggers** tab. A note cannot be both a Trigger and a House Preset's.
+- House looks: in the Venue Patch's **House** tab, set what each House Preset of the Show does in this venue, with the rig showing it as you edit. A House Preset with no look is marked "Not set up in this venue". Looks for House Presets the Show lacks are kept, and can be removed.
+- Fire House Presets from their MIDI note, from the new House section in Perform, or from the Fallback Panel with Shift+1–8. The House Lights fade to the look over the House Preset's fade; the last one fired is highlighted. **Startup** in Perform fades back to the Startup look. Opening a Venue Patch goes to its Startup look; opening a Show keeps the House Lights as they are.
+- Strobe: a Rule can strobe the Fixtures it targets, Slow, Medium or Fast, or once per 1, 1/2 or 1/4 beat of the Tempo. Off stops strobe from earlier Rules and lower Layers. The preview flashes strobing Fixtures, and the Fixture inspector lists the Scenes that strobe a Fixture with no strobe channel, or whose strobe rate is unknown.
+- Movement Effect **None**: stops the movement Effect of lower Layers and earlier Rules, holding the aim still, faded in over the Scene's fade-in.
+- Effects can run in cycles of 1/4 and 1/2 beat.
+- Intensity Effects: Pulse, Ramp up, Ramp down, Square and Chase scale the intensity of a Rule's Fixtures, even intensity from other Layers. Chase lights one Spread position at a time. **None** stops the intensity Effect of lower Layers and earlier Rules.
+- Colour Effects: a Rule can step or fade through 2 to 4 colours, or run a Rainbow, in place of its colour. Spread offsets each Fixture, so Alternate with two colours gives odd and even. Fixtures with a colour wheel snap to its nearest colour. **None** stops the colour Effect of lower Layers and earlier Rules, back to the colour under it.
+- Speed limit: a movement Effect that would turn a moving Fixture faster than 300°/s runs at a longer length instead, still on the beat and at its size, so moving Fixtures are not overdriven at high Tempos. Only if 16 beats is still too fast does its size shrink. The length switches without a jump, and back when the Tempo falls. The Show keeps the length you set.
+- The Scene editor says when the Speed limit slows a Rule's movement Effect at the current Tempo, and to what length. In Perform and on the Fallback Panel, an active Scene's button shows **Limited** while the Speed limit slows it; hover it to see the length.
+- Pan/Tilt speed channels in Open Fixture Library files now import as a speed from slow to fast, and the Profile editor can set one. LightCues still leaves the channel at its default. Re-import the Fixture Profile to pick this up.
+
+### Changed
+
+- The interface now uses the LiveCues family palette and the IBM Plex Sans and Mono fonts, bundled with the app, with square corners and no shadows. Buttons are now keys with a cut corner. Every view, the sidebar, fields, lists, tabs, dialogs, toasts and badges follow the same style. In Perform and on the Fallback Panel, Blackout and Freeze sink while engaged, the Grand Master is a fader, and the live Scene's button is lit.
+- New app icon in the LiveCues family style.
+- The licence is now MIT. Releases up to v0.1.1 stay under GPL-3.0-only.
+- LightCues now installs to `%LOCALAPPDATA%\Programs\LiveCues\LightCues` and keeps its data, the Profile Library, settings and logs, in `%APPDATA%\LiveCues\LightCues`. Data in the old `%APPDATA%\LightCues` is not moved.
+- Venue Patches and Shows saved by this version do not open in older versions of LightCues, as they can hold House Lights, House Presets, strobe and the new Effect settings. Older files still open.
+- Strobe speeds given as slow and fast in Open Fixture Library files now import as 1 to 20 Hz, in the right direction, so a fast-to-slow strobe channel no longer runs backwards. Re-import the Fixture Profile and apply it again to pick this up.
+- A "dark" brightness in Open Fixture Library files now imports as 5%. Re-import the Fixture Profile and apply it again to pick this up.
+- GDTF channels whose meaning depends on another channel now import the meaning that applies at that channel's default. Re-import the Fixture Profile and apply it again to pick this up.
+- The fixture import report names the value each channel it cannot drive is held at. In the Profile editor, a channel with an unsupported range shows "held at default" by its default value, as that is what LightCues sends there. Re-import the Fixture Profile to see the held values in the report.
+- The fixture import report warns when an Open Fixture Library file has cyan, magenta or yellow but no red, green or blue, as it may be a CMY fixture that mixes colour subtractively. LightCues still drives cyan, magenta and yellow as additive emitters. Re-import the Fixture Profile to see the warning.
+
+### Security
+
+- Electron updated to 44.9.1.
+- The GDTF import reads files with an XML parser updated for a security advisory.
+- The app now also blocks redirects away from its own page, as it already did for navigation.
+
 ## [0.1.1] - 2026-10-12
 
 ### Added

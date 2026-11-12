@@ -18,5 +18,5 @@
 }
 
 .message {
-  color: var(--text-muted);
+  color: var(--legend-dim);
 }

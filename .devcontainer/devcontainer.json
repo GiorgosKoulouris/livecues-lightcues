@@ -1,15 +1,14 @@
 {
-  "name": "LightCues",
+  "name": "lvlc",
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
-  // Build with plain `docker build` so Compose never builds. Dev Containers
-  // otherwise injects a temp Dockerfile outside the build context, which
-  // `buildx bake` (used by recent Compose) rejects without fs entitlements.
-  "initializeCommand": ["docker", "build", "-t", "lightcues-devcontainer:latest", ".devcontainer"],
   "workspaceFolder": "/workspaces",
   "remoteUser": "node",
   "updateRemoteUserUID": true,
-  "postCreateCommand": "sudo chown node:node node_modules && if [ -f package.json ]; then npm install; fi",
+  "postCreateCommand": "sudo chown node:node node_modules && if [ -f package.json ]; then npm install --prefer-offline --no-audit --no-fund; fi",
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
   "customizations": {
     "vscode": {
       "extensions": [

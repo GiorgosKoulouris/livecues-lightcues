@@ -1,37 +1,58 @@
-/* Design tokens (ADR 0003). Dark only; a light theme would redefine these. */
+/* Design tokens (ADR 0003, 0017). Dark only; a light theme would redefine these. */
 :root {
   color-scheme: dark;
 
-  /* Surfaces, darkest first. */
-  --surface-0: #0e1014;
-  --surface-1: #15181e;
-  --surface-2: #1c2028;
-  --surface-3: #262b35;
-  --border: #2f3541;
-  --border-strong: #444c5b;
+  /* The Silkscreen Desk palette. The hex values are identical to the sibling
+     LiveCues apps (VideoCues, Reaper Remote). Only this file holds hex. */
+  --chassis: #191a17;
+  --bar: #141512;
+  --display: #0c0d0b;
+  --key: #282a25;
+  --key-hover: #343630;
+  --edge: #3a3c34;
+  --line: #2d2e29;
+  --active-wash: #22241f;
+  --legend: #dcdbcd;
+  --legend-dim: #8d8c80;
+  --signal: #ff6a1a;
+  --signal-ink: #1c0b00;
+  --led-green: #79e08a;
+  --led-red: #ff4a3a;
+  --warn-amber: #e0a030;
 
-  --text: #e3e6eb;
-  --text-muted: #9aa2b1;
-  --text-faint: #6b7383;
-  --text-on-accent: #0e1014;
+  /* Role names the components use today, mapped onto the palette. They go as
+     the components are restyled to the family names. */
+  --surface-0: var(--chassis);
+  --surface-1: var(--bar);
+  --surface-2: var(--key);
+  --surface-3: var(--key-hover);
+  --border: var(--line);
+  --border-strong: var(--edge);
 
-  --accent: #5b9dff;
-  --accent-hover: #7aafff;
-  --accent-soft: rgb(91 157 255 / 16%);
-  /* An active Scene or Layer. */
-  --active: #3ddc97;
-  --active-soft: rgb(61 220 151 / 16%);
+  --text: var(--legend);
+  --text-muted: var(--legend-dim);
+  --text-faint: var(--legend-dim);
+  --text-on-accent: var(--signal-ink);
+
+  --accent: var(--signal);
+  --accent-hover: var(--signal);
+  --accent-soft: var(--active-wash);
+  /* Something is live. */
+  --active: var(--led-green);
+  --active-soft: var(--active-wash);
   /* Errors, destructive actions and Blackout. */
-  --danger: #ff4d4f;
-  --danger-hover: #ff6b6d;
-  --danger-soft: rgb(255 77 79 / 16%);
+  --danger: var(--led-red);
+  --danger-hover: var(--led-red);
+  --danger-soft: var(--active-wash);
   /* Warnings and Blind. */
-  --warning: #ffb020;
-  --warning-soft: rgb(255 176 32 / 16%);
+  --warning: var(--warn-amber);
+  --warning-soft: var(--active-wash);
 
   --backdrop: rgb(0 0 0 / 60%);
-  --focus-ring: 0 0 0 2px var(--surface-0), 0 0 0 4px var(--accent);
-  --shadow-overlay: 0 12px 32px rgb(0 0 0 / 50%);
+  /* Drawn inside the key. */
+  --focus-ring: inset 0 0 0 2px var(--signal);
+  /* The family is flat: no shadows. */
+  --shadow-overlay: none;
 
   --space-1: 4px;
   --space-2: 8px;
@@ -40,23 +61,27 @@
   --space-5: 24px;
   --space-6: 32px;
 
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 10px;
-  --radius-pill: 999px;
+  /* Square corners. The one cut is a key's top right, the chamfer. */
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-pill: 0;
+  --chamfer: 8px;
 
-  --font-sans: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
-  /* DMX addresses and channel numbers. */
-  --font-mono: ui-monospace, Consolas, 'Cascadia Mono', monospace;
+  /* Anything printed on the panel. */
+  --font-sans: 'IBM Plex Sans', 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  /* Values the machine reports: DMX addresses, channel values, MIDI notes, times. */
+  --font-mono: 'IBM Plex Mono', ui-monospace, Consolas, 'Cascadia Mono', monospace;
   --text-xs: 11px;
   --text-sm: 12px;
   --text-md: 14px;
   --text-lg: 16px;
   --text-xl: 20px;
   --line-height: 1.4;
-  --weight-normal: 400;
+  --weight-normal: 500;
   --weight-medium: 500;
   --weight-bold: 600;
+  --weight-heavy: 700;
 
   --icon-sm: 16px;
   --icon-md: 18px;

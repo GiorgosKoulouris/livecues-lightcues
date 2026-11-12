@@ -1,3 +1,4 @@
+/* A key. The top right corner is cut by --chamfer. */
 .button {
   display: inline-flex;
   align-items: center;
@@ -6,17 +7,29 @@
   height: var(--control-height);
   padding: 0 var(--space-3);
   border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  font-weight: var(--weight-medium);
+  border-radius: 0;
+  background: var(--key);
+  color: var(--legend);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.04em;
   white-space: nowrap;
   cursor: pointer;
-  transition:
-    background var(--duration-fast),
-    border-color var(--duration-fast);
+  clip-path: polygon(0 0, calc(100% - var(--chamfer)) 0, 100% var(--chamfer), 100% 100%, 0 100%);
+  transition: background var(--duration-fast);
+}
+
+.button:hover:not(:disabled) {
+  background: var(--key-hover);
+}
+
+/* Pressed inverts. */
+.button:active:not(:disabled) {
+  background: var(--legend);
+  color: var(--chassis);
 }
 
 .button:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
@@ -36,54 +49,71 @@
   height: var(--icon-lg);
 }
 
+/* The lit key: the one forward action of a view. */
 .primary {
-  background: var(--accent);
-  color: var(--text-on-accent);
+  background: var(--signal);
+  color: var(--signal-ink);
+  font-weight: var(--weight-heavy);
 }
 
 .primary:hover:not(:disabled) {
-  background: var(--accent-hover);
+  background: var(--signal);
 }
 
+.primary:active:not(:disabled) {
+  background: var(--legend);
+  color: var(--chassis);
+}
+
+/* A plain key. */
 .secondary {
-  background: var(--surface-2);
-  border-color: var(--border);
+  background: var(--key);
 }
 
-.secondary:hover:not(:disabled) {
-  background: var(--surface-3);
-  border-color: var(--border-strong);
+/* A toggle that is on sinks, such as an active Scene. */
+.secondary[aria-pressed='true'],
+.secondary[aria-pressed='true']:hover:not(:disabled) {
+  background: var(--chassis);
+  border-color: var(--edge);
 }
 
-/* A toggle that is on, such as an active Scene. */
-.secondary[aria-pressed='true'] {
-  border-color: var(--active);
-  box-shadow: inset 0 0 0 1px var(--active);
-}
-
+/* A quiet key: no face, an Edge outline. */
 .ghost {
+  border-color: var(--edge);
   background: transparent;
-  color: var(--text-muted);
+  color: var(--legend-dim);
 }
 
 .ghost:hover:not(:disabled) {
-  background: var(--surface-2);
-  color: var(--text);
+  background: var(--key-hover);
+  color: var(--legend);
+}
+
+.ghost:active:not(:disabled) {
+  background: var(--legend);
+  color: var(--chassis);
 }
 
 /* An icon toggle that is on, such as Fixture labels. */
 .ghost[aria-pressed='true'],
 .ghost[aria-pressed='true']:hover:not(:disabled) {
-  color: var(--accent);
+  background: var(--active-wash);
+  color: var(--legend);
 }
 
+/* Destructive: a plain key with an LED Red legend. Never lit. */
 .danger {
-  background: var(--danger);
-  color: var(--text-on-accent);
+  background: var(--key);
+  color: var(--led-red);
 }
 
-.danger:hover:not(:disabled) {
-  background: var(--danger-hover);
+/* Sunk: something it controls is on. Chassis face, 2px inset LED Red outline. */
+.sunk,
+.sunk:hover:not(:disabled) {
+  border-color: transparent;
+  background: var(--chassis);
+  color: var(--led-red);
+  box-shadow: inset 0 0 0 2px var(--led-red);
 }
 
 .iconOnly {

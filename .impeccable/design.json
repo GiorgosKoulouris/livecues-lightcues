@@ -1,0 +1,467 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-12T02:26:31.000Z",
+  "title": "Design System: LightCues",
+  "extensions": {
+    "colorMeta": {
+      "chassis": {
+        "role": "neutral",
+        "displayName": "Chassis",
+        "canonical": "#191a17",
+        "oklch": "oklch(21.6% 0.006 121.9)",
+        "tonalRamp": [
+          "#0c0d0b",
+          "#141512",
+          "#191a17",
+          "#22241f",
+          "#282a25",
+          "#2d2e29",
+          "#343630",
+          "#3a3c34",
+          "#8d8c80",
+          "#dcdbcd"
+        ]
+      },
+      "bar": {
+        "role": "neutral",
+        "displayName": "Bar",
+        "canonical": "#141512",
+        "oklch": "oklch(19.3% 0.006 122.0)",
+        "tonalRamp": [
+          "#0c0d0b",
+          "#141512",
+          "#191a17",
+          "#22241f",
+          "#282a25",
+          "#2d2e29",
+          "#343630",
+          "#3a3c34",
+          "#8d8c80",
+          "#dcdbcd"
+        ]
+      },
+      "display": {
+        "role": "neutral",
+        "displayName": "Display",
+        "canonical": "#0c0d0b",
+        "oklch": "oklch(15.7% 0.004 128.8)",
+        "tonalRamp": [
+          "#0c0d0b",
+          "#141512",
+          "#191a17",
+          "#22241f",
+          "#282a25",
+          "#2d2e29",
+          "#343630",
+          "#3a3c34",
+          "#8d8c80",
+          "#dcdbcd"
+        ]
+      },
+      "key": {
+        "role": "neutral",
+        "displayName": "Key",
+        "canonical": "#282a25",
+        "oklch": "oklch(28.1% 0.009 124.8)",
+        "tonalRamp": [
+          "#0c0d0b",
+          "#141512",
+          "#191a17",
+          "#22241f",
+          "#282a25",
+          "#2d2e29",
+          "#343630",
+          "#3a3c34",
+          "#8d8c80",
+          "#dcdbcd"
+        ]
+      },
+      "key-hover": {
+        "role": "neutral",
+        "displayName": "Key Hover",
+        "canonical": "#343630",
+        "oklch": "oklch(32.9% 0.011 122.0)",
+        "tonalRamp": [
+          "#0c0d0b",
+          "#141512",
+          "#191a17",
+          "#22241f",
+          "#282a25",
+          "#2d2e29",
+          "#343630",
+          "#3a3c34",
+          "#8d8c80",
+          "#dcdbcd"
+        ]
+      },
+      "edge": {
+        "role": "neutral",
+        "displayName": "Edge",
+        "canonical": "#3a3c34",
+        "oklch": "oklch(35.2% 0.014 118.5)",
+        "tonalRamp": [
+          "#0c0d0b",
+          "#141512",
+          "#191a17",
+          "#22241f",
+          "#282a25",
+          "#2d2e29",
+          "#343630",
+          "#3a3c34",
+          "#8d8c80",
+          "#dcdbcd"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Line",
+        "canonical": "#2d2e29",
+        "oklch": "oklch(29.8% 0.009 116.1)",
+        "tonalRamp": [
+          "#0c0d0b",
+          "#141512",
+          "#191a17",
+          "#22241f",
+          "#282a25",
+          "#2d2e29",
+          "#343630",
+          "#3a3c34",
+          "#8d8c80",
+          "#dcdbcd"
+        ]
+      },
+      "active-wash": {
+        "role": "neutral",
+        "displayName": "Active Wash",
+        "canonical": "#22241f",
+        "oklch": "oklch(25.6% 0.010 124.9)",
+        "tonalRamp": [
+          "#0c0d0b",
+          "#141512",
+          "#191a17",
+          "#22241f",
+          "#282a25",
+          "#2d2e29",
+          "#343630",
+          "#3a3c34",
+          "#8d8c80",
+          "#dcdbcd"
+        ]
+      },
+      "legend": {
+        "role": "neutral",
+        "displayName": "Legend",
+        "canonical": "#dcdbcd",
+        "oklch": "oklch(88.8% 0.019 103.5)",
+        "tonalRamp": [
+          "#0c0d0b",
+          "#141512",
+          "#191a17",
+          "#22241f",
+          "#282a25",
+          "#2d2e29",
+          "#343630",
+          "#3a3c34",
+          "#8d8c80",
+          "#dcdbcd"
+        ]
+      },
+      "legend-dim": {
+        "role": "neutral",
+        "displayName": "Legend Dim",
+        "canonical": "#8d8c80",
+        "oklch": "oklch(63.7% 0.018 103.0)",
+        "tonalRamp": [
+          "#0c0d0b",
+          "#141512",
+          "#191a17",
+          "#22241f",
+          "#282a25",
+          "#2d2e29",
+          "#343630",
+          "#3a3c34",
+          "#8d8c80",
+          "#dcdbcd"
+        ]
+      },
+      "signal": {
+        "role": "primary",
+        "displayName": "Signal Orange",
+        "canonical": "#ff6a1a",
+        "oklch": "oklch(70.2% 0.199 43.0)",
+        "tonalRamp": [
+          "#0c0d0b",
+          "#141512",
+          "#191a17",
+          "#22241f",
+          "#282a25",
+          "#2d2e29",
+          "#343630",
+          "#3a3c34",
+          "#8d8c80",
+          "#dcdbcd"
+        ]
+      },
+      "signal-ink": {
+        "role": "primary",
+        "displayName": "Signal Ink",
+        "canonical": "#1c0b00",
+        "oklch": "oklch(17.2% 0.040 61.2)",
+        "tonalRamp": [
+          "#0c0d0b",
+          "#141512",
+          "#191a17",
+          "#22241f",
+          "#282a25",
+          "#2d2e29",
+          "#343630",
+          "#3a3c34",
+          "#8d8c80",
+          "#dcdbcd"
+        ]
+      },
+      "led-green": {
+        "role": "secondary",
+        "displayName": "LED Green",
+        "canonical": "#79e08a",
+        "oklch": "oklch(82.3% 0.154 147.8)",
+        "tonalRamp": [
+          "#0c0d0b",
+          "#141512",
+          "#191a17",
+          "#22241f",
+          "#282a25",
+          "#2d2e29",
+          "#343630",
+          "#3a3c34",
+          "#8d8c80",
+          "#dcdbcd"
+        ]
+      },
+      "led-red": {
+        "role": "tertiary",
+        "displayName": "LED Red",
+        "canonical": "#ff4a3a",
+        "oklch": "oklch(66.8% 0.220 29.3)",
+        "tonalRamp": [
+          "#0c0d0b",
+          "#141512",
+          "#191a17",
+          "#22241f",
+          "#282a25",
+          "#2d2e29",
+          "#343630",
+          "#3a3c34",
+          "#8d8c80",
+          "#dcdbcd"
+        ]
+      },
+      "warn-amber": {
+        "role": "tertiary",
+        "displayName": "Warn Amber",
+        "canonical": "#e0a030",
+        "oklch": "oklch(74.9% 0.142 76.5)",
+        "tonalRamp": [
+          "#0c0d0b",
+          "#141512",
+          "#191a17",
+          "#22241f",
+          "#282a25",
+          "#2d2e29",
+          "#343630",
+          "#3a3c34",
+          "#8d8c80",
+          "#dcdbcd"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "title": {
+        "displayName": "Title",
+        "purpose": "The top bar: LiveCues in Legend, LightCues in Signal."
+      },
+      "perform": {
+        "displayName": "Perform",
+        "purpose": "Text on Perform's 64px gig-size controls."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "The default for text and fields."
+      },
+      "key-label": {
+        "displayName": "Key Label",
+        "purpose": "Key faces. A lit key goes up to 700."
+      },
+      "legend": {
+        "displayName": "Legend",
+        "purpose": "Captions, field labels, table headers, Sidebar and tabs, and the word in a state chip."
+      },
+      "readout": {
+        "displayName": "Readout",
+        "purpose": "DMX addresses, channel values, MIDI notes, percentages, BPM and times."
+      }
+    },
+    "shadows": [
+      {
+        "name": "focus-ring",
+        "value": "inset 0 0 0 2px #ff6a1a",
+        "purpose": "Keyboard focus, drawn inside the key."
+      },
+      {
+        "name": "backdrop",
+        "value": "rgb(0 0 0 / 60%)",
+        "purpose": "Behind dialogs."
+      },
+      {
+        "name": "led-halo",
+        "value": "0 0 6px <lamp colour>",
+        "purpose": "A lit LED only. The one glow."
+      }
+    ],
+    "motion": [
+      {
+        "name": "duration-fast",
+        "value": "120ms",
+        "purpose": "Background and border colour changes on hover. No other motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "side-panel",
+        "value": "1280px",
+        "purpose": "Below this, side columns such as the Preview become a panel over the view."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Key",
+      "kind": "button",
+      "refersTo": "key",
+      "description": "A button that acts: Key face, one chamfered corner.",
+      "html": "<button class=\"ds-key\">Map Trigger</button>",
+      "css": "*{box-sizing:border-box}.ds-key{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:32px;padding:0 12px;border:0;background:#282a25;color:#dcdbcd;font:600 14px/1.4 'IBM Plex Sans','Segoe UI',system-ui,sans-serif;letter-spacing:.04em;cursor:pointer;clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,0 100%)}.ds-key:hover{background:#343630}.ds-key:active{background:#dcdbcd;color:#191a17}"
+    },
+    {
+      "name": "Lit Key",
+      "kind": "button",
+      "refersTo": "key-lit",
+      "description": "The view's one forward action. At most one per view.",
+      "html": "<button class=\"ds-key ds-lit\">Save</button>",
+      "css": "*{box-sizing:border-box}.ds-key{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:32px;padding:0 12px;border:0;background:#282a25;color:#dcdbcd;font:600 14px/1.4 'IBM Plex Sans','Segoe UI',system-ui,sans-serif;letter-spacing:.04em;cursor:pointer;clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,0 100%)}.ds-key:hover{background:#343630}.ds-key:active{background:#dcdbcd;color:#191a17}.ds-lit{background:#ff6a1a;color:#1c0b00;font-weight:700}.ds-lit:hover{background:#ff6a1a}"
+    },
+    {
+      "name": "Sunk Key",
+      "kind": "button",
+      "refersTo": "key-sunk",
+      "description": "Engaged state, such as Blackout: Chassis face, red inset outline, red disc and the word.",
+      "html": "<button class=\"ds-key ds-sunk\">&#9679; BLACKOUT</button>",
+      "css": "*{box-sizing:border-box}.ds-key{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:32px;padding:0 12px;border:0;background:#282a25;color:#dcdbcd;font:600 14px/1.4 'IBM Plex Sans','Segoe UI',system-ui,sans-serif;letter-spacing:.04em;cursor:pointer;clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,0 100%)}.ds-key:hover{background:#343630}.ds-key:active{background:#dcdbcd;color:#191a17}.ds-sunk{background:#191a17;color:#ff4a3a;box-shadow:inset 0 0 0 2px #ff4a3a}"
+    },
+    {
+      "name": "Scene Button",
+      "kind": "button",
+      "refersTo": "scene-button",
+      "description": "160 by 52px. Live: Active Wash face, 3px Signal edge, green triangle, name at 700.",
+      "html": "<div class=\"ds-scenes\"><button class=\"ds-scene\">Verse</button><button class=\"ds-scene ds-live\">&#9654; Chorus</button></div>",
+      "css": "*{box-sizing:border-box}.ds-key{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:32px;padding:0 12px;border:0;background:#282a25;color:#dcdbcd;font:600 14px/1.4 'IBM Plex Sans','Segoe UI',system-ui,sans-serif;letter-spacing:.04em;cursor:pointer;clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,0 100%)}.ds-key:hover{background:#343630}.ds-key:active{background:#dcdbcd;color:#191a17}.ds-scenes{display:grid;grid-template-columns:repeat(2,160px);gap:8px}.ds-scene{min-height:52px;padding:8px 12px;border:0;background:#282a25;color:#dcdbcd;font:500 14px/1.4 'IBM Plex Sans',sans-serif;text-align:left}.ds-live{background:#22241f;border-left:3px solid #ff6a1a;font-weight:700}.ds-live::first-letter{color:#79e08a}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "A Display slot with an Edge border. Values in Mono.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-label\">DMX ADDRESS</span><input class=\"ds-input\" value=\"101\"></label>",
+      "css": "*{box-sizing:border-box}.ds-key{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:32px;padding:0 12px;border:0;background:#282a25;color:#dcdbcd;font:600 14px/1.4 'IBM Plex Sans','Segoe UI',system-ui,sans-serif;letter-spacing:.04em;cursor:pointer;clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,0 100%)}.ds-key:hover{background:#343630}.ds-key:active{background:#dcdbcd;color:#191a17}.ds-field{display:flex;flex-direction:column;gap:4px;width:200px}.ds-label{color:#8d8c80;font:600 11px 'IBM Plex Sans',sans-serif;letter-spacing:.12em}.ds-input{height:32px;padding:0 8px;border:1px solid #3a3c34;background:#0c0d0b;color:#dcdbcd;font:400 14px 'IBM Plex Mono',monospace}"
+    },
+    {
+      "name": "Sidebar Navigation",
+      "kind": "navigation",
+      "refersTo": "nav-item",
+      "description": "Legend caps. The selected view gets Active Wash and a 3px Signal edge.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-item\">SHOW</a><a class=\"ds-item ds-cur\">PERFORM</a></nav>",
+      "css": "*{box-sizing:border-box}.ds-key{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:32px;padding:0 12px;border:0;background:#282a25;color:#dcdbcd;font:600 14px/1.4 'IBM Plex Sans','Segoe UI',system-ui,sans-serif;letter-spacing:.04em;cursor:pointer;clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,0 100%)}.ds-key:hover{background:#343630}.ds-key:active{background:#dcdbcd;color:#191a17}.ds-nav{display:flex;flex-direction:column;width:176px;background:#141512}.ds-item{display:flex;align-items:center;height:32px;padding:0 8px;color:#8d8c80;font:600 11px 'IBM Plex Sans',sans-serif;letter-spacing:.12em}.ds-cur{background:#22241f;color:#dcdbcd;border-left:3px solid #ff6a1a}"
+    },
+    {
+      "name": "Tabs",
+      "kind": "navigation",
+      "refersTo": "tab",
+      "description": "Legend caps. The selected tab is Legend with a 3px Signal underline.",
+      "html": "<div class=\"ds-tabs\"><span class=\"ds-tab\">RULES</span><span class=\"ds-tab ds-sel\">LAYERS</span></div>",
+      "css": "*{box-sizing:border-box}.ds-key{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:32px;padding:0 12px;border:0;background:#282a25;color:#dcdbcd;font:600 14px/1.4 'IBM Plex Sans','Segoe UI',system-ui,sans-serif;letter-spacing:.04em;cursor:pointer;clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,0 100%)}.ds-key:hover{background:#343630}.ds-key:active{background:#dcdbcd;color:#191a17}.ds-tabs{display:flex;border-bottom:1px solid #2d2e29}.ds-tab{padding:0 12px;height:32px;display:flex;align-items:center;color:#8d8c80;font:600 11px 'IBM Plex Sans',sans-serif;letter-spacing:.12em}.ds-sel{color:#dcdbcd;border-bottom:3px solid #ff6a1a}"
+    },
+    {
+      "name": "State Chip",
+      "kind": "badge",
+      "refersTo": "state-chip",
+      "description": "A drawn shape plus an upper-case word.",
+      "html": "<span class=\"ds-chip\"><span class=\"ds-ring\"></span>BLIND</span>",
+      "css": "*{box-sizing:border-box}.ds-key{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:32px;padding:0 12px;border:0;background:#282a25;color:#dcdbcd;font:600 14px/1.4 'IBM Plex Sans','Segoe UI',system-ui,sans-serif;letter-spacing:.04em;cursor:pointer;clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,0 100%)}.ds-key:hover{background:#343630}.ds-key:active{background:#dcdbcd;color:#191a17}.ds-chip{display:inline-flex;align-items:center;gap:7px;color:#dcdbcd;font:600 11px 'IBM Plex Sans',sans-serif;letter-spacing:.12em}.ds-ring{width:11px;height:11px;border:2px solid #e0a030;border-radius:50%}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Silkscreen Desk",
+    "overview": "LightCues is a piece of show hardware: a matte dark panel with legends silkscreened onto it, values in recessed display slots, and keys you press. It sits in a dark venue during the show, so it is calm, legible and deliberate. Nothing moves or glows unless the state changed, and every mark means something. It shares this system with its LiveCues siblings, [VideoCues](https://github.com/GiorgosKoulouris/livecues-videocues) and [Reaper Remote](https://github.com/GiorgosKoulouris/livecues-reaper-remote). VideoCues is the closest, since it is also a Windows desktop app. Hex values stay identical across the three. LightCues adds sections for its own surfaces: the Fallback Panel, Perform, the Scene list and editor, the Preview and Stage Plan, Blackout and Blind. The density is a working rack unit's. It assumes the user knows DMX, and fits a lot on one screen like a console. Perform is the exception: its controls grow to gig size.",
+    "keyCharacteristics": [
+      "Dark only. A light theme stays possible because tokens are named by role.",
+      "Flat: depth is tone (Bar, Chassis, Display) plus 1px rules. No shadows, blur or gradients. The only exceptions are a lit LED's 6px halo and inset hard lines.",
+      "Square corners everywhere. A key has one chamfered corner, top right, 8px, cut with `clip-path`.",
+      "One Signal Orange: the one lit key, keyboard focus, selection and the selected view.",
+      "State is always a drawn shape plus a word, never colour alone: disc, ring, triangle, square.",
+      "IBM Plex Sans for anything printed on the panel, IBM Plex Mono for values the machine reports."
+    ],
+    "rules": [
+      {
+        "name": "The Lit-Key Rule",
+        "body": "At most one Signal-filled key per view, and only for the forward action. Every other primary button is a plain key.",
+        "section": "colors"
+      },
+      {
+        "name": "The LED Rule",
+        "body": "Green, red and amber only report state, and always appear beside a drawn shape and a word. They never fill a key face or tint a background.",
+        "section": "colors"
+      },
+      {
+        "name": "The Dark Room Rule",
+        "body": "Text is Legend or Legend Dim. No new greys, no new hues, no hex outside `tokens.css`. The one exception is Preview and Stage Plan data (see below).",
+        "section": "colors"
+      },
+      {
+        "name": "The Silkscreen Rule",
+        "body": "Anything that labels the panel is a legend: small, spaced, upper-case, Legend Dim. Anything the machine reports is in Mono. Words the operator acts on (key labels) are sentence-case Sans.",
+        "section": "typography"
+      },
+      {
+        "name": "The Readout Rule",
+        "body": "Any number that changes or is read as a value is Mono with tabular figures, so it does not shift as it changes.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-Panel Rule",
+        "body": "No shadows, blur or gradients. The only exceptions are a lit LED's 6px halo and inset hard lines.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Sunk-Is-On Rule",
+        "body": "A pressed-in look is reserved for state. A key sinks only while something it controls is on.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do take every colour, size and spacing from the tokens in `src/renderer/src/ui/tokens.css`. Add a token rather than hard-coding a value.",
+      "Do pair every state colour with a drawn shape and an upper-case word.",
+      "Do put values the machine reports in Mono with tabular figures.",
+      "Do print the keyboard key on any control that has one.",
+      "Do keep Perform's targets at gig size.",
+      "Do keep hex values identical to the sibling apps."
+    ],
+    "donts": [
+      "Don't light more than one key per view, or fill a key red or green.",
+      "Don't add shadows, blur, gradients, rounded corners or illustrations.",
+      "Don't use colour alone to report state.",
+      "Don't add a light theme surface or any large bright area.",
+      "Don't load fonts, icons or images from the network. Everything ships with the app.",
+      "Don't let the Sidebar, top bar or Fallback Panel scroll out of view."
+    ]
+  }
+}

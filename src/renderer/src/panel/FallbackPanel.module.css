@@ -7,13 +7,8 @@
   gap: var(--space-3);
   min-width: 0;
   padding: var(--space-3) var(--space-4);
-  background: var(--surface-1);
-  border-top: 1px solid var(--border);
-}
-
-.blackout {
-  background: var(--danger-soft);
-  border-top-color: var(--danger);
+  background: var(--bar);
+  border-top: 1px solid var(--line);
 }
 
 /* Caps a long Base Look name, so the Scene buttons keep room. */
@@ -22,18 +17,26 @@
 }
 
 /* Scrolls sideways rather than wrapping, so the strip keeps its height. */
-.scenes {
+.scenes,
+.housePresets {
   display: flex;
   gap: var(--space-2);
   min-width: 0;
   overflow-x: auto;
 }
 
+/* After the Scene buttons, set apart from them. */
+.housePresets {
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--line);
+}
+
 .note {
-  color: var(--text-faint);
+  color: var(--legend-dim);
   font-size: var(--text-sm);
 }
 
-.scenes button {
+.scenes button,
+.housePresets button {
   flex-shrink: 0;
 }

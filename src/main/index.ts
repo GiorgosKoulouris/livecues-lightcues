@@ -62,8 +62,15 @@ import { snapshotFile } from './engine-snapshot';
 import { superviseEngine } from './engine-supervisor';
 import { licensePath } from './licenses';
 import { createLog, lineSplitter } from './log';
-import { isAppPage } from './navigation';
+import { restrictContents } from './navigation';
 import { createUpdateCheck, isReleasePageUrl } from './update-check';
+
+// User data goes in %APPDATA%\LiveCues\LightCues, not Electron's default
+// %APPDATA%\LightCues (ADR 0016). This runs before anything reads userData.
+// A --user-data-dir switch, as the e2e test passes, still wins.
+if (!app.commandLine.hasSwitch('user-data-dir')) {
+  app.setPath('userData', join(app.getPath('appData'), 'LiveCues', 'LightCues'));
+}
 
 const VENUE_FILTERS = [{ name: 'LightCues Venue Patch', extensions: ['lcvenue'] }];
 const SHOW_FILTERS = [{ name: 'LightCues Show', extensions: ['lcshow'] }];
@@ -458,6 +465,10 @@ function createWindow(supervisor: Supervisor, pageUrl: string): BrowserWindow {
     ...(app.isPackaged ? {} : { icon: join(__dirname, '../../build/icon.ico') }),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
+      // These are Electron's defaults. Explicit, so a change of default cannot loosen them.
+      contextIsolation: true,
+      sandbox: true,
+      nodeIntegration: false,
     },
   });
   connectWindowToEngine(window, supervisor);
@@ -478,12 +489,7 @@ function rendererUrl(): string {
 // from injected content, such as a crafted Show, Venue Patch or Profile
 // Library file. Runs before the first window is created.
 function restrictNavigation(pageUrl: string): void {
-  app.on('web-contents-created', (_event, contents) => {
-    contents.setWindowOpenHandler(() => ({ action: 'deny' }));
-    contents.on('will-navigate', (event) => {
-      if (!isAppPage(event.url, pageUrl)) event.preventDefault();
-    });
-  });
+  app.on('web-contents-created', (_event, contents) => restrictContents(contents, pageUrl));
 }
 
 // Logs main's own errors. The monitor leaves Electron's handling of an

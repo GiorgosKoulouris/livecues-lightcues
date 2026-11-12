@@ -6,7 +6,7 @@ import {
   type UpdateCheckOptions,
 } from './update-check';
 
-const RELEASE_URL = 'https://github.com/GiorgosKoulouris/LightCues/releases/tag/v0.2.0';
+const RELEASE_URL = 'https://github.com/GiorgosKoulouris/livecues-lightcues/releases/tag/v0.2.0';
 const NOW = Date.parse('2026-10-09T12:00:00Z');
 
 function release(tag: string, more: object = {}): unknown {
@@ -36,7 +36,7 @@ describe('update check', () => {
     await check.run();
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(fetch).toHaveBeenCalledWith(
-      'https://api.github.com/repos/GiorgosKoulouris/LightCues/releases/latest',
+      'https://api.github.com/repos/GiorgosKoulouris/livecues-lightcues/releases/latest',
       expect.anything(),
     );
   });
@@ -229,22 +229,22 @@ describe('checking on request', () => {
 describe('isReleasePageUrl', () => {
   it('allows a release page of the project', () => {
     expect(isReleasePageUrl(RELEASE_URL)).toBe(true);
-    expect(isReleasePageUrl('https://github.com/GiorgosKoulouris/LightCues/releases/latest')).toBe(
-      true,
-    );
+    expect(
+      isReleasePageUrl('https://github.com/GiorgosKoulouris/livecues-lightcues/releases/latest'),
+    ).toBe(true);
   });
 
   it('denies any other URL', () => {
     for (const url of [
-      'https://github.com/GiorgosKoulouris/LightCues',
-      'https://github.com/GiorgosKoulouris/LightCues/releases',
-      'https://github.com/GiorgosKoulouris/LightCues/issues/1',
-      'https://github.com/Someone/LightCues/releases/tag/v0.2.0',
-      'http://github.com/GiorgosKoulouris/LightCues/releases/tag/v0.2.0',
-      'https://github.com.example.com/GiorgosKoulouris/LightCues/releases/tag/v0.2.0',
-      'https://user@github.com/GiorgosKoulouris/LightCues/releases/tag/v0.2.0',
-      'https://github.com:8443/GiorgosKoulouris/LightCues/releases/tag/v0.2.0',
-      'https://github.com/GiorgosKoulouris/LightCues/releases/../../../evil',
+      'https://github.com/GiorgosKoulouris/livecues-lightcues',
+      'https://github.com/GiorgosKoulouris/livecues-lightcues/releases',
+      'https://github.com/GiorgosKoulouris/livecues-lightcues/issues/1',
+      'https://github.com/Someone/livecues-lightcues/releases/tag/v0.2.0',
+      'http://github.com/GiorgosKoulouris/livecues-lightcues/releases/tag/v0.2.0',
+      'https://github.com.example.com/GiorgosKoulouris/livecues-lightcues/releases/tag/v0.2.0',
+      'https://user@github.com/GiorgosKoulouris/livecues-lightcues/releases/tag/v0.2.0',
+      'https://github.com:8443/GiorgosKoulouris/livecues-lightcues/releases/tag/v0.2.0',
+      'https://github.com/GiorgosKoulouris/livecues-lightcues/releases/../../../evil',
       'file:///C:/Windows/System32/calc.exe',
       'javascript:alert(1)',
       'not a url',

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import type { OutputStatus } from '../../../shared/protocol';
-import { fixtureMode, type VenuePatch } from '../../../shared/venue-patch';
+import { addressedInUniverse, fixtureMode, type VenuePatch } from '../../../shared/venue-patch';
 import { cx } from '../ui/cx';
 import { Select } from '../ui/Select';
 import styles from './ChannelMonitor.module.css';
@@ -95,9 +95,10 @@ function Grid({
                 key={channel}
                 className={styles.cell}
                 data-zero={value === 0 || undefined}
+                style={{ '--level': value / 255 } as CSSProperties}
                 onMouseEnter={() => onHover(channel)}
               >
-                {value}
+                <span>{value}</span>
               </div>
             );
           })}
@@ -107,11 +108,11 @@ function Grid({
   );
 }
 
-// Each patched channel of the Universe, by DMX channel.
+// Each patched channel of the Universe, by DMX channel. House Lights count
+// as Fixtures.
 function channelOwners(patch: VenuePatch, universe: number): Map<number, Owner> {
   const owners = new Map<number, Owner>();
-  for (const fixture of patch.fixtures) {
-    if (fixture.universe !== universe) continue;
+  for (const fixture of addressedInUniverse(patch, universe)) {
     fixtureMode(patch, fixture).channels.forEach((channel, offset) => {
       const name = channel.kind === 'unused' ? 'Unused' : channel.name;
       owners.set(fixture.address + offset, { fixture: fixture.name, channel: name });

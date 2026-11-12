@@ -17,14 +17,13 @@
   max-height: calc(100vh - var(--space-6));
   overflow-y: auto;
   padding: var(--space-5);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface-2);
-  box-shadow: var(--shadow-overlay);
+  border: 1px solid var(--edge);
+  border-radius: 0;
+  background: var(--chassis);
 }
 
 .dialog:focus-visible {
-  box-shadow: var(--shadow-overlay);
+  box-shadow: none;
 }
 
 .dialogHeader {
@@ -36,10 +35,11 @@
 
 .dialogTitle {
   font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
 }
 
 .dialogDescription {
-  color: var(--text-muted);
+  color: var(--legend-dim);
 }
 
 .dialogFooter {
@@ -52,10 +52,9 @@
 .menu {
   min-width: 180px;
   padding: var(--space-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface-2);
-  box-shadow: var(--shadow-overlay);
+  border: 1px solid var(--edge);
+  border-radius: 0;
+  background: var(--bar);
 }
 
 .popover {
@@ -68,7 +67,7 @@
   gap: var(--space-2);
   height: var(--control-height);
   padding: 0 var(--space-2);
-  border-radius: var(--radius-sm);
+  border-left: 3px solid transparent;
   outline: none;
   cursor: default;
   user-select: none;
@@ -80,22 +79,23 @@
 }
 
 .menuItem[data-highlighted] {
-  background: var(--surface-3);
+  border-left-color: var(--signal);
+  background: var(--key-hover);
 }
 
 .menuItem[data-disabled] {
-  opacity: 0.45;
+  opacity: 0.4;
 }
 
 .menuDanger {
-  color: var(--danger);
+  color: var(--led-red);
 }
 
 .tooltip {
   padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  background: var(--surface-3);
-  color: var(--text);
+  border: 1px solid var(--edge);
+  border-radius: 0;
+  background: var(--bar);
+  color: var(--legend);
   font-size: var(--text-sm);
-  box-shadow: var(--shadow-overlay);
 }

@@ -1,36 +1,66 @@
+/* A state chip: a drawn shape, then a legend word. */
 .badge {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-2);
   height: 20px;
-  padding: 0 var(--space-2);
-  border-radius: var(--radius-pill);
+  color: var(--legend-dim);
   font-size: var(--text-xs);
-  font-weight: var(--weight-medium);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 
-.neutral {
-  background: var(--surface-3);
-  color: var(--text-muted);
+.badge::before {
+  content: '';
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  box-sizing: border-box;
 }
 
+/* Idle: a square. */
+.neutral::before {
+  background: var(--legend-dim);
+}
+
+/* Selected or noted: a Signal disc. */
 .accent {
-  background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--legend);
 }
 
+.accent::before {
+  border-radius: 50%;
+  background: var(--signal);
+}
+
+/* Playing: an LED Green triangle. */
 .active {
-  background: var(--active-soft);
-  color: var(--active);
+  color: var(--legend);
 }
 
+.active::before {
+  background: var(--led-green);
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
+/* Warning: a Warn Amber ring. */
 .warning {
-  background: var(--warning-soft);
-  color: var(--warning);
+  color: var(--warn-amber);
 }
 
+.warning::before {
+  border: 2px solid var(--warn-amber);
+  border-radius: 50%;
+}
+
+/* Fault: an LED Red disc. */
 .danger {
-  background: var(--danger-soft);
-  color: var(--danger);
+  color: var(--led-red);
+}
+
+.danger::before {
+  border-radius: 50%;
+  background: var(--led-red);
 }

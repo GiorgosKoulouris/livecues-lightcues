@@ -1,8 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import type { Capability, Channel, FixtureProfile } from './fixture-profile';
 import type { Rule, Show } from './show';
-import { DEFAULT_MOUNTING, type PatchedFixture, type VenuePatch } from './venue-patch';
-import { approximatedAims } from './venue-check';
+import {
+  DEFAULT_MOUNTING,
+  type HouseLook,
+  type PatchedFixture,
+  type VenuePatch,
+} from './venue-patch';
+import {
+  approximatedAims,
+  approximatedStrobes,
+  lookPresetsNotInShow,
+  unsetHousePresets,
+} from './venue-check';
 
 function control(name: string, capability: Capability): Channel {
   return { kind: 'control', name, defaultValue: 0, ranges: [{ from: 0, to: 255, capability }] };
@@ -38,6 +48,20 @@ const noTiltDegrees = profile('test/no-tilt-degrees', [
 // A bar that only tilts.
 const bar = profile('test/bar', [dimmer, tilt]);
 const par = profile('test/par', [dimmer]);
+const strobe = profile('test/strobe', [dimmer, control('Strobe', { type: 'strobe', hz: [1, 25] })]);
+// A strobe range that gives no Hz span.
+const unspanned = profile('test/unspanned', [dimmer, control('Strobe', { type: 'strobe' })]);
+// A strobe range turned on, and a speed channel without a Hz span.
+const unspannedSpeed = profile('test/unspanned-speed', [
+  dimmer,
+  control('Shutter', { type: 'strobe' }),
+  control('Speed', { type: 'strobeSpeed' }),
+]);
+// A strobe span made from words, like OFL's slow → fast.
+const wordy = profile('test/wordy', [
+  dimmer,
+  control('Strobe', { type: 'strobe', hz: [1, 20], assumed: true }),
+]);
 
 function fixture(id: string, profileId: string, overrides: Partial<PatchedFixture> = {}) {
   return {
@@ -60,7 +84,7 @@ function patch(...fixtures: PatchedFixture[]): VenuePatch {
     stage: { width: 10, depth: 8 },
     universes: [{ number: 1 }],
     fixtures: fixtures.map((f, i) => ({ ...f, address: 1 + i * 3 })),
-    profiles: [mover, bare, noTiltDegrees, bar, par],
+    profiles: [mover, bare, noTiltDegrees, bar, par, strobe, unspanned, unspannedSpeed, wordy],
   };
 }
 
@@ -148,5 +172,98 @@ describe('approximatedAims', () => {
       ['a', 'Up'],
       ['b', 'Up'],
     ]);
+  });
+});
+
+describe('approximatedStrobes', () => {
+  function shows(...scenes: [string, Rule[]][]): Show {
+    return {
+      ...show([]),
+      scenes: scenes.map(([id, rules]) => ({
+        id,
+        name: id,
+        tags: [],
+        layer: 'l1',
+        fadeIn: 0,
+        rules,
+      })),
+    };
+  }
+
+  it('lists the Scenes that strobe a Fixture with no strobe channel or no Hz span', () => {
+    const rig = patch(
+      fixture('par', par.id),
+      fixture('strobe', strobe.id),
+      fixture('unspanned', unspanned.id),
+      fixture('speed', unspannedSpeed.id),
+      fixture('wordy', wordy.id),
+    );
+    const s = shows(
+      ['fast', [{ target: {}, strobe: 'Fast' }]],
+      ['steady', [{ target: {}, intensity: 1 }]],
+      ['beat', [{ target: {}, strobe: 0.5 }]],
+    );
+
+    expect(approximatedStrobes(s, rig)).toEqual([
+      { fixtureId: 'par', scenes: ['fast', 'beat'], approximation: 'noStrobeChannel' },
+      { fixtureId: 'unspanned', scenes: ['fast', 'beat'], approximation: 'assumedHzSpan' },
+      { fixtureId: 'speed', scenes: ['fast', 'beat'], approximation: 'assumedHzSpan' },
+      { fixtureId: 'wordy', scenes: ['fast', 'beat'], approximation: 'assumedHzSpan' },
+    ]);
+  });
+
+  it('counts only Scenes whose Rules leave the Fixture strobing', () => {
+    const rig = patch(fixture('par', par.id), fixture('wash', par.id, { role: 'Wash' }));
+    const s = shows(
+      ['off', [{ target: {}, strobe: 'Off' }]],
+      [
+        'stopped',
+        [
+          { target: {}, strobe: 'Slow' },
+          { target: { roles: ['Wash'] }, strobe: 'Off' },
+        ],
+      ],
+    );
+
+    expect(approximatedStrobes(s, rig)).toEqual([
+      { fixtureId: 'par', scenes: ['stopped'], approximation: 'noStrobeChannel' },
+    ]);
+  });
+});
+
+describe('unsetHousePresets', () => {
+  const dim = { id: 'dim', name: 'Dim', fade: 2 };
+  const up = { id: 'up', name: 'Up', fade: 5 };
+  const white = { intensity: 1, colour: { swatch: 'White' } } as const;
+
+  function housed(looks?: Record<string, HouseLook>): VenuePatch {
+    return {
+      ...patch(),
+      house: { groups: [{ id: 'bar', name: 'Bar' }], lights: [], ...(looks && { looks }) },
+    };
+  }
+
+  it('lists the House Presets this Venue Patch has no look for, in Show order', () => {
+    const presets = show([], { housePresets: [dim, up] });
+
+    expect(unsetHousePresets(presets, patch())).toEqual([dim, up]);
+    expect(unsetHousePresets(presets, housed({ up: { bar: white } }))).toEqual([dim]);
+    expect(unsetHousePresets(presets, housed({ dim: { bar: white }, up: { bar: white } }))).toEqual(
+      [],
+    );
+  });
+
+  it('ignores looks for House Presets the Show lacks', () => {
+    expect(unsetHousePresets(show([]), housed({ gone: { bar: white } }))).toEqual([]);
+  });
+
+  it('lists the looks for House Presets the Show lacks, in patch order', () => {
+    const rig = housed({ gone: { bar: white }, dim: { bar: white }, old: { bar: white } });
+
+    expect(lookPresetsNotInShow(show([], { housePresets: [dim, up] }), rig)).toEqual([
+      'gone',
+      'old',
+    ]);
+    expect(lookPresetsNotInShow(show([]), patch())).toEqual([]);
   });
 });

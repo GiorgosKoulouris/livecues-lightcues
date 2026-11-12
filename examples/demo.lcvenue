@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "stage": {
     "width": 8,
     "depth": 6
@@ -620,7 +620,12 @@
                   "from": 16,
                   "to": 255,
                   "capability": {
-                    "type": "strobeSpeed"
+                    "type": "strobeSpeed",
+                    "hz": [
+                      1,
+                      20
+                    ],
+                    "assumed": true
                   }
                 }
               ]
@@ -885,7 +890,12 @@
                   "from": 3,
                   "to": 255,
                   "capability": {
-                    "type": "strobe"
+                    "type": "strobe",
+                    "hz": [
+                      1,
+                      20
+                    ],
+                    "assumed": true
                   }
                 }
               ]
@@ -1463,14 +1473,24 @@
                   "from": 31,
                   "to": 200,
                   "capability": {
-                    "type": "strobe"
+                    "type": "strobe",
+                    "hz": [
+                      1,
+                      20
+                    ],
+                    "assumed": true
                   }
                 },
                 {
                   "from": 201,
                   "to": 250,
                   "capability": {
-                    "type": "strobe"
+                    "type": "strobe",
+                    "hz": [
+                      1,
+                      20
+                    ],
+                    "assumed": true
                   }
                 },
                 {
@@ -1533,8 +1553,11 @@
                   "from": 0,
                   "to": 255,
                   "capability": {
-                    "type": "unsupported",
-                    "feature": "PanTiltSpeed"
+                    "type": "panTiltSpeed",
+                    "speed": [
+                      1,
+                      0
+                    ]
                   }
                 }
               ]
@@ -1758,14 +1781,24 @@
                   "from": 31,
                   "to": 200,
                   "capability": {
-                    "type": "strobe"
+                    "type": "strobe",
+                    "hz": [
+                      1,
+                      20
+                    ],
+                    "assumed": true
                   }
                 },
                 {
                   "from": 201,
                   "to": 250,
                   "capability": {
-                    "type": "strobe"
+                    "type": "strobe",
+                    "hz": [
+                      1,
+                      20
+                    ],
+                    "assumed": true
                   }
                 },
                 {

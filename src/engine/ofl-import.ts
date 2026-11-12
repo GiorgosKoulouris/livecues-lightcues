@@ -15,6 +15,7 @@ import {
   type FixtureImport,
   type ImportReport,
 } from './import-report';
+import { ASSUMED_STROBE_HZ } from '../shared/strobe';
 
 // The subset of the Open Fixture Library fixture format we read.
 // https://github.com/OpenLightingProject/open-fixture-library/blob/master/docs/fixture-format.md
@@ -26,6 +27,9 @@ interface OflCapability {
   speed?: string;
   speedStart?: string;
   speedEnd?: string;
+  duration?: string;
+  durationStart?: string;
+  durationEnd?: string;
   wheel?: string;
   slotNumber?: number;
   angle?: string;
@@ -93,6 +97,11 @@ export function importOflFixture(json: unknown, manufacturer: string): FixtureIm
     for (const [modeKey, imported] of importChannel(key, channel, fixture, report)) {
       channels.set(modeKey, imported);
     }
+  }
+  if (mayBeCmy(channels.values())) {
+    report.add({
+      feature: 'Cyan/Magenta/Yellow may be subtractive (CMY); driven as additive emitters',
+    });
   }
 
   const modes: FixtureMode[] = [];
@@ -266,7 +275,7 @@ function unresolvedChannel(
     channel.capabilities?.some((cap) => cap.switchChannels && key in cap.switchChannels),
   );
   const feature = switching ? 'Switching channel' : 'Unknown channel';
-  report.add({ channel: key, feature });
+  report.add({ channel: key, feature, held: 0 });
   return {
     kind: 'control',
     name: key,
@@ -293,7 +302,7 @@ function importChannel(
 
   const context: CapabilityContext = {
     wheel: (wheelName) => fixture.wheels?.[wheelName ?? name],
-    report: (feature) => report.add({ channel: name, feature }),
+    report: (feature) => report.add({ channel: name, feature, held: defaultByte(0) }),
   };
   const oflCapabilities = channel.capabilities ?? [
     { ...channel.capability!, dmxRange: [0, 256 ** resolution - 1] },
@@ -325,21 +334,46 @@ interface CapabilityContext {
 }
 
 function importCapability(cap: OflCapability, context: CapabilityContext): Capability {
+  // Whether a span read so far was made from words.
+  let assumed = false;
   // Reads an optional [start, end] property pair, reporting values we cannot place.
-  const span = (parsed: Span | null | undefined, what: string): Span | undefined => {
+  const span = (parsed: ParsedSpan | null | undefined, what: string): Span | undefined => {
     if (parsed === null) context.report(`${cap.type} ${what}`);
-    return parsed ?? undefined;
+    if (parsed?.assumed) assumed = true;
+    return parsed?.span;
   };
+  const flagged = <C extends Capability>(capability: C): C =>
+    assumed ? { ...capability, assumed: true } : capability;
   const level = () =>
     span(
-      pair(cap.brightnessStart ?? cap.brightness, cap.brightnessEnd ?? cap.brightness, brightness),
+      pair(
+        cap.brightnessStart ?? cap.brightness,
+        cap.brightnessEnd ?? cap.brightness,
+        brightness,
+        ASSUMED_BRIGHTNESS,
+      ),
       'brightness not in %',
     );
   const hz = () =>
     span(
-      pair(cap.speedStart ?? cap.speed, cap.speedEnd ?? cap.speed, unit('Hz')),
+      pair(cap.speedStart ?? cap.speed, cap.speedEnd ?? cap.speed, unit('Hz'), ASSUMED_SPEEDS),
       'speed not in Hz',
     );
+  const relativeSpeed = (): Span | undefined => {
+    if (cap.durationStart === undefined && cap.duration === undefined) {
+      return span(
+        pair(cap.speedStart ?? cap.speed, cap.speedEnd ?? cap.speed, relative, RELATIVE_SPEEDS),
+        'speed not relative',
+      );
+    }
+    const ms = span(
+      pair(cap.durationStart ?? cap.duration, cap.durationEnd ?? cap.duration, milliseconds),
+      'duration not in ms or s',
+    );
+    // The shorter time is the faster end.
+    if (!ms || ms[0] === ms[1]) return undefined;
+    return ms[0] < ms[1] ? [1, 0] : [0, 1];
+  };
   const degrees = () =>
     span(
       pair(cap.angleStart ?? cap.angle, cap.angleEnd ?? cap.angle, unit('deg')),
@@ -350,10 +384,10 @@ function importCapability(cap: OflCapability, context: CapabilityContext): Capab
     case 'NoFunction':
       return { type: 'none' };
     case 'Intensity':
-      return { type: 'intensity', level: level() };
+      return flagged({ type: 'intensity', level: level() });
     case 'ColorIntensity': {
       const emitter = EMITTERS[cap.color!];
-      if (emitter) return { type: 'emitter', emitter, level: level() };
+      if (emitter) return flagged({ type: 'emitter', emitter, level: level() });
       break;
     }
     case 'ShutterStrobe':
@@ -363,15 +397,17 @@ function importCapability(cap: OflCapability, context: CapabilityContext): Capab
         case 'Closed':
           return { type: 'shutter', effect: 'closed' };
         case 'Strobe':
-          return { type: 'strobe', hz: hz() };
+          return flagged({ type: 'strobe', hz: hz() });
       }
       return unsupported(`ShutterStrobe ${cap.shutterEffect}`);
     case 'StrobeSpeed':
-      return { type: 'strobeSpeed', hz: hz() };
+      return flagged({ type: 'strobeSpeed', hz: hz() });
     case 'Pan':
       return { type: 'pan', degrees: degrees() };
     case 'Tilt':
       return { type: 'tilt', degrees: degrees() };
+    case 'PanTiltSpeed':
+      return { type: 'panTiltSpeed', speed: relativeSpeed() };
     case 'WheelSlot':
       return importWheelSlot(cap, context);
   }
@@ -393,28 +429,70 @@ function importWheelSlot(cap: OflCapability, context: CapabilityContext): Capabi
   return { type: 'wheelSlot', slot: { name: slot.name ?? colour, colour } };
 }
 
+// A span read from an OFL start/end pair, `assumed` when either end is a word
+// taken at an assumed value.
+interface ParsedSpan {
+  span: Span;
+  assumed: boolean;
+}
+
 // An OFL start/end property pair: undefined when absent, null when either
 // value is in a unit or word we cannot place.
 function pair(
   start: string | undefined,
   end: string | undefined,
   parse: (value: string) => number | undefined,
-): Span | null | undefined {
+  words: ReadonlyMap<string, number> = NO_WORDS,
+): ParsedSpan | null | undefined {
   if (start === undefined || end === undefined) return undefined;
-  const from = parse(start);
-  const to = parse(end);
-  return from === undefined || to === undefined ? null : [from, to];
+  const from = parse(start) ?? words.get(start);
+  const to = parse(end) ?? words.get(end);
+  if (from === undefined || to === undefined) return null;
+  return { span: [from, to], assumed: words.has(start) || words.has(end) };
 }
+
+// Speed words, at the ends of the assumed strobe rate span.
+const ASSUMED_SPEEDS: ReadonlyMap<string, number> = new Map([
+  ['slow', ASSUMED_STROBE_HZ[0]],
+  ['fast', ASSUMED_STROBE_HZ[1]],
+]);
+
+// Speed words as a relative speed, 0 slowest to 1 fastest.
+const RELATIVE_SPEEDS: ReadonlyMap<string, number> = new Map([
+  ['stop', 0],
+  ['slow', 0],
+  ['fast', 1],
+]);
+
+const NO_WORDS: ReadonlyMap<string, number> = new Map();
+
+// Brightness words with no fixed fraction of full output, at an assumed one.
+const ASSUMED_BRIGHTNESS: ReadonlyMap<string, number> = new Map([['dark', 0.05]]);
 
 function unit(suffix: string) {
   return (value: string) => (value.endsWith(suffix) ? parseFloat(value) : undefined);
 }
 
-// Brightness as a fraction of full output. 'dark' and lumens have no fixed fraction.
+function percent(value: string): number | undefined {
+  return value.endsWith('%') ? parseFloat(value) / 100 : undefined;
+}
+
+// A percentage of full speed, as a fraction. OFL allows any percentage.
+function relative(value: string): number | undefined {
+  const fraction = percent(value);
+  return fraction !== undefined && fraction >= 0 && fraction <= 1 ? fraction : undefined;
+}
+
+function milliseconds(value: string): number | undefined {
+  if (value.endsWith('ms')) return parseFloat(value);
+  return value.endsWith('s') ? parseFloat(value) * 1000 : undefined;
+}
+
+// Brightness as a fraction of full output. Lumens have no fixed fraction.
 function brightness(value: string): number | undefined {
   if (value === 'off') return 0;
   if (value === 'bright') return 1;
-  return value.endsWith('%') ? parseFloat(value) / 100 : undefined;
+  return percent(value);
 }
 
 const EMITTERS: Record<string, Emitter> = {
@@ -432,6 +510,20 @@ const EMITTERS: Record<string, Emitter> = {
   Indigo: 'indigo',
   UV: 'uv',
 };
+
+// OFL writes CMY flags as ColorIntensity Cyan/Magenta/Yellow, like additive
+// LEDs. Cyan, magenta or yellow with no red, green or blue may be CMY.
+function mayBeCmy(channels: Iterable<Channel>): boolean {
+  const emitters = new Set<Emitter>();
+  for (const channel of channels) {
+    if (channel.kind !== 'control') continue;
+    for (const { capability } of channel.ranges) {
+      if (capability.type === 'emitter') emitters.add(capability.emitter);
+    }
+  }
+  const has = (colours: Emitter[]) => colours.some((emitter) => emitters.has(emitter));
+  return has(['cyan', 'magenta', 'yellow']) && !has(['red', 'green', 'blue']);
+}
 
 // An OFL DMX value (a number at `resolution` bytes, or a percentage like
 // '50%') scaled to the channel's full `bytes` resolution.

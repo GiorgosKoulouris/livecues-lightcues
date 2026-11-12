@@ -38,6 +38,26 @@ _Avoid_: DMX view, channel view
 The per-venue description of the rig: which Fixtures exist, their Profile, Universe, address and position on stage.
 _Avoid_: Rig file, setup
 
+### House
+
+**House Light**:
+A Fixture belonging to the venue (bar, ceiling) rather than the show rig, on a Universe the app drives. Patched in the Venue Patch with a Profile, Universe and address, but no stage position, Zone, Role or Mounting. Only intensity and colour are driven. Scenes never target it, and Blackout, Grand Master, Freeze and Blind do not apply to it.
+_Avoid_: Venue light, room light
+
+**House Group**:
+A named set of House Lights in the Venue Patch, such as Bar or Ceiling. Each House Light is in exactly one.
+_Avoid_: Area, Zone
+
+**House Preset**:
+A named slot in the Show, with a fade and an optional MIDI note, that sets the House Lights to that slot's house look. Fired by its note (Go only) or its button in Perform and on the Fallback Panel. One holds at a time.
+_Avoid_: House Scene, house cue
+
+**House look**:
+Intensity and colour for some House Groups, defined in the Venue Patch for one House Preset or as the Startup look. Groups it does not list stay where they are.
+
+**Startup look**:
+The house look a Venue Patch sends from launch and when it is opened, and that Startup in Perform fades back to. Going to it sends the Groups it does not list to full white, as at launch. Full white when not set.
+
 ### Show
 
 **Show**:
@@ -49,11 +69,19 @@ A reusable look or effect that targets Zones rather than specific Fixtures. Seve
 _Avoid_: Cue, preset
 
 **Rule**:
-One part of a Scene: a target (Zones × Roles) and the settings applied to it (intensity, colour, Direction, effect). Later Rules in a Scene override earlier ones.
+One part of a Scene: a target (Zones × Roles) and the settings applied to it (intensity, colour, Direction, Effects, strobe). Later Rules in a Scene override earlier ones.
 
 **Effect**:
-A time-varying change within a Rule, timed in beats of the Tempo. A movement Effect (Circle, Pan sweep, Tilt sweep, Ballyhoo) runs around a base Direction, which may come from another Scene; its size is in degrees and its length in beats. Sequences over time are not Effects: the DAW sequences Scenes through Triggers. A spatial Effect is ordered by Fixture positions on stage (e.g. a left-to-right wave).
-_Avoid_: Chase (a kind of Effect), FX
+A time-varying change within a Rule, timed in beats of the Tempo. There are three kinds: movement, intensity and colour, and a Rule has one slot for each. A slot left unset leaves that kind to earlier Rules and lower Layers; set to None, it stops their Effect of that kind (a movement None holds the aim still, faded in like any Effect). Every Effect's length is 1/4, 1/2, 1, 2, 4, 8 or 16 beats. A movement Effect (Circle, Pan sweep, Tilt sweep, Ballyhoo) runs around a base Direction, which may come from another Scene; its size is in degrees. An intensity Effect (Pulse, Ramp up, Ramp down, Square, Chase) scales the intensity a Fixture gets, which may come from another Scene, by up to its depth (0–1); Chase lights one Spread position at a time. A colour Effect steps or fades through 2 to 4 colours, or runs a Rainbow (a hue cycle), in place of the Rule's colour: a Rule sets a colour or a colour Effect, not both. A colour set later stops it, and a colour None shows the colour under it. Size and depth fade in with the Scene, and a colour Effect crossfades from the colour before. A movement Effect too fast for a moving Fixture runs slower, under the Speed limit. Sequences over time are not Effects: the DAW sequences Scenes through Triggers. A spatial Effect is ordered by Fixture positions on stage (e.g. a left-to-right wave).
+_Avoid_: Chase (for an Effect in general; Chase is one intensity Effect), FX
+
+**Speed limit**:
+The fastest a movement Effect may turn a moving Fixture: 300°/s, on pan and on tilt separately, for every Fixture, always on. An Effect that would go faster runs at the shortest longer Effect length that stays under it, keeping its size and the beat; only if 16 beats is still too fast does its size shrink. It switches length on a beat where no Fixture jumps, and steps back down only when well under the limit. The Show keeps the length as programmed.
+_Avoid_: Speed cap, max speed
+
+**Strobe**:
+A Rule setting that makes the targeted Fixtures with a strobe channel flash: Off, Slow (2 Hz), Medium (6 Hz), Fast (12 Hz), or once per 1, 1/2 or 1/4 beat of the Tempo. Only the rate is sent; each Fixture times its own flashes, so they are not locked to the beat. Off stops strobe from earlier Rules and lower Layers. It snaps on and off at Scene start, and Freeze does not stop it. Not an Effect.
+_Avoid_: Flash (a Trigger mode), shutter
 
 **Focus Check**:
 A Venue Patch editor mode that sends every moving Fixture, open in white, to one chosen Direction on the real rig, in Blind too, so placement and Mounting can be corrected live. Blackout still wins. Ends when the editor is left.
@@ -83,7 +111,7 @@ The beats per minute that Effects run to. Taken from the MIDI Input's MIDI Clock
 _Avoid_: BPM, speed
 
 **Freeze**:
-Stops every movement Effect where it is, until turned off; they then jump to where the beat has got to. Directions and fades still apply. It holds the beat Effects run to, so a Scene started while frozen holds its Effect where that beat puts it. Not saved, off on launch, and kept when a Show is replaced, like Blackout.
+Stops every Effect where it is, until turned off; they then jump to where the beat has got to. Directions and fades still apply. It holds the beat Effects run to, so a Scene started while frozen holds its Effect where that beat puts it. Not saved, off on launch, and kept when a Show is replaced, like Blackout.
 
 **Layer**:
 A slot that holds at most one active Scene. Activating a Scene replaces the active Scene in its Layer; different Layers stack.
@@ -103,11 +131,11 @@ _Avoid_: MIDI device, controller
 The Scene designated as the safe fallback look, available from the Fallback Panel at any time. Going to it clears every other Layer.
 
 **Fallback Panel**:
-The always-visible manual controls that need no MIDI: Blackout, Base Look, Grand Master, Tap Tempo, Freeze and a few Scene buttons chosen per Show, each with a keyboard shortcut. Also shows the MIDI Input status.
+The always-visible manual controls that need no MIDI: Blackout, Base Look, Grand Master, Tap Tempo, Freeze, a few Scene buttons chosen per Show and the House Preset buttons, each with a keyboard shortcut. Also shows the MIDI Input status.
 _Avoid_: Manual panel, fader panel
 
 **Blackout**:
-Takes every Fixture's intensity to 0 until turned off, in Blind too. The active Scenes stay active.
+Takes every Fixture's intensity to 0 until turned off, in Blind too. The active Scenes stay active. House Lights are not affected.
 
 **Default Direction**:
 The Direction a Show gives moving Fixtures where no Rule sets one, and the base of a movement Effect with none. Down unless changed.
@@ -116,14 +144,14 @@ The Direction a Show gives moving Fixtures where no Rule sets one, and the base 
 The colour a Show gives Fixtures where no Rule sets one. White unless changed.
 
 **Grand Master**:
-A global intensity scaler applied after all Scenes are combined.
+A global intensity scaler applied after all Scenes are combined. House Lights are not affected.
 
 **Monitor**:
 The default mode, where the preview mirrors exactly what is being sent to the rig.
 
 **Blind**:
-A mode where the preview updates but nothing is sent to the rig, except Blackout.
+A mode where the preview updates but nothing is sent to the rig, except Blackout and House Lights, which always send.
 _Avoid_: Offline, preview mode
 
 **Venue Check**:
-A report, produced when a Show is combined with a Venue Patch, listing Scenes whose targets are missing or only approximated in that rig.
+A report, produced when a Show is combined with a Venue Patch, listing Scenes whose targets are missing or only approximated in that rig, and House Presets that Venue Patch has no house look for (not set up in this venue). Strobe is approximated on a Fixture with no strobe channel, which stays steady, and on one whose strobe rate has no Hz span, taken as 1–20 Hz, or a span made from words such as slow and fast.

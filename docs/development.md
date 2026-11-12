@@ -25,13 +25,13 @@ Prerequisites (Windows): Git, Node.js 22.12 or newer (see [.nvmrc](../.nvmrc)), 
 This builds `main`, the released code:
 
 ```powershell
-git clone https://github.com/GiorgosKoulouris/LightCues.git LightCues
-cd LightCues
+git clone https://github.com/GiorgosKoulouris/livecues-lightcues.git
+cd livecues-lightcues
 npm install
 npm run dev
 ```
 
-The window opens on the Venue Patch view. The top bar's right end shows a green dot and "Engine": the engine process is running. Hover it for the reply time and uptime.
+The window opens on the Venue Patch view. The top bar's right end shows a green disc and "Engine": the engine process is running. Hover it for the reply time and uptime.
 
 Run the tests:
 
@@ -50,8 +50,8 @@ npm test
 | `npm run icon` | Regenerate `build/icon.ico` from `build/icon.svg`. |
 | `npm test` | Run the test suite (Vitest). |
 | `npm run test:watch` | Run Vitest in watch mode. |
-| `npm run coverage` | Run the tests with coverage. Prints a summary and writes an HTML report to `coverage/`. Not part of `check`. |
-| `npm run e2e` | Build, then launch the app and run the end-to-end tests in [e2e/](../e2e/) (Playwright). Opens the example, fires a Scene and checks the Virtual Output's frame in the channel monitor. Not part of `check`, not run in CI. Windows host only: run it there before staging. |
+| `npm run coverage` | Run the tests with coverage. Prints a summary and writes an HTML report and `coverage-summary.json` to `coverage/`. CI runs it too: see [CI](#ci). Not part of `check`. |
+| `npm run e2e` | Build, then launch the app and run the end-to-end tests in [e2e/](../e2e/) (Playwright). Opens the example, fires a Scene and checks the Virtual Output's frame in the channel monitor. Not part of `check`, not run in CI. Windows host only: run it there before promoting. |
 | `npm run typecheck` | Typecheck engine, Electron side and renderer separately. |
 | `npm run lint` | ESLint. Also blocks Electron/UI imports in `src/engine` and `src/shared`. |
 | `npm run format` | Format with Prettier. |
@@ -72,16 +72,18 @@ GitHub Actions on `windows-latest` ([.github/workflows/](../.github/workflows/))
 | Pull request to `main` | `npm run check` |
 | Push to `dev` | Nothing |
 
-`stage` is the squashed batch on its way to `main`. See [agents/staging.md](agents/staging.md). Releases: [agents/releasing.md](agents/releasing.md).
+Coverage has its own workflow, [coverage.yml](../.github/workflows/coverage.yml): `npm run coverage` on pushes to `main`, pull requests to `main` and by hand. It never fails on a number. The run's summary page shows a table, and the HTML report is an artifact kept 14 days. A push to `main` also writes `coverage.json` to the orphan `badges` branch (one commit, force-pushed each run), which the README badge reads through shields.io. Run `npm run coverage` locally for the same report in `coverage/`.
+
+`stage` is the squashed batch on its way to `main`, made by `/branch-flow promote`. See [agents/promote.md](agents/promote.md). Releases: [agents/releasing.md](agents/releasing.md).
 
 Actions are pinned by commit SHA, with the version in a trailing comment.
 
 ### Dependabot
 
-[.github/dependabot.yml](../.github/dependabot.yml) opens monthly PRs against `dev`. npm gets two grouped PRs: dev dependencies and runtime. GitHub Actions get one PR each.
+[.github/dependabot.yml](../.github/dependabot.yml) opens weekly PRs against `dev`. npm gets two grouped PRs: dev dependencies and runtime. GitHub Actions get one PR each.
 
 - No CI runs on `dev`. Run `npm run check` on the PR branch before merging, then pull `dev`.
-- Merge or close open Dependabot PRs before a staging round ([agents/staging.md](agents/staging.md) step 1).
+- Merge or close open Dependabot PRs before a promote ([agents/promote.md](agents/promote.md)).
 - Security updates are a repo setting, ungrouped. GitHub always opens them against `main`, whatever `target-branch` says. Don't merge them there: it breaks the fast-forward from `stage`. Apply the bump on `dev` and close the PR. The alert closes when the batch reaches `main`.
 - `global-agent` is pinned by an override in `package.json` (under `@electron/get`). Dependabot doesn't need an ignore rule for it. Check the pin by hand when `@electron/get` moves.
 
@@ -93,7 +95,7 @@ The installer ships `resources/THIRD_PARTY_NOTICES.txt`: the name, version, lice
 
 Packaging fails when a package:
 
-- has a license off the allow list in [scripts/security-scan/licenses.mjs](../scripts/security-scan/licenses.mjs) (GPL-3.0-only compatible). Replace the package, or add the license to the list if it is compatible.
+- has a license off the allow list in [scripts/security-scan/licenses.mjs](../scripts/security-scan/licenses.mjs) (compatible with MIT for distribution). Replace the package, or add the license to the list if it is compatible.
 - ships no LICENSE, COPYING or NOTICE file. Copy the upstream license file to `build/licenses/<name>@<version>.txt`. The version is in the name, so an update is checked again.
 
 ## Security scan
@@ -123,8 +125,7 @@ Electron app with three processes ([ADR 0002](adr/0002-electron-with-separate-en
 
 Pull requests by arrangement: open an issue first.
 
-- Work on the `dev` branch: `git switch dev`. `dev` reaches `main` squashed, through `stage`. See [agents/staging.md](agents/staging.md).
-- A user-facing change adds a line under `## [Unreleased]` in [CHANGELOG.md](../CHANGELOG.md).
+- Work on the `dev` branch: `git switch dev`. `dev` reaches `main` squashed, through `stage`, by `/branch-flow promote` and `ship`. Promote writes the [CHANGELOG.md](../CHANGELOG.md) lines. See [agents/promote.md](agents/promote.md).
 - Run `npm run check` before merging. CI runs it again on `stage` and on pull requests to `main`.
 - Issues and specs are markdown files under `.scratch/<feature>/`. See [agents/issue-tracker.md](agents/issue-tracker.md).
 - Use the domain terms from [CONTEXT.md](../CONTEXT.md) in code, UI and docs.

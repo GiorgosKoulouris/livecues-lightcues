@@ -1,16 +1,30 @@
 import { Play, Plus, Trash2 } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ROLES, type Role } from '../../../shared/fixture-profile';
-import { DIRECTIONS, type Direction, type Rule, type Scene, type Show } from '../../../shared/show';
+import {
+  beatsText,
+  DIRECTIONS,
+  STROBE_HZ,
+  STROBE_RATES,
+  type Colour,
+  type ColourEffect,
+  type Direction,
+  type EffectSlot,
+  type Rule,
+  type Scene,
+  type Show,
+  type StrobeRate,
+} from '../../../shared/show';
 import type { VenuePatch } from '../../../shared/venue-patch';
 import { Button, IconButton } from '../ui/Button';
 import { Checkbox } from '../ui/Checkbox';
+import { cx } from '../ui/cx';
 import { NumberField, parseName, TextField } from '../ui/fields';
 import { Select } from '../ui/Select';
 import { useToast } from '../ui/Toast';
 import { moveItem, SortableList, useItemKeys } from '../ui/SortableList';
 import { ColourPicker } from './ColourPicker';
-import { EffectPicker } from './EffectPicker';
+import { ColourEffectPicker, EffectPicker, IntensityEffectPicker } from './EffectPicker';
 import styles from './SceneEditor.module.css';
 import { parseTags } from './scenes';
 import { ZonePicker } from './ZonePicker';
@@ -18,10 +32,24 @@ import { ZonePicker } from './ZonePicker';
 // Arrow Up/Down step of the fade-in, in seconds.
 const FADE_STEP = 0.5;
 
+// The Strobe picker's options; '' leaves strobe to earlier Rules.
+const STROBE_OPTIONS = [
+  { value: '', label: 'Not set' },
+  ...STROBE_RATES.map((rate) => ({ value: String(rate), label: strobeLabel(rate) })),
+];
+
+function strobeLabel(rate: StrobeRate): string {
+  if (rate === 'Off') return rate;
+  if (typeof rate === 'string') return `${rate} (${STROBE_HZ[rate]} Hz)`;
+  return beatsText(rate);
+}
+
 interface SceneEditorProps {
   scene: Scene;
   show: Show;
   patch: VenuePatch;
+  // The current Tempo, for the Speed limit note on movement Effects.
+  bpm: number | undefined;
   // Every change is sent at once, so an active Scene updates live. Resolves
   // to whether it was done.
   onPut(scene: Scene): Promise<boolean>;
@@ -31,7 +59,7 @@ interface SceneEditorProps {
 
 // Edits one Scene: name, tags, Layer and fade-in in a header, and its Rules as
 // cards, reordered by dragging their handle.
-export function SceneEditor({ scene, show, patch, onPut, onGo, onRemove }: SceneEditorProps) {
+export function SceneEditor({ scene, show, patch, bpm, onPut, onGo, onRemove }: SceneEditorProps) {
   const toast = useToast();
   // Rules have no ids; these keep focus with a Rule as it moves.
   const ruleKeys = useItemKeys(scene.rules.length);
@@ -114,6 +142,7 @@ export function SceneEditor({ scene, show, patch, onPut, onGo, onRemove }: Scene
                 handle={handle}
                 rule={rule}
                 patch={patch}
+                bpm={bpm}
                 onPut={(next) => putRules(scene.rules.map((r, j) => (j === i ? next : r)))}
                 onRemove={() => void removeRule(i)}
               />
@@ -134,6 +163,7 @@ function RuleCard({
   handle,
   rule,
   patch,
+  bpm,
   onPut,
   onRemove,
 }: {
@@ -141,10 +171,12 @@ function RuleCard({
   handle: ReactNode;
   rule: Rule;
   patch: VenuePatch;
+  bpm: number | undefined;
   onPut(rule: Rule): void;
   onRemove(): void;
 }) {
-  const { target, intensity, colour, direction, effect } = rule;
+  const { target, intensity, colour, direction, strobe } = rule;
+  const { movementEffect, intensityEffect, colourEffect } = rule;
 
   // `undefined` leaves the attribute to earlier Rules.
   function set<K extends Exclude<keyof Rule, 'target'>>(key: K, value: Rule[K] | undefined) {
@@ -191,7 +223,12 @@ function RuleCard({
               </>
             )}
           </div>
-          <ColourPicker colour={colour} onChange={(c) => set('colour', c)} />
+          <RuleColour
+            colour={colour}
+            colourEffect={colourEffect}
+            onColour={(c) => set('colour', c)}
+            onColourEffect={(e) => set('colourEffect', e)}
+          />
           <Select<Direction | ''>
             label="Direction"
             value={direction ?? ''}
@@ -201,10 +238,85 @@ function RuleCard({
             ]}
             onChange={(d) => set('direction', d || undefined)}
           />
-          <EffectPicker effect={effect} onChange={(e) => set('effect', e)} />
+          <EffectPicker
+            slot={movementEffect}
+            bpm={bpm}
+            onChange={(e) => set('movementEffect', e)}
+          />
+          <IntensityEffectPicker
+            slot={intensityEffect}
+            onChange={(e) => set('intensityEffect', e)}
+          />
+          <Select
+            label="Strobe"
+            value={strobe === undefined ? '' : String(strobe)}
+            options={STROBE_OPTIONS}
+            onChange={(value) =>
+              set(
+                'strobe',
+                STROBE_RATES.find((rate) => String(rate) === value),
+              )
+            }
+          />
         </div>
       </div>
     </>
+  );
+}
+
+type ColourMode = 'colour' | 'effect';
+
+const COLOUR_MODES: { mode: ColourMode; label: string }[] = [
+  { mode: 'colour', label: 'Colour' },
+  { mode: 'effect', label: 'Colour Effect' },
+];
+
+// A Rule's colour or colour Effect: it sets one or the other. Switching
+// drops the one set. With neither set, the switch picks which is shown.
+function RuleColour({
+  colour,
+  colourEffect,
+  onColour,
+  onColourEffect,
+}: {
+  colour?: Colour;
+  colourEffect?: EffectSlot<ColourEffect>;
+  onColour(colour: Colour | undefined): void;
+  onColourEffect(slot: EffectSlot<ColourEffect> | undefined): void;
+}) {
+  // The mode last switched to, shown while neither is set.
+  const [chosen, setChosen] = useState<ColourMode>('colour');
+  const mode: ColourMode =
+    colourEffect !== undefined ? 'effect' : colour !== undefined ? 'colour' : chosen;
+
+  function pick(next: ColourMode) {
+    setChosen(next);
+    if (next === mode) return;
+    if (next === 'effect') onColour(undefined);
+    else onColourEffect(undefined);
+  }
+
+  return (
+    <div className={styles.colourSetting}>
+      <div role="group" aria-label="Colour or Colour Effect" className={styles.switch}>
+        {COLOUR_MODES.map((option) => (
+          <button
+            key={option.mode}
+            type="button"
+            aria-pressed={mode === option.mode}
+            className={cx(styles.switchOption, mode === option.mode && styles.switchPicked)}
+            onClick={() => pick(option.mode)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+      {mode === 'colour' ? (
+        <ColourPicker colour={colour} onChange={onColour} />
+      ) : (
+        <ColourEffectPicker slot={colourEffect} onChange={onColourEffect} />
+      )}
+    </div>
   );
 }
 

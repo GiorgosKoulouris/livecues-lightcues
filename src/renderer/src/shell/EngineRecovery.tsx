@@ -1,4 +1,3 @@
-import { CircleAlert } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { DOCUMENTS, type EngineDocument, type RestoreResult } from '../../../shared/protocol';
 import { Button } from '../ui/Button';
@@ -49,7 +48,7 @@ export function EngineRecovery() {
 
   return (
     <div role="alert" className={styles.banner}>
-      <CircleAlert className={styles.icon} aria-hidden />
+      <span className={styles.mark} aria-hidden />
       <span className={styles.message}>
         The engine keeps crashing. Save your work and restart LightCues.
       </span>

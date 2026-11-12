@@ -39,3 +39,8 @@ RUN arch="$(dpkg --print-architecture)" \
 RUN python3 -m venv /opt/semgrep \
     && /opt/semgrep/bin/pip install --no-cache-dir "semgrep==${SEMGREP_VERSION}" \
     && ln -s /opt/semgrep/bin/semgrep /usr/local/bin/semgrep
+
+# Mount points for the named volumes in docker-compose.yml. A new volume copies
+# the owner from the image, so node owns them from the first start.
+RUN mkdir -p /home/node/.claude /home/node/.npm \
+    && chown node:node /home/node/.claude /home/node/.npm

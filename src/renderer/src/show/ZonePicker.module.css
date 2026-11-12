@@ -17,13 +17,15 @@
 .legend {
   margin-bottom: var(--space-2);
   padding: 0;
-  color: var(--text-muted);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
+  color: var(--legend-dim);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .summary {
-  color: var(--text-faint);
+  color: var(--legend-dim);
   font-weight: var(--weight-normal);
 }
 
@@ -46,38 +48,42 @@
 .svg {
   width: 100%;
   height: auto;
-  border-radius: var(--radius-md);
-  background: var(--surface-0);
+  border-radius: 0;
+  background: var(--display);
 }
 
 .zone {
-  fill: var(--surface-3);
-  stroke: var(--border-strong);
+  fill: var(--key);
+  stroke: var(--edge);
   cursor: pointer;
 }
 
 .zone:hover {
-  fill: var(--border-strong);
+  fill: var(--key-hover);
 }
 
 .picked,
 .picked:hover {
-  fill: var(--accent);
-  fill-opacity: 0.6;
+  fill: var(--active-wash);
+  stroke: var(--signal);
+  stroke-width: 0.08;
 }
 
 .fixture {
-  fill: var(--warning);
+  fill: var(--legend-dim);
   pointer-events: none;
 }
 
 .label {
-  fill: var(--text-faint);
+  fill: var(--legend-dim);
   font-size: var(--text-sm);
 }
 
 .caption {
-  color: var(--text-muted);
-  font-size: var(--text-sm);
+  color: var(--legend-dim);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   text-align: center;
 }

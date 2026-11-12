@@ -390,6 +390,16 @@ describe('numbers', () => {
     }
   });
 
+  it('passes spans flagged as assumed', () => {
+    const channels = [
+      control('Dimmer', { type: 'intensity', level: [0.05, 1], assumed: true }),
+      control('Red', { type: 'emitter', emitter: 'red', level: [0.05, 1], assumed: true }),
+      control('Strobe', { type: 'strobe', hz: [20, 1], assumed: true }),
+      control('Speed', { type: 'strobeSpeed', hz: [1, 20], assumed: true }),
+    ];
+    expect(validateProfile(profile(channels))).toEqual([]);
+  });
+
   // Fixed in this issue: such a span made the pan or tilt DMX value, or the
   // intensity, NaN, which the Output sends as 0.
   it('fails a span that is not two finite numbers', () => {
@@ -411,6 +421,7 @@ describe('numbers', () => {
         { type: 'emitter', emitter: 'red', level: span },
         { type: 'strobe', hz: span },
         { type: 'strobeSpeed', hz: span },
+        { type: 'panTiltSpeed', speed: span },
       ] as Capability[];
       const channels = capabilities.map((capability, i) => control(`C${i + 1}`, capability));
       expect(validateProfile(profile(channels))).toEqual([
@@ -420,6 +431,31 @@ describe('numbers', () => {
         'Mode "Standard", channel 4 "C4": emitter level must be two finite numbers',
         'Mode "Standard", channel 5 "C5": strobe hz must be two finite numbers',
         'Mode "Standard", channel 6 "C6": strobeSpeed hz must be two finite numbers',
+        'Mode "Standard", channel 7 "C7": panTiltSpeed speed must be two finite numbers',
+      ]);
+    }
+  });
+
+  it('passes a pan/tilt speed within 0–1, either way round', () => {
+    for (const speed of [
+      [0, 1],
+      [1, 0],
+      [0.5, 0.5],
+    ] as Span[]) {
+      const speedChannel = control('Speed', { type: 'panTiltSpeed', speed });
+      expect(validateProfile(profile([speedChannel]))).toEqual([]);
+    }
+  });
+
+  it('fails a pan/tilt speed outside 0–1', () => {
+    for (const speed of [
+      [-0.1, 1],
+      [0, 1.5],
+      [0, 100],
+    ] as Span[]) {
+      const speedChannel = control('Speed', { type: 'panTiltSpeed', speed });
+      expect(validateProfile(profile([speedChannel]))).toEqual([
+        'Mode "Standard", channel 1 "Speed": panTiltSpeed speed must be within 0–1',
       ]);
     }
   });

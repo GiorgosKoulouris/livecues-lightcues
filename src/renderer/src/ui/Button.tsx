@@ -3,7 +3,7 @@ import styles from './Button.module.css';
 import { cx } from './cx';
 import { Tooltip } from './Tooltip';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'sunk';
 
 interface ButtonProps extends ComponentProps<'button'> {
   variant?: ButtonVariant;

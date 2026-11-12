@@ -6,7 +6,17 @@ import type {
   Emitter,
   FixtureProfile,
 } from '../shared/fixture-profile';
-import type { MovementEffect, Rule, Scene, Show, Spread, Swatch } from '../shared/show';
+import type {
+  Colour,
+  ColourEffect,
+  IntensityEffect,
+  MovementEffect,
+  Rule,
+  Scene,
+  Show,
+  Spread,
+  Swatch,
+} from '../shared/show';
 import type { PatchedFixture, VenuePatch } from '../shared/venue-patch';
 import {
   activate,
@@ -699,7 +709,7 @@ describe('movement Effects', () => {
   }
 
   it('sweeps pan around the base aim over its length in beats', () => {
-    const s = show(scene('sweep', [{ target: {}, direction: 'Cross', effect: effect() }]));
+    const s = show(scene('sweep', [{ target: {}, direction: 'Cross', movementEffect: effect() }]));
     const active = playOn(rig, s, ['sweep', 0]);
 
     expect([0, 1, 2, 3, 4].map((beat) => aimAtBeat(s, active, beat))).toEqual([
@@ -712,8 +722,12 @@ describe('movement Effects', () => {
   });
   it('sweeps tilt, and circles with tilt a quarter cycle ahead of pan', () => {
     const s = show(
-      scene('tilt', [{ target: {}, direction: 'Cross', effect: effect({ shape: 'Tilt sweep' }) }]),
-      scene('circle', [{ target: {}, direction: 'Cross', effect: effect({ shape: 'Circle' }) }]),
+      scene('tilt', [
+        { target: {}, direction: 'Cross', movementEffect: effect({ shape: 'Tilt sweep' }) },
+      ]),
+      scene('circle', [
+        { target: {}, direction: 'Cross', movementEffect: effect({ shape: 'Circle' }) },
+      ]),
     );
     const at = (id: string) => [0, 1, 2, 3].map((b) => aimAtBeat(s, playOn(rig, s, [id, 0]), b));
 
@@ -733,7 +747,7 @@ describe('movement Effects', () => {
 
   it('wanders smoothly with Ballyhoo, within its size, the same each time for a Fixture', () => {
     const ballyhoo = effect({ shape: 'Ballyhoo', size: 20, length: 8 });
-    const s = show(scene('wander', [{ target: {}, direction: 'Cross', effect: ballyhoo }]));
+    const s = show(scene('wander', [{ target: {}, direction: 'Cross', movementEffect: ballyhoo }]));
     const twin = fixture({ id: 'twin', profileId: mover.id, x: 3, y: 4, height: 6, address: 4 });
     const both = patch([hung, twin], [mover]);
     const active = playOn(both, s, ['wander', 0]);
@@ -764,7 +778,9 @@ describe('movement Effects', () => {
   it('clamps the turned aim to the Fixture range', () => {
     // Down is tilt 0 of ±135°; Up is out of reach, at the end of the range.
     const s = show(
-      scene('up', [{ target: {}, direction: 'Up', effect: effect({ shape: 'Tilt sweep' }) }]),
+      scene('up', [
+        { target: {}, direction: 'Up', movementEffect: effect({ shape: 'Tilt sweep' }) },
+      ]),
     );
     const active = playOn(rig, s, ['up', 0]);
     const tilts = [1, 3].map((beat) => Math.abs(aimAtBeat(s, active, beat)[1]!));
@@ -788,7 +804,7 @@ describe('movement Effects', () => {
       },
     });
     const both = patch([hung, inverted], [mover]);
-    const s = show(scene('sweep', [{ target: {}, direction: 'Down', effect: effect() }]));
+    const s = show(scene('sweep', [{ target: {}, direction: 'Down', movementEffect: effect() }]));
     const active = playOn(both, s, ['sweep', 0]);
 
     expect(aimAtBeat(s, active, 1, 0, both, 'mover')[0]).toBe(10);
@@ -804,7 +820,9 @@ describe('movement Effects', () => {
     // at: the sine of its phase.
     function phases(spread: Spread): Record<string, number> {
       const s = show(
-        scene('sweep', [{ target: {}, direction: 'Down', effect: effect({ size: 20, spread }) }]),
+        scene('sweep', [
+          { target: {}, direction: 'Down', movementEffect: effect({ size: 20, spread }) },
+        ]),
       );
       const lights = resolveLights(s, line, playOn(line, s, ['sweep', 0]), 0, 1, 1);
       return Object.fromEntries(
@@ -836,7 +854,7 @@ describe('movement Effects', () => {
         scene('sweep', [
           {
             target: { zones: [{ row: 'Midstage', column: 'Stage Left', level: 'Overhead' }] },
-            effect: effect({ size: 20, spread: 'Left→Right' }),
+            movementEffect: effect({ size: 20, spread: 'Left→Right' }),
           },
         ]),
       );
@@ -850,8 +868,10 @@ describe('movement Effects', () => {
   it('runs around a Direction from another Layer, each combined by last change', () => {
     const s = show(
       scene('cross', [{ target: {}, direction: 'Cross' }]),
-      scene('sweep', [{ target: {}, effect: effect() }], { layer: 'l2' }),
-      scene('tilt', [{ target: {}, direction: 'Cross', effect: effect({ shape: 'Tilt sweep' }) }]),
+      scene('sweep', [{ target: {}, movementEffect: effect() }], { layer: 'l2' }),
+      scene('tilt', [
+        { target: {}, direction: 'Cross', movementEffect: effect({ shape: 'Tilt sweep' }) },
+      ]),
     );
 
     // The Effect runs around Cross, set on the other Layer.
@@ -869,7 +889,7 @@ describe('movement Effects', () => {
   it("fades an Effect's size in with its Scene, and out with the one it replaces", () => {
     const s = show(
       scene('cross', [{ target: {}, direction: 'Cross' }]),
-      scene('sweep', [{ target: {}, direction: 'Cross', effect: effect() }], { fadeIn: 2 }),
+      scene('sweep', [{ target: {}, direction: 'Cross', movementEffect: effect() }], { fadeIn: 2 }),
     );
     const fadingIn = playOn(rig, s, ['cross', 0], ['sweep', 10]);
     const fadingOut = playOn(rig, s, ['sweep', 0], ['cross', 10]);
@@ -884,7 +904,7 @@ describe('movement Effects', () => {
 
   it('moves between Directions from the aim shown, turning it once', () => {
     const s = show(
-      scene('sweep', [{ target: {}, effect: effect() }], { layer: 'l2' }),
+      scene('sweep', [{ target: {}, movementEffect: effect() }], { layer: 'l2' }),
       scene('down', [{ target: {}, intensity: 1, direction: 'Down' }]),
       scene('cross', [{ target: {}, intensity: 1, direction: 'Cross' }], { fadeIn: 2 }),
     );
@@ -899,8 +919,8 @@ describe('movement Effects', () => {
 
   it('fades an Effect in from the one it takes over from on another Layer', () => {
     const s = show(
-      scene('sweep', [{ target: {}, direction: 'Cross', effect: effect() }]),
-      scene('tilt', [{ target: {}, effect: effect({ shape: 'Tilt sweep' }) }], {
+      scene('sweep', [{ target: {}, direction: 'Cross', movementEffect: effect() }]),
+      scene('tilt', [{ target: {}, movementEffect: effect({ shape: 'Tilt sweep' }) }], {
         layer: 'l2',
         fadeIn: 2,
       }),
@@ -922,12 +942,612 @@ describe('movement Effects', () => {
     ]);
   });
 
+  it('runs cycles of 1/2 and 1/4 beat', () => {
+    const s = show(
+      scene('half', [{ target: {}, direction: 'Cross', movementEffect: effect({ length: 0.5 }) }]),
+      scene('quarter', [
+        { target: {}, direction: 'Cross', movementEffect: effect({ length: 0.25 }) },
+      ]),
+    );
+    const pans = (id: string, step: number) =>
+      [0, 1, 2, 3, 4].map((i) => aimAtBeat(s, playOn(rig, s, [id, 0]), i * step)[0]);
+
+    expect(pans('half', 1 / 8)).toEqual([90, 100, 90, 80, 90]);
+    expect(pans('quarter', 1 / 16)).toEqual([90, 100, 90, 80, 90]);
+  });
+
+  describe('None', () => {
+    const s = show(
+      scene('sweep', [{ target: {}, direction: 'Cross', movementEffect: effect() }]),
+      scene('still', [{ target: {}, movementEffect: 'None' }], { layer: 'l2' }),
+      scene('slow still', [{ target: {}, movementEffect: 'None' }], { layer: 'l2', fadeIn: 2 }),
+      scene('lit', [{ target: {}, intensity: 1 }], { layer: 'l2' }),
+    );
+
+    it("stops a lower Layer's movement Effect, leaving its Direction", () => {
+      expect(aimAtBeat(s, playOn(rig, s, ['sweep', 0], ['still', 1]), 1)).toEqual([90, 45]);
+      // A Scene that leaves the slot alone keeps it running.
+      expect(aimAtBeat(s, playOn(rig, s, ['sweep', 0], ['lit', 1]), 1)).toEqual([100, 45]);
+      // Changed last, the Effect wins.
+      expect(aimAtBeat(s, playOn(rig, s, ['still', 0], ['sweep', 1]), 1)).toEqual([100, 45]);
+    });
+
+    it("stops an earlier Rule's movement Effect in its Scene", () => {
+      const own = show(
+        scene('sweep', [
+          { target: {}, direction: 'Cross', movementEffect: effect() },
+          { target: {}, movementEffect: 'None' },
+        ]),
+      );
+
+      expect(aimAtBeat(own, playOn(rig, own, ['sweep', 0]), 1)).toEqual([90, 45]);
+    });
+
+    it("stills the turn over its Scene's fade-in", () => {
+      const active = playOn(rig, s, ['sweep', 0], ['slow still', 10]);
+
+      expect([10, 11, 12].map((time) => aimAtBeat(s, active, 1, time)[0])).toEqual([100, 95, 90]);
+    });
+  });
+
   it('leaves Fixtures without pan or tilt alone', () => {
     const par = fixture({ id: 'par', address: 4 });
     const r = patch([hung, par], [mover, dimmer]);
-    const s = show(scene('sweep', [{ target: {}, intensity: 1, effect: effect() }]));
+    const s = show(scene('sweep', [{ target: {}, intensity: 1, movementEffect: effect() }]));
 
     expect(channels(resolveFrames(s, r, playOn(r, s, ['sweep', 0]), 0, 1, 1), 4)[3]).toBe(255);
     expect(resolveLights(s, r, playOn(r, s, ['sweep', 0]), 0, 1, 1).par).not.toHaveProperty('aim');
+  });
+});
+
+describe('intensity Effects', () => {
+  const effect = (overrides: Partial<IntensityEffect> = {}): IntensityEffect => ({
+    shape: 'Square',
+    depth: 1,
+    length: 4,
+    spread: 'In sync',
+    ...overrides,
+  });
+  const rig = patch([fixture({})]);
+
+  // The Fixture's intensity at `beat` of the Tempo and `time`.
+  function intensityAt(s: Show, active: ActiveScenes, beat: number, time = 0, grandMaster = 1) {
+    return resolveLights(s, rig, active, time, grandMaster, beat).f1!.intensity;
+  }
+
+  it('scales the intensity over its cycle', () => {
+    const s = show(scene('pulse', [{ target: {}, intensity: 0.8, intensityEffect: effect() }]));
+    const active = play(s, ['pulse', 0]);
+
+    expect([0, 1, 2, 3, 4].map((beat) => intensityAt(s, active, beat))).toEqual([
+      0.8, 0.8, 0, 0, 0.8,
+    ]);
+    // Sent on the dimmer.
+    expect(channels(resolveFrames(s, rig, active, 0, 1, 2), 1)).toEqual([0]);
+  });
+
+  it('dips by its depth', () => {
+    const s = show(
+      scene('half', [{ target: {}, intensity: 0.8, intensityEffect: effect({ depth: 0.5 }) }]),
+      scene('none', [{ target: {}, intensity: 0.8, intensityEffect: effect({ depth: 0 }) }]),
+    );
+
+    expect(intensityAt(s, play(s, ['half', 0]), 2)).toBeCloseTo(0.4);
+    expect(intensityAt(s, play(s, ['none', 0]), 2)).toBeCloseTo(0.8);
+  });
+
+  it("scales a lower Layer's intensity, each combined by last change", () => {
+    const s = show(
+      scene('lit', [{ target: {}, intensity: 0.8 }]),
+      scene('pulse', [{ target: {}, intensityEffect: effect() }], { layer: 'l2' }),
+      scene('bright', [{ target: {}, intensity: 1 }]),
+    );
+
+    expect(intensityAt(s, play(s, ['lit', 0], ['pulse', 1]), 2)).toBe(0);
+    expect(intensityAt(s, play(s, ['pulse', 0], ['lit', 1]), 2)).toBe(0);
+    expect(intensityAt(s, play(s, ['lit', 0], ['pulse', 1]), 1)).toBeCloseTo(0.8);
+    // A Scene changed later that leaves the slot alone keeps it running, over
+    // its intensity too.
+    expect(intensityAt(s, play(s, ['lit', 0], ['pulse', 1], ['bright', 2]), 2)).toBe(0);
+  });
+
+  it("fades its depth in with its Scene's fade-in", () => {
+    const s = show(
+      scene('lit', [{ target: {}, intensity: 0.8 }]),
+      scene('pulse', [{ target: {}, intensityEffect: effect() }], { layer: 'l2', fadeIn: 2 }),
+    );
+    const active = play(s, ['lit', 0], ['pulse', 10]);
+
+    expect([10, 11, 12].map((time) => intensityAt(s, active, 2, time))).toEqual([0.8, 0.4, 0]);
+  });
+
+  describe('None', () => {
+    const s = show(
+      scene('lit', [{ target: {}, intensity: 0.8, intensityEffect: effect() }]),
+      scene('steady', [{ target: {}, intensityEffect: 'None' }], { layer: 'l2' }),
+      scene('slow steady', [{ target: {}, intensityEffect: 'None' }], { layer: 'l2', fadeIn: 2 }),
+    );
+
+    it("stops a lower Layer's intensity Effect", () => {
+      expect(intensityAt(s, play(s, ['lit', 0], ['steady', 1]), 2)).toBeCloseTo(0.8);
+      // Changed last, the Effect wins.
+      expect(intensityAt(s, play(s, ['steady', 0], ['lit', 1]), 2)).toBe(0);
+    });
+
+    it("stops an earlier Rule's intensity Effect in its Scene", () => {
+      const own = show(
+        scene('lit', [
+          { target: {}, intensity: 0.8, intensityEffect: effect() },
+          { target: {}, intensityEffect: 'None' },
+        ]),
+      );
+
+      expect(intensityAt(own, play(own, ['lit', 0]), 2)).toBeCloseTo(0.8);
+    });
+
+    it("steadies the intensity over its Scene's fade-in", () => {
+      const active = play(s, ['lit', 0], ['slow steady', 10]);
+
+      expect([10, 11, 12].map((time) => intensityAt(s, active, 2, time))).toEqual([0, 0.4, 0.8]);
+    });
+  });
+
+  describe('Chase', () => {
+    // Dimmers across the stage, at x -4, -2, 2 and 4.
+    const at = (x: number, address: number) => fixture({ id: `x${x}`, x, address });
+    const line = patch([at(4, 1), at(-2, 2), at(-4, 3), at(2, 4)]);
+    // The Fixtures lit at each beat, by x.
+    function litAt(spread: Spread, beats: number[]): string[][] {
+      const s = show(
+        scene('chase', [
+          { target: {}, intensity: 1, intensityEffect: effect({ shape: 'Chase', spread }) },
+        ]),
+      );
+      const active = play(s, ['chase', 0]);
+      return beats.map((beat) => {
+        const lights = resolveLights(s, line, active, 0, 1, beat);
+        return ['x-4', 'x-2', 'x2', 'x4'].filter((id) => lights[id]!.intensity > 0);
+      });
+    }
+
+    it('lights one of 4 positions at a time, Left→Right', () => {
+      expect(litAt('Left→Right', [0.5, 1.5, 2.5, 3.5])).toEqual([['x-4'], ['x-2'], ['x2'], ['x4']]);
+    });
+
+    it('lights the centre pair, then the outer pair, Mirrored', () => {
+      expect(litAt('Mirrored', [1, 3])).toEqual([
+        ['x-2', 'x2'],
+        ['x-4', 'x4'],
+      ]);
+    });
+
+    it('is a Square In sync', () => {
+      expect(litAt('In sync', [1, 3])).toEqual([['x-4', 'x-2', 'x2', 'x4'], []]);
+    });
+  });
+
+  it('applies the Grand Master and Blackout after it', () => {
+    const s = show(
+      scene('pulse', [{ target: {}, intensity: 0.8, intensityEffect: effect({ depth: 0.5 }) }]),
+    );
+    const active = play(s, ['pulse', 0]);
+
+    expect(intensityAt(s, active, 2, 0, 0.5)).toBeCloseTo(0.2);
+    expect(intensityAt(s, active, 0, 0, 0)).toBe(0);
+  });
+
+  it('scales the emitters of a Fixture without a dimmer', () => {
+    const s = show(
+      scene('pulse', [
+        {
+          target: {},
+          intensity: 1,
+          colour: { swatch: 'Red' },
+          intensityEffect: effect({ depth: 0.5 }),
+        },
+      ]),
+    );
+    const r = patch([fixture({ profileId: rgbw.id })], [rgbw]);
+
+    expect(channels(resolveFrames(s, r, play(s, ['pulse', 0]), 0, 1, 2), 4)).toEqual([
+      128, 0, 0, 0,
+    ]);
+  });
+});
+
+describe('colour Effects', () => {
+  const red: Colour = { swatch: 'Red' };
+  const blue: Colour = { swatch: 'Blue' };
+  const green: Colour = { swatch: 'Green' };
+  const white: Colour = { swatch: 'White' };
+  // Red and blue, 2 beats each.
+  const step = (overrides: Partial<ColourEffect> = {}): ColourEffect =>
+    ({
+      shape: 'Step',
+      colours: [red, blue],
+      length: 4,
+      spread: 'In sync',
+      ...overrides,
+    }) as ColourEffect;
+  const rig = patch([fixture({ profileId: rgb.id })], [rgb]);
+
+  // The Fixture's colour as [red, green, blue] at `beat` and `time`.
+  function colourAt(s: Show, active: ActiveScenes, beat: number, time = 0, on = rig) {
+    const { red: r, green: g, blue: b } = resolveLights(s, on, active, time, 1, beat).f1!;
+    return [r, g, b].map((level) => Math.round(level * 100) / 100);
+  }
+
+  it('steps through 2 colours over its cycle', () => {
+    const s = show(scene('cycle', [{ target: {}, intensity: 1, colourEffect: step() }]));
+    const active = play(s, ['cycle', 0]);
+
+    expect([0, 1, 2, 3, 4].map((beat) => colourAt(s, active, beat))).toEqual([
+      [1, 0, 0],
+      [1, 0, 0],
+      [0, 0, 1],
+      [0, 0, 1],
+      [1, 0, 0],
+    ]);
+    // Sent on the emitters.
+    expect(channels(resolveFrames(s, rig, active, 0, 1, 2), 4)).toEqual([255, 0, 0, 255]);
+  });
+
+  it('steps and fades through 4 colours', () => {
+    const colours = [red, blue, green, white];
+    const s = show(
+      scene('step', [{ target: {}, intensity: 1, colourEffect: step({ colours }) }]),
+      scene('fade', [{ target: {}, intensity: 1, colourEffect: step({ shape: 'Fade', colours }) }]),
+    );
+
+    const stepped = play(s, ['step', 0]);
+    expect([0, 1, 2, 3].map((beat) => colourAt(s, stepped, beat))).toEqual([
+      [1, 0, 0],
+      [0, 0, 1],
+      [0, 1, 0],
+      [1, 1, 1],
+    ]);
+    const faded = play(s, ['fade', 0]);
+    expect([0.5, 1.5, 3.5].map((beat) => colourAt(s, faded, beat))).toEqual([
+      [0.5, 0, 0.5],
+      [0, 0.5, 0.5],
+      [1, 0.5, 0.5],
+    ]);
+  });
+
+  it('cycles the hue with Rainbow', () => {
+    const s = show(
+      scene('rainbow', [
+        {
+          target: {},
+          intensity: 1,
+          colourEffect: { shape: 'Rainbow', length: 4, spread: 'In sync' },
+        },
+      ]),
+    );
+    const active = play(s, ['rainbow', 0]);
+
+    expect([0, 1, 2, 3].map((beat) => colourAt(s, active, beat))).toEqual([
+      [1, 0, 0],
+      [0.5, 1, 0],
+      [0, 1, 1],
+      [0.5, 0, 1],
+    ]);
+  });
+
+  it('gives odd and even Fixtures across the stage the 2 colours, Alternate', () => {
+    // Across the stage at x -4, -2, 2 and 4, patched out of order.
+    const at = (x: number, address: number) =>
+      fixture({ id: `x${x}`, x, address, profileId: rgb.id });
+    const line = patch([at(4, 1), at(-2, 5), at(-4, 9), at(2, 13)], [rgb]);
+    const s = show(
+      scene('cycle', [{ target: {}, intensity: 1, colourEffect: step({ spread: 'Alternate' }) }]),
+    );
+    const lights = resolveLights(s, line, play(s, ['cycle', 0]), 0, 1, 0);
+
+    expect(['x-4', 'x-2', 'x2', 'x4'].map((id) => lights[id]!.red)).toEqual([1, 0, 1, 0]);
+  });
+
+  it('takes over from a colour on another Layer, each combined by last change', () => {
+    const s = show(
+      scene('cycle', [{ target: {}, intensity: 1, colourEffect: step() }]),
+      scene('green', [{ target: {}, colour: green }], { layer: 'l2' }),
+    );
+
+    expect(colourAt(s, play(s, ['green', 0], ['cycle', 1]), 2)).toEqual([0, 0, 1]);
+    expect(colourAt(s, play(s, ['cycle', 0], ['green', 1]), 2)).toEqual([0, 1, 0]);
+  });
+
+  it("crossfades from the colour before over its Scene's fade-in", () => {
+    const s = show(
+      scene('green', [{ target: {}, intensity: 1, colour: green }]),
+      scene('cycle', [{ target: {}, colourEffect: step() }], { layer: 'l2', fadeIn: 2 }),
+      scene('slow cycle', [{ target: {}, intensity: 1, colourEffect: step() }], { fadeIn: 2 }),
+    );
+
+    // From a lower Layer's colour.
+    const over = play(s, ['green', 0], ['cycle', 10]);
+    expect([10, 11, 12].map((time) => colourAt(s, over, 2, time))).toEqual([
+      [0, 1, 0],
+      [0, 0.5, 0.5],
+      [0, 0, 1],
+    ]);
+    // From the Scene it replaces on its Layer.
+    const replacing = play(s, ['green', 0], ['slow cycle', 10]);
+    expect(colourAt(s, replacing, 2, 11)).toEqual([0, 0.5, 0.5]);
+  });
+
+  it('crossfades from where an interrupted fade had got to, over the colour below', () => {
+    const s = show(
+      scene('green', [{ target: {}, intensity: 1, colour: green }]),
+      scene('cycle', [{ target: {}, colourEffect: step() }], { layer: 'l2', fadeIn: 2 }),
+      scene('red', [{ target: {}, colour: red }], { layer: 'l2', fadeIn: 2 }),
+    );
+    const active = play(s, ['green', 0], ['cycle', 10], ['red', 11]);
+
+    // Halfway from green to the Step's blue, then on to red.
+    expect([11, 12, 13].map((time) => colourAt(s, active, 2, time))).toEqual([
+      [0, 0.5, 0.5],
+      [0.5, 0.25, 0.25],
+      [1, 0, 0],
+    ]);
+  });
+
+  it('snaps a colour-wheel Fixture to the nearest slot as it steps', () => {
+    const s = show(scene('cycle', [{ target: {}, intensity: 1, colourEffect: step() }]));
+    const r = patch([fixture({ profileId: wheel.id })], [wheel]);
+    const active = play(s, ['cycle', 0]);
+
+    expect(channels(resolveFrames(s, r, active, 0, 1, 0), 2)).toEqual([255, 14]);
+    expect(channels(resolveFrames(s, r, active, 0, 1, 2), 2)).toEqual([255, 24]);
+  });
+
+  describe('None', () => {
+    const s = show(
+      scene('red cycle', [
+        { target: {}, intensity: 1, colour: red },
+        { target: {}, colourEffect: step({ colours: [blue, green] }) },
+      ]),
+      scene('cycle', [
+        { target: {}, intensity: 1, colourEffect: step({ colours: [blue, green] }) },
+      ]),
+      scene('stop', [{ target: {}, colourEffect: 'None' }], { layer: 'l2' }),
+      scene('slow stop', [{ target: {}, colourEffect: 'None' }], { layer: 'l2', fadeIn: 2 }),
+    );
+
+    it("stops a lower Layer's colour Effect, leaving the colour set under it", () => {
+      expect(colourAt(s, play(s, ['red cycle', 0], ['stop', 1]), 0)).toEqual([1, 0, 0]);
+      // With no colour under it, the Show's default colour: White.
+      expect(colourAt(s, play(s, ['cycle', 0], ['stop', 1]), 0)).toEqual([1, 1, 1]);
+      // Changed last, the Effect wins.
+      expect(colourAt(s, play(s, ['stop', 0], ['red cycle', 1]), 0)).toEqual([0, 0, 1]);
+    });
+
+    it("stops an earlier Rule's colour Effect in its Scene", () => {
+      const own = show(
+        scene('look', [
+          { target: {}, intensity: 1, colour: red },
+          { target: {}, colourEffect: step({ colours: [blue, green] }) },
+          { target: {}, colourEffect: 'None' },
+        ]),
+      );
+
+      expect(colourAt(own, play(own, ['look', 0]), 0)).toEqual([1, 0, 0]);
+    });
+
+    it("fades to the colour under it over its Scene's fade-in", () => {
+      const active = play(s, ['red cycle', 0], ['slow stop', 10]);
+
+      expect([10, 11, 12].map((time) => colourAt(s, active, 0, time))).toEqual([
+        [0, 0, 1],
+        [0.5, 0, 0.5],
+        [1, 0, 0],
+      ]);
+    });
+  });
+});
+
+describe('strobe', () => {
+  const range = (from: number, to: number, capability: Capability): CapabilityRange => ({
+    from,
+    to,
+    capability,
+  });
+  const control = (name: string, ranges: CapabilityRange[]): Channel => ({
+    kind: 'control',
+    name,
+    defaultValue: 0,
+    ranges,
+  });
+  const open = { type: 'shutter', effect: 'open' } as const;
+
+  // Like the Smart Beam: a Shutter and a Ring Strobe, each 1–25 Hz.
+  const beam = profile('test/beam', [
+    channel('Dimmer', { type: 'intensity' }),
+    control('Shutter', [
+      range(0, 31, { type: 'shutter', effect: 'closed' }),
+      range(32, 63, open),
+      range(64, 95, { type: 'strobe', hz: [1, 25] }),
+      range(96, 127, open),
+    ]),
+    control('Ring Strobe', [range(0, 0, open), range(1, 255, { type: 'strobe', hz: [1, 25] })]),
+  ]);
+  // A strobe range with no Hz span.
+  const unspanned = profile('test/unspanned', [
+    channel('Dimmer', { type: 'intensity' }),
+    control('Strobe', [range(0, 9, open), range(10, 255, { type: 'strobe' })]),
+  ]);
+  // A narrow 4–10 Hz span.
+  const narrow = profile('test/narrow', [
+    channel('Dimmer', { type: 'intensity' }),
+    control('Strobe', [range(0, 9, open), range(10, 255, { type: 'strobe', hz: [4, 10] })]),
+  ]);
+  // The strobe range turns strobe on; a speed channel sets the rate.
+  const speed = profile('test/speed', [
+    channel('Dimmer', { type: 'intensity' }),
+    control('Shutter', [range(0, 127, open), range(128, 255, { type: 'strobe' })]),
+    channel('Speed', { type: 'strobeSpeed', hz: [0.5, 15] }),
+  ]);
+
+  // The first channels of one Fixture of `p`, the Scenes played in order.
+  function strobeOn(
+    p: FixtureProfile,
+    s: Show,
+    steps: [string, number][],
+    { grandMaster = 1, bpm = 120 } = {},
+  ): number[] {
+    const rig = patch([fixture({ profileId: p.id })], [p]);
+    const frames = resolveFrames(s, rig, playOn(rig, s, ...steps), 10, grandMaster, 0, bpm);
+    return channels(frames, p.modes[0]!.channels.length);
+  }
+
+  // One Fixture of `p` lit by one Rule with `strobe`.
+  function strobing(p: FixtureProfile, strobe: Rule['strobe'], options = {}): number[] {
+    const s = show(scene('s', [{ target: {}, intensity: 1, strobe }]));
+    return strobeOn(p, s, [['s', 0]], options);
+  }
+
+  it('drives every strobe channel at the rate across its Hz span', () => {
+    // 6 Hz is 5/24 of the way across 1–25 Hz.
+    expect(strobing(beam, 'Medium')).toEqual([255, 70, 54]);
+    expect(strobing(beam, 'Fast')).toEqual([255, 78, 117]);
+  });
+
+  it('keeps the shutter open when Off or not set', () => {
+    expect(strobing(beam, 'Off')).toEqual([255, 47, 0]);
+    expect(strobing(beam, undefined)).toEqual([255, 47, 0]);
+  });
+
+  it('takes a strobe range without a span as 1–20 Hz', () => {
+    expect(strobing(unspanned, 'Slow')).toEqual([255, 23]);
+    expect(strobing(unspanned, 'Fast')).toEqual([255, 152]);
+  });
+
+  it('clamps the rate to the span, above and below', () => {
+    expect(strobing(narrow, 'Slow')).toEqual([255, 10]);
+    expect(strobing(narrow, 'Medium')).toEqual([255, 92]);
+    expect(strobing(narrow, 'Fast')).toEqual([255, 255]);
+  });
+
+  it('converts a beat rate to Hz from the Tempo', () => {
+    // A 1/4 beat at 120 BPM is 8 Hz; at 60 BPM, 4 Hz.
+    expect(strobing(narrow, 0.25)).toEqual([255, 173]);
+    expect(strobing(narrow, 0.25, { bpm: 60 })).toEqual([255, 10]);
+    // One beat at 480 BPM is 8 Hz.
+    expect(strobing(narrow, 1, { bpm: 480 })).toEqual([255, 173]);
+  });
+
+  it('sets the rate on a strobe speed channel when the strobe range is elsewhere', () => {
+    // 6 Hz is 11/29 of the way across 0.5–15 Hz.
+    expect(strobing(speed, 'Medium')).toEqual([255, 191, 97]);
+    expect(strobing(speed, 'Off')).toEqual([255, 63, 0]);
+  });
+
+  it('sets the rate on a strobe range without a span when the speed range shares its channel', () => {
+    const shared = profile('test/shared', [
+      channel('Dimmer', { type: 'intensity' }),
+      control('Strobe', [
+        range(0, 127, { type: 'strobe' }),
+        range(128, 255, { type: 'strobeSpeed', hz: [1, 20] }),
+      ]),
+    ]);
+
+    // 1–20 Hz assumed across the strobe range: 2 Hz is 1/19 of the way.
+    expect(strobing(shared, 'Slow')).toEqual([255, 7]);
+  });
+
+  it('keeps the direction of a span made from words', () => {
+    // An OFL fast → slow strobe: 20 Hz at the low end.
+    const backwards = profile('test/backwards', [
+      channel('Dimmer', { type: 'intensity' }),
+      control('Strobe', [
+        range(0, 9, open),
+        range(10, 255, { type: 'strobe', hz: [20, 1], assumed: true }),
+      ]),
+    ]);
+
+    // 12 Hz is 8/19 of the way from 20 Hz down to 1 Hz; 2 Hz is 18/19.
+    expect(strobing(backwards, 'Fast')).toEqual([255, 113]);
+    expect(strobing(backwards, 'Slow')).toEqual([255, 242]);
+  });
+
+  it('lets later Rules and higher Layers override it, Off included', () => {
+    const s = show(
+      scene('fast', [
+        { target: {}, intensity: 1, strobe: 'Fast' },
+        { target: {}, colour: { swatch: 'Red' } },
+      ]),
+      scene('stop', [
+        { target: {}, intensity: 1, strobe: 'Medium' },
+        { target: {}, strobe: 'Off' },
+      ]),
+      scene('dim', [{ target: {}, intensity: 0.5 }], { layer: 'l2' }),
+      scene('off', [{ target: {}, strobe: 'Off' }], { layer: 'l2' }),
+    );
+
+    expect(strobeOn(narrow, s, [['fast', 0]])[1]).toBe(255);
+    expect(strobeOn(narrow, s, [['stop', 0]])[1]).toBe(4);
+    expect(
+      strobeOn(narrow, s, [
+        ['fast', 0],
+        ['dim', 1],
+      ])[1],
+    ).toBe(255);
+    expect(
+      strobeOn(narrow, s, [
+        ['fast', 0],
+        ['off', 1],
+      ])[1],
+    ).toBe(4);
+    expect(
+      strobeOn(narrow, s, [
+        ['off', 0],
+        ['fast', 1],
+      ])[1],
+    ).toBe(255);
+  });
+
+  it('snaps on and off at Scene start, not crossfaded', () => {
+    const s = show(
+      scene('steady', [{ target: {}, intensity: 1 }]),
+      scene('fast', [{ target: {}, intensity: 1, strobe: 'Fast' }], { fadeIn: 100 }),
+      scene('calm', [{ target: {}, intensity: 1 }], { fadeIn: 100 }),
+    );
+
+    expect(
+      strobeOn(narrow, s, [
+        ['steady', 0],
+        ['fast', 5],
+      ])[1],
+    ).toBe(255);
+    expect(
+      strobeOn(narrow, s, [
+        ['fast', 0],
+        ['calm', 5],
+      ])[1],
+    ).toBe(4);
+  });
+
+  it('gives dark on Blackout or at intensity 0', () => {
+    expect(strobing(narrow, 'Fast', { grandMaster: 0 })).toEqual([0, 4]);
+    const s = show(scene('s', [{ target: {}, intensity: 0, strobe: 'Fast' }]));
+    expect(strobeOn(narrow, s, [['s', 0]])).toEqual([0, 4]);
+  });
+
+  it('leaves a Fixture with no strobe channel steady', () => {
+    expect(strobing(dimmer, 'Fast')).toEqual([255]);
+  });
+
+  it('shows the rate in the preview, only on a lit Fixture that can strobe', () => {
+    const lights = (p: FixtureProfile, intensity: number, strobe: Rule['strobe']) => {
+      const s = show(scene('s', [{ target: {}, intensity, strobe }]));
+      const rig = patch([fixture({ profileId: p.id })], [p]);
+      return resolveLights(s, rig, play(s, ['s', 0]), 0, 1, 0, 60).f1!;
+    };
+
+    expect(lights(narrow, 1, 'Fast').strobe).toBe(12);
+    expect(lights(narrow, 1, 0.5).strobe).toBe(2);
+    expect(lights(narrow, 1, 'Off')).not.toHaveProperty('strobe');
+    expect(lights(narrow, 0, 'Fast')).not.toHaveProperty('strobe');
+    expect(lights(dimmer, 1, 'Fast')).not.toHaveProperty('strobe');
   });
 });

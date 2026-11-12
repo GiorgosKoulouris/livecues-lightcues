@@ -23,7 +23,7 @@
 }
 
 .subheading {
-  color: var(--text-muted);
+  color: var(--legend-dim);
   font-size: var(--text-sm);
 }
 
@@ -51,8 +51,11 @@
 .legend {
   margin-bottom: var(--space-1);
   padding: 0;
-  font-size: var(--text-md);
-  font-weight: var(--weight-medium);
+  color: var(--legend-dim);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .rotation {
@@ -79,7 +82,7 @@
 }
 
 .note {
-  color: var(--text-faint);
+  color: var(--legend-dim);
   font-size: var(--text-sm);
 }
 
@@ -92,9 +95,9 @@
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3);
-  border-radius: var(--radius-md);
-  background: var(--warning-soft);
-  color: var(--warning);
+  border: 1px solid var(--warn-amber);
+  background: var(--bar);
+  color: var(--warn-amber);
   font-size: var(--text-sm);
 }
 

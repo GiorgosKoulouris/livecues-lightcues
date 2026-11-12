@@ -6,7 +6,7 @@ export default defineConfig({
     // npm run coverage. Not part of check, not a CI gate.
     coverage: {
       provider: 'v8',
-      reporter: ['text-summary', 'html'],
+      reporter: ['text-summary', 'html', 'json-summary'],
       include: ['src/**'],
       exclude: [
         'src/**/*.test.{ts,tsx}',

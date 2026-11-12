@@ -1,6 +1,6 @@
 // Writes THIRD_PARTY_NOTICES.txt into the packed app's resources: the name,
 // version, license and license files of every npm package that ships, plus
-// the Open Fixture Library credit for the examples. "What ships" is the
+// the bundled IBM Plex fonts' license, and the Open Fixture Library credit for the examples. "What ships" is the
 // security scan's inventory of the packed app. Fails the build if a package
 // has no license file or a license off the allow list.
 // electron-builder runs it as the afterPack hook (electron-builder.yml),
@@ -22,6 +22,7 @@ export const SKIP_ENV = 'LIGHTCUES_SKIP_NOTICES';
 // `<name>@<version>.txt`. The version is in the name so an update is checked again.
 export const FALLBACK_LICENSES_DIR = 'build/licenses';
 const EXAMPLES_README = 'examples/README.md';
+const FONTS_LICENSE = 'src/renderer/src/assets/fonts/OFL.txt';
 const LICENSE_FILE = /^(licen[cs]e|copying|notice)([-._].*)?$/i;
 const RULE = '='.repeat(80);
 
@@ -79,7 +80,9 @@ export function buildNotices({ appDir, projectDir, inventory }) {
   if (problems.length > 0) {
     throw new NoticesError(`Third-party notices:\n  ${problems.join('\n  ')}`);
   }
-  return [header(), ...sections, fixtureDataSection(projectDir)].join('\n\n');
+  return [header(), ...sections, fontsSection(projectDir), fixtureDataSection(projectDir)].join(
+    '\n\n',
+  );
 }
 
 // `license` is an SPDX expression. Old packages use `{ type }` or `licenses`.
@@ -109,7 +112,7 @@ function header() {
   return [
     'LightCues third-party notices',
     '',
-    'LightCues is licensed under GPL-3.0-only (LICENSE.txt). It includes the',
+    'LightCues is licensed under the MIT license (LICENSE.txt). It includes the',
     'third-party software below, each under its own license. The notices of the',
     'Electron runtime are in LICENSE.electron.txt and LICENSES.chromium.html,',
     'next to LightCues.exe.',
@@ -119,6 +122,25 @@ function header() {
 function section(title, license, texts) {
   const body = texts.map(({ file, text }) => `--- ${file} ---\n\n${text.trim()}`);
   return [RULE, title, `License: ${license}`, '', ...body].join('\n');
+}
+
+// The renderer bundles IBM Plex as woff2 files. They are not npm packages
+// in the app, so their OFL text is read from the assets folder.
+function fontsSection(projectDir) {
+  const path = join(projectDir, FONTS_LICENSE);
+  if (!existsSync(path)) {
+    throw new NoticesError(`Third-party notices: ${FONTS_LICENSE} is missing.`);
+  }
+  const text = readFileSync(path, 'utf8').trim();
+  return [
+    RULE,
+    'IBM Plex Sans and IBM Plex Mono fonts',
+    'License: OFL-1.1',
+    '',
+    'The interface text is set in these fonts, bundled as woff2 files.',
+    '',
+    text,
+  ].join('\n');
 }
 
 // The example Venue Patch embeds Profiles made from Open Fixture Library

@@ -1,0 +1,155 @@
+/* Scrolls on its own, so the tab bar stays in place. */
+.house {
+  --house-width: 960px;
+  --address-field-width: 80px;
+  --look-setting-width: 280px;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: var(--house-width);
+  height: 100%;
+  padding-top: var(--space-4);
+  overflow-y: auto;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.heading {
+  font-size: var(--text-lg);
+}
+
+.hint {
+  color: var(--legend-dim);
+  font-size: var(--text-sm);
+}
+
+.empty {
+  color: var(--legend-dim);
+}
+
+.add {
+  align-self: flex-start;
+}
+
+/* One House Group: its name, its House Lights and Add House Light. */
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  background: var(--bar);
+}
+
+.groupHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--line);
+  background: var(--bar);
+  color: var(--legend-dim);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.12em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.table td {
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+.profile {
+  padding-top: var(--space-2);
+  color: var(--legend-dim);
+}
+
+.address {
+  width: var(--address-field-width);
+}
+
+.actions {
+  width: 1%;
+  text-align: right;
+}
+
+/* One house look: its name, badge and remove button over its settings. */
+.lookCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.lookHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.lookName {
+  font-weight: var(--weight-medium);
+}
+
+.lookRemove {
+  margin-left: auto;
+}
+
+/* A house look: one setting per House Group. */
+.look {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--look-setting-width), 1fr));
+  gap: var(--space-3);
+}
+
+.setting {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  background: var(--bar);
+}
+
+.legend {
+  padding: 0 var(--space-1);
+  color: var(--legend-dim);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.intensity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.slider {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--signal);
+}
+
+.percent {
+  min-width: 4ch;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { MidiInputStatus } from '../../../shared/protocol';
 import { midiWarning } from '../show/useMidiInput';
 import type { PlaybackState } from '../show/usePlayback';
@@ -24,6 +25,9 @@ interface TopBarProps {
 export function TopBar({ show, venue, playback, midiInput }: TopBarProps) {
   return (
     <header className={styles.bar}>
+      <h1 className={styles.title}>
+        <span>LiveCues</span> <span className={styles.product}>LightCues</span>
+      </h1>
       <FileName kind="Show" file={show} />
       <FileName kind="Venue Patch" file={venue} />
       <span className={styles.spacer} />
@@ -67,21 +71,53 @@ function MidiPill({ status }: { status: MidiInputStatus | undefined }) {
       </Badge>
     );
   }
-  if (!status) return <Badge>MIDI…</Badge>;
+  if (!status) return <StateChip state="connecting">MIDI…</StateChip>;
   if (status.state === 'connected') {
     return (
-      <Badge tone="active" title={`Listening to ${status.selected}`}>
+      <StateChip state="live" title={`Listening to ${status.selected}`}>
         MIDI: {status.selected}
-      </Badge>
+      </StateChip>
     );
   }
-  return <Badge title="Choose a MIDI Input in the Show view">No MIDI Input</Badge>;
+  return (
+    <StateChip state="offline" title="Choose a MIDI Input in the Show view">
+      No MIDI Input
+    </StateChip>
+  );
+}
+
+type ChipState = 'live' | 'connecting' | 'offline';
+
+// A state chip: a disc when live, a ring when connecting (Legend Dim) or
+// offline (Warn Amber), then the word.
+function StateChip({
+  state,
+  title,
+  role,
+  children,
+}: {
+  state: ChipState;
+  title?: string;
+  role?: string;
+  children: ReactNode;
+}) {
+  return (
+    <span className={cx(styles.chip, styles[state])} role={role} title={title}>
+      {children}
+    </span>
+  );
 }
 
 const ENGINE_LABELS: Record<EngineStatus['state'], string> = {
   waiting: 'Engine starting…',
   running: 'Engine',
   notResponding: 'Engine not responding',
+};
+
+const ENGINE_CHIP: Record<EngineStatus['state'], ChipState> = {
+  waiting: 'connecting',
+  running: 'live',
+  notResponding: 'offline',
 };
 
 function EngineIndicator({ status }: { status: EngineStatus }) {
@@ -93,9 +129,8 @@ function EngineIndicator({ status }: { status: EngineStatus }) {
         ? 'No reply to the last ping'
         : 'Waiting for the first reply';
   return (
-    <span className={styles.engine} role="status" title={detail}>
-      <span className={cx(styles.dot, styles[status.state])} aria-hidden />
+    <StateChip state={ENGINE_CHIP[status.state]} role="status" title={detail}>
       {label}
-    </span>
+    </StateChip>
   );
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { diagnosticsText, type Diagnostics } from './diagnostics';
 
-const LOG_FOLDER = 'C:\\Users\\sam\\AppData\\Roaming\\LightCues\\logs';
+const LOG_FOLDER = 'C:\\Users\\sam\\AppData\\Roaming\\LiveCues\\LightCues\\logs';
 
 const FULL: Diagnostics = {
   app: {

@@ -4,6 +4,7 @@
 
 - Keep responses compact and technical.
 - Use short sentences and plain wording. No filler or flourish.
+- Ask every question through the AskUserQuestion tool, never as plain text. This includes grilling and planning rounds.
 
 ### Branching
 
@@ -24,18 +25,22 @@ Uses the five default triage roles (needs-triage, needs-info, ready-for-agent, r
 
 Single-context: one `CONTEXT.md` plus `docs/adr/` at the repo root. See `docs/agents/domain.md`.
 
-### Staging
-
-Squash `dev` into 4-5 commits on a `stage` branch before merging to `main`, optionally holding back commits that stay on `dev`, or reordering `dev`. No AI co-author trailers in staged commits. Follow `docs/agents/staging.md` for every staging, squash or reorder request.
-
 ### Releasing
 
-A release is a `vX.Y.Z` tag on `main` that equals `v` + the `package.json` version. Bump the version in the staged batch, merge, then tag by hand. See `docs/agents/releasing.md`.
-
-### Changelog
-
-Every user-facing change adds a `CHANGELOG.md` line under `## [Unreleased]`, in the same commit. When writing a line, or staging a release batch, follow `docs/agents/releasing.md` § Changelog.
+A release is a `vX.Y.Z` tag on `main` that equals `v` + the `package.json` version. Bump the version on `dev`, promote and ship, then tag by hand. See `docs/agents/releasing.md`.
 
 ### Security scan
 
 When asked to "run the security scan", run `npm run security:scan`, triage its outputs, review the code and write a report to `reports/security/`. Report-only: change and commit nothing. Follow `docs/agents/security-scan.md`.
+
+## Branch flow
+
+Branches run dev → stage → main. All commits go on `dev`. `stage` and `main` change only through `/branch-flow promote` and `/branch-flow ship`. The skill also writes `CHANGELOG.md`.
+
+- Groups: 10
+- Changelog: keep-a-changelog
+- Version: package.json
+- Glossary: CONTEXT.md
+- Release-notes: scripts/changelog-section.sh
+- Promote-notes: docs/agents/promote.md
+- Ship: pr
