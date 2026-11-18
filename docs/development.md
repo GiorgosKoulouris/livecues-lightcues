@@ -48,6 +48,8 @@ npm test
 | `npm start` | Run the built app. Windows host only. |
 | `npm run package` | Build the Windows x64 installer, its blockmap and `latest.yml` into `dist/`. Never publishes. Windows host only: on Linux the NSIS step needs Wine. |
 | `npm run icon` | Regenerate `build/icon.ico` from `build/icon.svg`. |
+| `npm run examples` | Regenerate the example Venue Patch and Show in [examples/](../examples/). |
+| `npm run show:palette` | Write the Palette Show and its cue sheet to `temp/venue/`. Pass a folder to write elsewhere: `npm run show:palette -- <folder>`. See [Palette Show](#palette-show). |
 | `npm test` | Run the test suite (Vitest). |
 | `npm run test:watch` | Run Vitest in watch mode. |
 | `npm run coverage` | Run the tests with coverage. Prints a summary and writes an HTML report and `coverage-summary.json` to `coverage/`. CI runs it too: see [CI](#ci). Not part of `check`. |
@@ -59,6 +61,19 @@ npm test
 | `npm run check` | Typecheck, lint, format check and tests, in that order. Run before merging. |
 | `npm run security:scan` | Security scan raw outputs. Devcontainer only. See [Security scan](#security-scan). |
 | `npm run security:test-rules` | Test the custom Electron semgrep rules. Devcontainer only. |
+
+## Palette Show
+
+A venue-independent Show of 61 Scenes by feeling, fired from the DAW on MIDI channel 1. It is built from [scripts/make-shows/palette.ts](../scripts/make-shows/palette.ts) with the app's own models.
+
+To change it:
+
+1. Edit the lists in `palette.ts`: Looks, Movement, Accents, Hits, notes, Fallback Panel and House Presets.
+2. Run `npm run show:palette`. It writes `Palette.lcshow` and `Palette cue sheet.md`, which holds the note map and how the Layers combine. The default folder is `temp/venue/`, which is git-ignored.
+3. Run `npm test` to check that the Show is valid and every note is unique.
+4. Open `Palette.lcshow` in the app with the venue's Venue Patch and read the Venue Check.
+
+Don't edit the generated files. They are overwritten on the next run.
 
 ## CI
 
@@ -85,6 +100,7 @@ Actions are pinned by commit SHA, with the version in a trailing comment.
 - No CI runs on `dev`. Run `npm run check` on the PR branch before merging, then pull `dev`.
 - Merge or close open Dependabot PRs before a promote ([agents/promote.md](agents/promote.md)).
 - Security updates are a repo setting, ungrouped. GitHub always opens them against `main`, whatever `target-branch` says. Don't merge them there: it breaks the fast-forward from `stage`. Apply the bump on `dev` and close the PR. The alert closes when the batch reaches `main`.
+- TypeScript majors are ignored in [.github/dependabot.yml](../.github/dependabot.yml): typescript-eslint 8.x peers `typescript <6.1.0`. Drop the rule once typescript-eslint accepts TS 7.
 - `global-agent` is pinned by an override in `package.json` (under `@electron/get`). Dependabot doesn't need an ignore rule for it. Check the pin by hand when `@electron/get` moves.
 
 ## Third-party notices
