@@ -97,6 +97,33 @@ test('the Light haze button fires the haze and Haze Off turns it off', async () 
   }
 });
 
+test('Ctrl+5 opens the Visualiser and it draws a canvas', async () => {
+  const userData = mkdtempSync(join(tmpdir(), 'lightcues-e2e-'));
+  const app = await electron.launch({
+    args: [`--user-data-dir=${userData}`, '.'],
+    env: inheritedEnv(),
+  });
+  try {
+    const page = await app.firstWindow();
+    const sidebar = page.getByRole('navigation', { name: 'Views' });
+    await sidebar.getByRole('button', { name: 'Open example' }).click();
+
+    await page.keyboard.press('Control+5');
+    await expect(sidebar.getByRole('button', { name: /Visualiser/ })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    const canvas = page.locator('main canvas');
+    await expect(canvas).toBeVisible();
+    const box = await canvas.boundingBox();
+    expect(box?.width).toBeGreaterThan(100);
+    expect(box?.height).toBeGreaterThan(100);
+  } finally {
+    await app.close();
+    rmSync(userData, { recursive: true, force: true });
+  }
+});
+
 // This process's environment, without a dev server URL: the app loads the
 // built renderer.
 function inheritedEnv(): Record<string, string> {

@@ -13,7 +13,7 @@ import {
   type PatchResult,
   type VenuePatch,
 } from '../shared/venue-patch';
-import { createHouse, houseFrames, houseLevels } from './house';
+import { createHouse, houseAmbient, houseFrames, houseLevels } from './house';
 
 const dimmerChannel: Channel = {
   kind: 'control',
@@ -305,5 +305,58 @@ describe('editing the Show while a House Preset is held', () => {
     edit([preset('dim', 0)]);
 
     expect(events).toEqual([]);
+  });
+});
+
+describe('houseAmbient', () => {
+  const ambient = (look: HouseLook, venue = patch()) => houseAmbient(venue, houseLevels(look));
+
+  it('is none with no House Lights', () => {
+    expect(houseAmbient(emptyPatch({ width: 10, depth: 8 }), {})).toBeUndefined();
+  });
+
+  it('is full white where the house state sets nothing', () => {
+    expect(ambient({})).toEqual({ intensity: 1, red: 1, green: 1, blue: 1 });
+  });
+
+  it('is the one Group when only one holds lights', () => {
+    let venue = ok(putHouseGroup(emptyPatch({ width: 10, depth: 8 }), { id: 'bar', name: 'Bar' }));
+    venue = ok(putHouseLight(venue, light('a', 'rgb', 1), house));
+    expect(ambient({ bar: { intensity: 0.5, colour: { swatch: 'Red' } } }, venue)).toEqual({
+      intensity: 0.5,
+      red: 1,
+      green: 0,
+      blue: 0,
+    });
+  });
+
+  it('takes the mean intensity of the Groups and the colour weighted by intensity', () => {
+    // Bar at half red, Ceiling at full blue: the brighter Group colours more.
+    const result = ambient({
+      bar: { intensity: 0.5, colour: { swatch: 'Red' } },
+      ceiling: { intensity: 1, colour: { swatch: 'Blue' } },
+    })!;
+    expect(result.intensity).toBeCloseTo(0.75);
+    expect(result.red).toBeCloseTo(1 / 3);
+    expect(result.blue).toBeCloseTo(2 / 3);
+    expect(result.green).toBeCloseTo(0);
+  });
+
+  it('counts a Group once, however many lights it holds', () => {
+    // Bar holds three lights, Ceiling one.
+    expect(
+      ambient({
+        bar: { intensity: 1, colour: { swatch: 'White' } },
+        ceiling: { intensity: 0, colour: { swatch: 'White' } },
+      })!.intensity,
+    ).toBeCloseTo(0.5);
+  });
+
+  it('averages the colour plainly when every Group is dark', () => {
+    const result = ambient({
+      bar: { intensity: 0, colour: { swatch: 'Red' } },
+      ceiling: { intensity: 0, colour: { swatch: 'Blue' } },
+    })!;
+    expect(result).toEqual({ intensity: 0, red: 0.5, green: 0, blue: 0.5 });
   });
 });

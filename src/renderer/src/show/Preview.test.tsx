@@ -25,7 +25,7 @@ afterEach(() => vi.restoreAllMocks());
 
 function show(light: FixtureLight) {
   render(<Preview patch={patch} />);
-  engine.emit({ type: 'preview', lights: { m1: light } });
+  engine.emit({ type: 'preview', lights: { m1: light }, haze: 0 });
 }
 
 const beam = () => screen.queryByTestId('beam-m1');
@@ -62,7 +62,7 @@ describe('Preview', () => {
     show({ intensity: 0, ...red, aim: { pan: 0, tilt: 45 } });
     expect(beam()).toBeNull();
 
-    engine.emit({ type: 'preview', lights: { m1: { intensity: 1, ...red } } });
+    engine.emit({ type: 'preview', lights: { m1: { intensity: 1, ...red } }, haze: 0 });
     expect(beam()).toBeNull();
   });
 
@@ -77,11 +77,12 @@ describe('Preview', () => {
 
     // Its marker in both views and its front beam; with an aim, its beam
     // top-down too.
-    engine.emit({ type: 'preview', lights: { m1: { intensity: 1, ...red, strobe: 2 } } });
+    engine.emit({ type: 'preview', lights: { m1: { intensity: 1, ...red, strobe: 2 } }, haze: 0 });
     expect(blinking()).toEqual(['0.5s', '0.5s', '0.5s']);
     engine.emit({
       type: 'preview',
       lights: { m1: { intensity: 1, ...red, aim: { pan: 0, tilt: 45 }, strobe: 12 } },
+      haze: 0,
     });
     expect(blinking()).toEqual(['0.25s', '0.25s', '0.25s', '0.25s']);
   });

@@ -15,11 +15,12 @@ const press = (key: string, more: Partial<KeyPress> = {}): KeyPress => ({
 const ctrl = (key: string, more: Partial<KeyPress> = {}) => press(key, { ctrlKey: true, ...more });
 
 describe('appShortcut', () => {
-  it('switches view with Ctrl+1 to 4', () => {
+  it('switches view with Ctrl+1 to 5', () => {
     expect(appShortcut(ctrl('1'))).toEqual({ type: 'view', view: 'show' });
     expect(appShortcut(ctrl('2'))).toEqual({ type: 'view', view: 'venue' });
     expect(appShortcut(ctrl('3'))).toEqual({ type: 'view', view: 'profiles' });
     expect(appShortcut(ctrl('4'))).toEqual({ type: 'view', view: 'perform' });
+    expect(appShortcut(ctrl('5'))).toEqual({ type: 'view', view: 'visualiser' });
   });
 
   it("acts on the current view's file with Ctrl+N, O, S and Shift+S", () => {
@@ -53,7 +54,7 @@ describe('appShortcut', () => {
     expect(appShortcut(ctrl('s', { repeat: true }))).toBeUndefined();
     expect(appShortcut(ctrl('1', { altKey: true }))).toBeUndefined();
     expect(appShortcut(ctrl('s', { metaKey: true }))).toBeUndefined();
-    expect(appShortcut(ctrl('5'))).toBeUndefined();
+    expect(appShortcut(ctrl('6'))).toBeUndefined();
     expect(appShortcut(ctrl('1', { shiftKey: true }))).toBeUndefined();
     expect(appShortcut(ctrl('n', { shiftKey: true }))).toBeUndefined();
   });

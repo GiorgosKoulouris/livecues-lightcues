@@ -1,0 +1,108 @@
+.view {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: var(--space-2);
+  height: 100%;
+  min-height: 0;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.group {
+  display: flex;
+  gap: var(--space-1);
+}
+
+/* Tab-style legends as in the Mode switch: the picked one is underlined. */
+.option {
+  display: inline-flex;
+  align-items: center;
+  height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  background: none;
+  color: var(--legend-dim);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.option:hover {
+  color: var(--legend);
+}
+
+.picked,
+.picked:hover {
+  border-bottom-color: var(--signal);
+  color: var(--legend);
+}
+
+.haze {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.haze input {
+  accent-color: var(--signal);
+}
+
+.percent {
+  min-width: 4ch;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* The canvas fills what is left; three.js sizes itself to it. */
+.stage {
+  position: relative;
+  min-height: 12rem;
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--display);
+  border: 1px solid var(--line);
+}
+
+.canvas canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.hover {
+  position: fixed;
+  z-index: var(--z-frame);
+  padding: var(--space-1) var(--space-2);
+  background: var(--bar);
+  border: 1px solid var(--edge);
+  color: var(--legend);
+  font-size: var(--text-xs);
+  pointer-events: none;
+}
+
+.empty {
+  color: var(--legend-dim);
+}
+
+/* In the canvas's top-right corner, over it. */
+.badge {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  pointer-events: none;
+}

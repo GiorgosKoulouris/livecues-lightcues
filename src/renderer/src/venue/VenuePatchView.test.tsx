@@ -1120,6 +1120,7 @@ describe('Focus Check', () => {
     engine.emit({
       type: 'preview',
       lights: { spot: { intensity: 1, red: 1, green: 1, blue: 1, aim } },
+      haze: 0,
     });
     expect(beam()).not.toBeNull();
     // Cut at the plan's edge, which stays put.

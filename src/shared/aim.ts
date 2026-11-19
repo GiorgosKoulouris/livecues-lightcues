@@ -175,27 +175,98 @@ export interface BeamInput {
   stage: StageBounds;
   // Channel angles, as `Aim.pan` and `Aim.tilt`. An axis not given is at 0.
   angles: AimAngles;
+  // Whether the back wall, at the upstage edge, stops a beam too. An object
+  // bounds the wall: it reaches `halfWidth` either side of centre and `height`
+  // up, and a beam meeting the plane outside that goes on.
+  wall?: boolean | { halfWidth: number; height: number };
+  // Whether the vertical audience plane stops a beam. On unless false.
+  audience?: boolean;
+  // Where there is a floor. A beam meeting the floor plane at an (x, y) it
+  // rejects goes on. Any floor everywhere when not given.
+  onFloor?: (x: number, y: number) => boolean;
 }
 
-// Where a beam lands: the floor, else the audience plane, whichever it meets
-// first, else `BEAM_UP_LENGTH` along it.
-export function beamLanding({ position, mounting, stage, angles }: BeamInput): StagePosition {
+// What a beam meets first.
+export type BeamSurface = 'floor' | 'wall' | 'audience' | 'none';
+
+export interface BeamStrike {
+  position: StagePosition;
+  // The unit vector along the beam, in stage coordinates (z up).
+  direction: { x: number; y: number; z: number };
+  // How far along the beam `position` is, in metres.
+  distance: number;
+  // 'none': it meets nothing and is drawn `BEAM_UP_LENGTH` long.
+  surface: BeamSurface;
+}
+
+// Where a beam lands: the floor, else the audience plane, else, with `wall`,
+// the back wall, whichever it meets first, else `BEAM_UP_LENGTH` along it.
+// `audience`, `onFloor` and a bounded `wall` narrow what can stop it.
+export function beamLanding(input: BeamInput): StagePosition {
+  return beamStrike(input).position;
+}
+
+// `beamLanding`, with the beam's direction and what it hit.
+export function beamStrike({
+  position,
+  mounting,
+  stage,
+  angles,
+  wall,
+  audience = true,
+  onFloor,
+}: BeamInput): BeamStrike {
   const beam = beamVector(
     fixtureFrame(mounting),
     physicalAngle(mounting, 'pan', angles.pan ?? 0),
     physicalAngle(mounting, 'tilt', angles.tilt ?? 0),
   );
   const { x, y, height } = position;
-  // How far along the beam each surface is, where it heads toward it.
-  const distances = [
-    beam[2] < -1e-9 ? height / -beam[2] : -1,
-    beam[1] < -1e-9 ? (y - audienceY(stage)) / -beam[1] : -1,
-  ].filter((d) => d >= 0);
-  const distance = distances.length > 0 ? Math.min(...distances) : BEAM_UP_LENGTH;
-  return {
+  const at = (distance: number) => ({
     x: x + beam[0] * distance,
     y: y + beam[1] * distance,
     height: height + beam[2] * distance,
+  });
+  // How far along the beam each surface is, where it heads toward it and the
+  // surface is there.
+  const hits: { distance: number; surface: BeamSurface }[] = [];
+  if (beam[2] < -1e-9) {
+    const distance = height / -beam[2];
+    const point = at(distance);
+    if (!onFloor || onFloor(point.x, point.y)) hits.push({ distance, surface: 'floor' });
+  }
+  if (audience && beam[1] < -1e-9) {
+    hits.push({ distance: (y - audienceY(stage)) / -beam[1], surface: 'audience' });
+  }
+  if (wall && beam[1] > 1e-9) {
+    const distance = (stage.depth - y) / beam[1];
+    const point = at(distance);
+    const onWall =
+      typeof wall === 'boolean' ||
+      (Math.abs(point.x) <= wall.halfWidth && point.height >= 0 && point.height <= wall.height);
+    if (onWall) hits.push({ distance, surface: 'wall' });
+  }
+  const first = hits
+    .filter((hit) => hit.distance >= 0)
+    .reduce<{ distance: number; surface: BeamSurface } | undefined>(
+      (best, hit) => (!best || hit.distance < best.distance ? hit : best),
+      undefined,
+    );
+  const { distance, surface } = first ?? { distance: BEAM_UP_LENGTH, surface: 'none' as const };
+  return {
+    position: at(distance),
+    direction: { x: beam[0], y: beam[1], z: beam[2] },
+    distance,
+    surface,
+  };
+}
+
+// The physical pan and tilt, in degrees, of channel angles, as `Aim.pan` and
+// `Aim.tilt`: after inversion and offset. An axis not given is at 0 channel.
+export function physicalAngles(mounting: Mounting, { pan, tilt }: AimAngles): Required<AimAngles> {
+  return {
+    pan: physicalAngle(mounting, 'pan', pan ?? 0),
+    tilt: physicalAngle(mounting, 'tilt', tilt ?? 0),
   };
 }
 

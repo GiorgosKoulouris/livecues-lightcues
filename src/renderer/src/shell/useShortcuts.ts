@@ -5,7 +5,7 @@ import type { View } from './views';
 export type FileCommands = Record<FileCommand, () => void>;
 export type HistoryCommands = Record<HistoryCommand, () => void>;
 
-// Switches view on Ctrl+1 to 4, from anywhere, also while typing.
+// Switches view on Ctrl+1 to 5, from anywhere, also while typing.
 export function useViewShortcuts(setView: (view: View) => void): void {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

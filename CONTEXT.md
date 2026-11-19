@@ -68,6 +68,16 @@ _Avoid_: Fogger, smoke machine, atmosphere
 A named slot in the Show with a haze level (0–100%), a fade and an optional MIDI note, that takes every Hazer to that level. Fired by its note (Go only) or its button in Perform and on the Fallback Panel. One holds at a time. Haze Off, built into every Show, takes the Hazers to 0 at once.
 _Avoid_: Haze Scene, haze cue, fog preset
 
+### Visualiser
+
+**Visualiser**:
+A View that shows the rig in 3D: the stage, a back wall and an audience floor derived from the stage bounds, a bar of truss under each row of Overhead Fixtures, and a generic body for each Fixture (moving head, par, bar or blinder, by its Profile and Role, with Mounting applied). Read-only: hovering a Fixture shows its name, and the mouse orbits, zooms and pans the camera, with FOH, Top and Side presets. The free camera is kept while the app runs, never saved. Not the Preview, the 2D top-down and front views in Show and Perform.
+_Avoid_: 3D preview, simulator
+
+**Assume haze**:
+A view-only slider in the Visualiser toolbar that sets the haze density the beams are drawn with, at once, in place of the Hazers' output. Cleared, the density follows the Hazers again. Never saved, and never sent to a Hazer. For rigs with no Hazer patched.
+_Avoid_: fake haze, haze override
+
 ### Show
 
 **Show**:
@@ -157,10 +167,10 @@ The colour a Show gives Fixtures where no Rule sets one. White unless changed.
 A global intensity scaler applied after all Scenes are combined. House Lights and Hazers are not affected.
 
 **Monitor**:
-The default mode, where the preview mirrors exactly what is being sent to the rig.
+The default mode, where the Preview and the Visualiser mirror exactly what is being sent to the rig.
 
 **Blind**:
-A mode where the preview updates but nothing is sent to the rig, except Blackout, House Lights and Hazers, which always send.
+A mode where the Preview and the Visualiser update but nothing is sent to the rig, except Blackout, House Lights and Hazers, which always send.
 _Avoid_: Offline, preview mode
 
 **Venue Check**:

@@ -72,6 +72,8 @@ export function createHaze({ patch, show, now, emit }: HazeOptions) {
       }
     },
     emitHaze,
+    // The haze level (0–1) the Hazers follow now, mid-fade too.
+    level: levelNow,
     // `stage` with the Hazers written over it.
     frames: (stage: Map<number, Uint8Array>): Map<number, Uint8Array> =>
       hazerFrames(patch(), levelNow(), stage),

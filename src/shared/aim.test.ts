@@ -2,7 +2,16 @@ import { describe, expect, it } from 'vitest';
 import type { Capability, Channel } from './fixture-profile';
 import type { Direction } from './show';
 import { DEFAULT_MOUNTING, type Mounting, type StagePosition } from './venue-patch';
-import { aimAt, aimDmx, beamLanding, BEAM_UP_LENGTH, type Aim, type AimAngles } from './aim';
+import {
+  aimAt,
+  aimDmx,
+  beamLanding,
+  beamStrike,
+  BEAM_UP_LENGTH,
+  audienceY,
+  type Aim,
+  type AimAngles,
+} from './aim';
 
 const stage = { width: 10, depth: 8 };
 
@@ -418,5 +427,75 @@ describe('beamLanding', () => {
     // Through head height over centre stage, then on to the floor beyond.
     expectPoint(at('Centre'), 3 - (3 * 6) / (6 - HEAD), 4, 0);
     expectPoint(at('Audience'), 3, AUDIENCE_Y, HEAD);
+  });
+
+  it('ignores the back wall unless asked, as the 2D Preview does', () => {
+    const base = {
+      position: rigged,
+      mounting: DEFAULT_MOUNTING,
+      stage,
+      angles: { pan: 180, tilt: 45 },
+    };
+    expectPoint(beamLanding(base), 0, 10, 0);
+    expectPoint(beamLanding({ ...base, wall: true }), 0, 8, 2);
+  });
+});
+
+describe('beamStrike', () => {
+  const input = { position: rigged, mounting: DEFAULT_MOUNTING, stage };
+
+  it('names the surface hit: floor, wall, audience plane or none', () => {
+    expect(beamStrike({ ...input, angles: { pan: 0, tilt: 0 } }).surface).toBe('floor');
+    expect(beamStrike({ ...input, angles: { pan: 180, tilt: 45 }, wall: true }).surface).toBe(
+      'wall',
+    );
+    expect(beamStrike({ ...input, angles: { pan: 0, tilt: 90 } }).surface).toBe('audience');
+    const up = { ...input, mounting: { ...DEFAULT_MOUNTING, mount: 'Standing' as const } };
+    expect(beamStrike({ ...up, angles: { pan: 0, tilt: 0 }, wall: true }).surface).toBe('none');
+  });
+
+  it('gives the unit direction and the distance along it', () => {
+    const strike = beamStrike({ ...input, angles: { pan: 180, tilt: 45 }, wall: true });
+    expect(strike.direction.y).toBeCloseTo(Math.SQRT1_2, 6);
+    expect(strike.direction.z).toBeCloseTo(-Math.SQRT1_2, 6);
+    expect(strike.distance).toBeCloseTo(4 * Math.SQRT2, 6);
+  });
+
+  it('floors a beam that heads toward the wall below the floor first', () => {
+    // 6 m up, 4 m from the wall: 20 degrees off straight down lands on the floor, 2.2 m short of it.
+    const strike = beamStrike({ ...input, angles: { pan: 180, tilt: 20 }, wall: true });
+    expect(strike.surface).toBe('floor');
+  });
+
+  describe('narrowing what stops a beam', () => {
+    it('lets a beam through the audience plane when `audience` is off', () => {
+      const strike = beamStrike({ ...input, angles: { pan: 0, tilt: 75 }, audience: false });
+      expect(strike.surface).toBe('floor');
+      expect(strike.position.height).toBeCloseTo(0);
+      expect(strike.position.y).toBeLessThan(audienceY(stage));
+    });
+
+    it('goes past a wall hit above its height, or past its sides', () => {
+      const wall = { halfWidth: 5, height: 3 };
+      const tall = { position: { x: 0, y: 2, height: 6 }, mounting: DEFAULT_MOUNTING, stage };
+      const standing = { ...tall, mounting: { ...DEFAULT_MOUNTING, mount: 'Standing' as const } };
+      const above = beamStrike({ ...standing, angles: { pan: 180, tilt: 45 }, wall });
+      expect(above.surface).toBe('none');
+      const inside = beamStrike({ ...standing, angles: { pan: 180, tilt: 45 }, wall: true });
+      expect(inside.surface).toBe('wall');
+      const aside = beamStrike({
+        ...tall,
+        position: { x: 4, y: 2, height: 1 },
+        angles: { pan: 180, tilt: 90 },
+        wall: { halfWidth: 1, height: 3 },
+      });
+      expect(aside.surface).toBe('none');
+    });
+
+    it('goes past the floor where `onFloor` rejects it', () => {
+      const strike = beamStrike({ ...input, angles: { pan: 0, tilt: 0 }, onFloor: () => false });
+      expect(strike.surface).toBe('none');
+      expect(strike.distance).toBe(BEAM_UP_LENGTH);
+    });
   });
 });

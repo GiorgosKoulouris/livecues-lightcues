@@ -24,6 +24,7 @@ import { cx } from './ui/cx';
 import { useOutputs } from './venue/useOutputs';
 import { useVenuePatch } from './venue/useVenuePatch';
 import { VenuePatchView } from './venue/VenuePatchView';
+import { VisualiserView } from './visualiser/VisualiserView';
 
 // The shell: sidebar, top bar, the current view and the Fallback Panel strip,
 // which the Perform view replaces. Blackout frames the window red, Blind amber.
@@ -91,6 +92,11 @@ export function App() {
               house={house}
               haze={haze}
             />
+          </div>
+          <div hidden={view !== 'visualiser'}>
+            {view === 'visualiser' && (
+              <VisualiserView patch={venue?.patch} blind={playback?.mode === 'blind'} />
+            )}
           </div>
         </main>
         {view !== 'perform' && (

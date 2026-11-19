@@ -1,6 +1,6 @@
 // The House Lights' output. They are kept apart from the Show: Scenes,
 // Blackout, the Grand Master, Freeze and Blind never reach them.
-import type { EngineEvent, HouseFired, HouseSnapshot } from '../shared/protocol';
+import type { EngineEvent, HouseAmbient, HouseFired, HouseSnapshot } from '../shared/protocol';
 import { findHousePreset, type Show } from '../shared/show';
 import {
   DMX_CHANNELS,
@@ -129,6 +129,8 @@ export function createHouse({ patch, show, now, emit }: HouseOptions) {
     preview(look: HouseLook | undefined): void {
       previewed = look;
     },
+    // The House Lights' ambient now, mid-fade too. None with no House Lights.
+    ambient: (): HouseAmbient | undefined => houseAmbient(patch(), levels()),
     emitHouse,
     // The house state for an engine restart: where each Group is going.
     snapshot: (): HouseSnapshot => snapshot,
@@ -163,6 +165,34 @@ export function houseLevels(look: HouseLook): Record<string, GroupLevel> {
   return Object.fromEntries(
     Object.entries(look).map(([group, setting]) => [group, settingLevel(setting)]),
   );
+}
+
+// The ambient of the House Groups that hold House Lights, a Group `levels` has
+// none for at full white. Its intensity is the Groups' mean and its colour
+// theirs averaged, weighted by intensity (plain, when all are dark). None with
+// no House Lights.
+export function houseAmbient(
+  patch: VenuePatch,
+  levels: Record<string, GroupLevel>,
+): HouseAmbient | undefined {
+  const groups = [...new Set(patchHouse(patch).lights.map((light) => light.group))];
+  if (groups.length === 0) return undefined;
+  const shown = groups.map((group) =>
+    Object.hasOwn(levels, group) ? levels[group]! : WHITE_LEVEL,
+  );
+  const total = shown.reduce((sum, { intensity }) => sum + intensity, 0);
+  const average = (channel: 'red' | 'green' | 'blue') =>
+    shown.reduce(
+      (sum, { intensity, colour }) =>
+        sum + colour[channel] * (total > 0 ? intensity / total : 1 / shown.length),
+      0,
+    );
+  return {
+    intensity: total / shown.length,
+    red: average('red'),
+    green: average('green'),
+    blue: average('blue'),
+  };
 }
 
 // `stage`, the frames per Universe, with each House Light set as its Group is

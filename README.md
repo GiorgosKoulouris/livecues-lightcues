@@ -37,7 +37,7 @@ The Profile Library and the chosen MIDI Input are kept in `%APPDATA%\LiveCues\Li
 
 To try LightCues without a rig, click **Open example** at the bottom of the Sidebar. It opens a demo Venue Patch and Show: a small band stage on the Virtual Output, which needs no DMX interface. Go to **Perform** and click the Scene buttons, or play notes from C3 up on MIDI channel 1. The Preview and the channel monitor in the Venue Patch view show what is sent. The example opens unsaved: **Save** asks where to put your copy. See [examples/README.md](examples/README.md) for the rig and the Triggers.
 
-The Sidebar switches between four views: Show, Venue Patch, Profile Library and Perform (Ctrl+1 to Ctrl+4). Show and Venue Patch each have New, Open…, Save and Save As… buttons.
+The Sidebar switches between five views: Show, Venue Patch, Profile Library, Perform and Visualiser (Ctrl+1 to Ctrl+5). Show and Venue Patch each have New, Open…, Save and Save As… buttons.
 
 ### 1. Import Profiles
 
@@ -92,6 +92,12 @@ In **Show**, on the **Triggers** tab:
 Open **Perform** at the gig. It shows Blackout, Base Look, Grand Master, Tap Tempo and Freeze along the top, a House section while the Venue Patch has House Lights, a Haze section while it has Hazers, every Scene button by Layer, and the Preview. The House section has **Startup** and a button per House Preset. Each fades the House Lights to its look; the last one fired stays lit. The Haze section has **Haze Off** and a button per Haze Preset, which fades every Hazer to its level. Blackout, Blind and Freeze do not affect haze. The top bar shows the MIDI Input. A red disc and "MIDI lost" mean it is lost, and Triggers do not fire until it returns.
 
 Fallback Panel keys: **B** Blackout, **0** Base Look, **1**–**9** Scene buttons, **-** / **+** Grand Master, **T** Tap Tempo, **F** Freeze, **Shift+1**–**8** House Presets. Haze Off and the Haze Presets are buttons with no keys. Pick the Base Look and the panel's Scene buttons in the Show settings.
+
+### 6. Visualiser
+
+![The Visualiser: the example stage in 3D from the front of house, with the camera buttons FOH, Top, Side and Reset](docs/images/visualiser.png)
+
+Open **Visualiser** (Ctrl+5) to see the rig in 3D: the stage, the back wall, the audience floor, the truss and a body for each Fixture, all unlit for now. Drag to orbit, scroll to zoom and right-drag to pan. **FOH**, **Top** and **Side** jump to a preset view, and **Reset** returns to FOH. Hover a Fixture to see its name. The view opens on FOH and keeps your camera while the app runs. If the machine has no WebGL, it says so and points to the Preview in Show and Perform.
 
 ## Troubleshooting
 

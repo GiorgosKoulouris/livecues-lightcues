@@ -161,6 +161,15 @@ export interface FixtureLight {
   strobe?: number;
 }
 
+// The House Lights' ambient: their intensity (0–1) and the colour they show at
+// full, red, green and blue each 0–1.
+export interface HouseAmbient {
+  intensity: number;
+  red: number;
+  green: number;
+  blue: number;
+}
+
 // The active Scene id per Layer id. A Layer without an entry is clear.
 export type ActiveByLayer = Record<string, string>;
 
@@ -357,8 +366,11 @@ export type EngineEvent =
   | { type: 'reopenErrors'; errors: string[] }
   // How every Fixture in the Venue Patch looks now, by Fixture id. In Monitor
   // it is what the Outputs send; in Blind, what they would send. Sent while
-  // the preview is started, on start and after every change.
-  | { type: 'preview'; lights: Record<string, FixtureLight> }
+  // the preview is started, on start and after every change. `haze` is the
+  // level (0–1) the Hazers follow, mid-fade too; Blind does not change it.
+  // `house` is the House Lights' ambient, combined across House Groups and
+  // mid-fade too, and absent when no House Lights are patched.
+  | { type: 'preview'; lights: Record<string, FixtureLight>; haze: number; house?: HouseAmbient }
   // The DMX values last sent for the monitored Universe, channel 1 first: what
   // its Output gets, real or virtual, in Blind too. Sent on monitorUniverse
   // and then on change, at most 10 times a second. None while nothing is

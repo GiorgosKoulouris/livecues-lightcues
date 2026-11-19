@@ -652,6 +652,23 @@ describe('engine House Lights', () => {
     expect(level()).toBe(255);
   });
 
+  it('sends the house ambient in the preview: steady, then mid-fade', async () => {
+    const { send, events } = await dimEngine();
+    const ambient = () => {
+      const last = events.findLast((e) => e.type === 'preview');
+      return last?.type === 'preview' ? last.house : undefined;
+    };
+    send({ type: 'startPreview' });
+    expect(ambient()).toEqual({ intensity: 1, red: 1, green: 1, blue: 1 });
+
+    send({ type: 'fireHousePreset', id: 'dim' });
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(ambient()!.intensity).toBeGreaterThan(0.5);
+    expect(ambient()!.intensity).toBeLessThan(0.7);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(ambient()!.intensity).toBeCloseTo(0.2);
+  });
+
   it('goes to the Startup look when the Venue Patch is opened, not when it is edited', async () => {
     const { editVenue, reopenVenue, house } = await houseEngine();
 
@@ -841,6 +858,35 @@ describe('engine Hazers', () => {
     await vi.advanceTimersByTimeAsync(3000);
 
     expect(haze()).toEqual([77, 102]);
+  });
+
+  it('leaves the house ambient out of the preview with no House Lights', async () => {
+    const { send, events } = await hazeEngine();
+    send({ type: 'startPreview' });
+    const last = events.findLast((e) => e.type === 'preview');
+    expect(last).toBeDefined();
+    expect(last && 'house' in last).toBe(false);
+  });
+
+  it('sends the haze level in the preview, mid-fade too', async () => {
+    const { send, events } = await hazeEngine();
+    const haze = () => {
+      const last = events.findLast((e) => e.type === 'preview');
+      return last?.type === 'preview' ? last.haze : undefined;
+    };
+    send({ type: 'startPreview' });
+    expect(haze()).toBe(0);
+
+    send({ type: 'fireHazePreset', id: 'light' });
+    await vi.advanceTimersByTimeAsync(2500);
+    expect(haze()).toBeGreaterThan(0.1);
+    expect(haze()).toBeLessThan(0.5);
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(haze()).toBeCloseTo(0.6);
+
+    send({ type: 'hazeOff' });
+    await vi.advanceTimersByTimeAsync(100);
+    expect(haze()).toBe(0);
   });
 
   it('goes to 0 at once with Haze Off, fan included', async () => {

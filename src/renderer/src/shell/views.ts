@@ -1,4 +1,4 @@
-export type View = 'show' | 'venue' | 'profiles' | 'perform';
+export type View = 'show' | 'venue' | 'profiles' | 'perform' | 'visualiser';
 
 // In sidebar order; Ctrl+1 is the first.
 export const VIEWS: readonly { id: View; label: string }[] = [
@@ -6,4 +6,5 @@ export const VIEWS: readonly { id: View; label: string }[] = [
   { id: 'venue', label: 'Venue Patch' },
   { id: 'profiles', label: 'Profile Library' },
   { id: 'perform', label: 'Perform' },
+  { id: 'visualiser', label: 'Visualiser' },
 ];

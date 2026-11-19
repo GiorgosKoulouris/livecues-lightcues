@@ -1,5 +1,6 @@
 import {
   BookOpen,
+  Box,
   CircleArrowUp,
   Clapperboard,
   ClipboardCopy,
@@ -26,6 +27,7 @@ const ICONS: Record<View, LucideIcon> = {
   venue: LayoutGrid,
   profiles: Library,
   perform: MonitorPlay,
+  visualiser: Box,
 };
 
 const CHECK_NOW_MESSAGES: Record<CheckNowState, string> = {

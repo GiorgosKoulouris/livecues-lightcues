@@ -198,7 +198,12 @@ export function createEngine({
       frames: () => haze.frames(house.frames(playback.frames())),
     });
 
-  const preview = createPreview({ emit, lights: () => playback.lights() });
+  const preview = createPreview({
+    emit,
+    lights: () => playback.lights(),
+    haze: haze.level,
+    house: house.ambient,
+  });
   const monitor = createChannelMonitor({ emit, frame: (u) => outputs?.sentFrame(u) });
 
   const midiInput =
