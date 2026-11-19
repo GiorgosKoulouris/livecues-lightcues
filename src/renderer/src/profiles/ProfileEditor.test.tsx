@@ -95,6 +95,39 @@ const capabilityOf = () => {
   return channel.ranges[0]!.capability;
 };
 
+describe('beam angle', () => {
+  it('round-trips: shows the Profile value, edits it and clears it', async () => {
+    const user = setup({ profile: { ...base(), beamAngle: 30 } });
+    const field = screen.getByLabelText('Beam angle (°)') as HTMLInputElement;
+    expect(field.value).toBe('30');
+    await user.clear(field);
+    await user.type(field, '45.5');
+    await user.tab();
+    expect(latest.beamAngle).toBe(45.5);
+    expect((screen.getByLabelText('Beam angle (°)') as HTMLInputElement).value).toBe('45.5');
+    await user.clear(screen.getByLabelText('Beam angle (°)'));
+    await user.tab();
+    expect(latest.beamAngle).toBeUndefined();
+    expect('beamAngle' in latest).toBe(false);
+  });
+
+  it('is empty for a Profile without one, and refuses 0', async () => {
+    const user = setup();
+    const field = screen.getByLabelText('Beam angle (°)') as HTMLInputElement;
+    expect(field.value).toBe('');
+    await user.type(field, '0');
+    await user.tab();
+    expect(latest.beamAngle).toBeUndefined();
+  });
+
+  it('accepts 0.05, as the validator does', async () => {
+    const user = setup();
+    await user.type(screen.getByLabelText('Beam angle (°)'), '0.05');
+    await user.tab();
+    expect(latest.beamAngle).toBe(0.05);
+  });
+});
+
 describe('header', () => {
   it('shows the unsaved badge, errors and the id', () => {
     setup({ errors: ['Bad thing'] });

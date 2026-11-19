@@ -89,7 +89,30 @@ export interface FixtureProfile {
   manufacturer: string;
   model: string;
   defaultRole: Role;
+  // The full beam angle in degrees, more than 0 and at most 180. Absent when
+  // the source gave none; `beamAngleOf` then falls back to the Role's default.
+  beamAngle?: number;
   modes: FixtureMode[];
+}
+
+// The full beam angle, in degrees, of a Role's Fixtures whose Profile gives none.
+export const BEAM_ANGLE_DEFAULTS: Record<Role, number> = {
+  Wash: 25,
+  'Spot/Beam': 8,
+  Blinder: 60,
+  Strobe: 90,
+  'Pixel/Bar': 30,
+  Effect: 15,
+};
+
+// A usable Beam angle: finite, more than 0 and at most 180 degrees.
+export function isBeamAngle(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 && value <= 180;
+}
+
+// A Fixture's full beam angle, in degrees: the Profile's, else its Role's default.
+export function beamAngleOf(profile: FixtureProfile, role: Role): number {
+  return profile.beamAngle ?? BEAM_ANGLE_DEFAULTS[role];
 }
 
 // Something an imported fixture uses that a Profile cannot represent.

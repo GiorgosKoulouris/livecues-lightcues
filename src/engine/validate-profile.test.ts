@@ -83,6 +83,40 @@ const channelPath = (n: number): Path => ['modes', 0, 'channels', n - 1];
 const rangePath = (n: number): Path => [...channelPath(n), 'ranges', 0];
 const capabilityPath = (n: number): Path => [...rangePath(n), 'capability'];
 
+describe('beam angle', () => {
+  const base: FixtureProfile = {
+    id: 'a/b',
+    manufacturer: 'A',
+    model: 'B',
+    defaultRole: 'Wash',
+    modes: [
+      {
+        name: 'm',
+        channels: [
+          {
+            kind: 'control',
+            name: 'D',
+            defaultValue: 0,
+            ranges: [{ from: 0, to: 255, capability: { type: 'intensity' } }],
+          },
+        ],
+      },
+    ],
+  };
+
+  it('accepts none, a positive angle and 180', () => {
+    expect(validateProfile(base)).toEqual([]);
+    expect(validateProfile({ ...base, beamAngle: 0.5 })).toEqual([]);
+    expect(validateProfile({ ...base, beamAngle: 180 })).toEqual([]);
+  });
+
+  it.each([0, -5, 180.1, NaN])('rejects %s', (beamAngle) => {
+    expect(validateProfile({ ...base, beamAngle })).toEqual([
+      'Beam angle must be more than 0 and at most 180 degrees',
+    ]);
+  });
+});
+
 describe('valid Profiles', () => {
   it('passes a minimal valid Profile', () => {
     expect(validateProfile(profile())).toEqual([]);

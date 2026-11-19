@@ -1,5 +1,6 @@
-import type {
-  Capability,
+import {
+  isBeamAngle,
+  type Capability,
   CapabilityRange,
   Channel,
   Emitter,
@@ -79,6 +80,7 @@ interface OflMatrixInsert {
 interface OflFixture {
   name: string;
   categories: string[];
+  physical?: { lens?: { degreesMinMax?: number[] } };
   availableChannels?: Record<string, OflChannel>;
   // Channels whose keys, aliases and names contain `$pixelKey`.
   templateChannels?: Record<string, OflChannel>;
@@ -129,6 +131,7 @@ export function importOflFixture(json: unknown, manufacturer: string): FixtureIm
     manufacturer,
     model: fixture.name,
     defaultRole: defaultRole(fixture.categories),
+    ...importedBeamAngle(fixture),
     modes,
   };
   return { profile, unsupported: report.features };
@@ -580,4 +583,16 @@ function defaultRole(categories: string[]): Role {
     if (role) return role;
   }
   return 'Wash';
+}
+
+// The lens angle: the midpoint of the range, or the single value. Left out
+// unless it is a usable angle (more than 0, at most 180).
+function importedBeamAngle(fixture: OflFixture): { beamAngle?: number } {
+  const range: unknown = fixture.physical?.lens?.degreesMinMax;
+  if (!Array.isArray(range) || range.length === 0) return {};
+  const first: unknown = range[0];
+  const last: unknown = range[range.length - 1];
+  if (typeof first !== 'number' || typeof last !== 'number') return {};
+  const angle = (first + last) / 2;
+  return isBeamAngle(angle) ? { beamAngle: angle } : {};
 }

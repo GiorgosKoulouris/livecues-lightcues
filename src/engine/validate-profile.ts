@@ -1,4 +1,5 @@
 import {
+  isBeamAngle,
   isHazeOrFan,
   type Capability,
   type Channel,
@@ -14,6 +15,9 @@ export function validateProfile(profile: FixtureProfile): string[] {
   if (!profile.id.trim()) errors.push('Id is required');
   if (!profile.manufacturer.trim()) errors.push('Manufacturer is required');
   if (!profile.model.trim()) errors.push('Model is required');
+  if (profile.beamAngle !== undefined && !isBeamAngle(profile.beamAngle)) {
+    errors.push('Beam angle must be more than 0 and at most 180 degrees');
+  }
   if (profile.modes.length === 0) errors.push('At least one mode is required');
   for (const name of duplicates(profile.modes.map((m) => m.name))) {
     errors.push(`Mode name "${name}" is used twice`);

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import {
   DMX_MAX_VALUE,
   EMITTERS,
+  isBeamAngle,
   ROLES,
   type Capability,
   type CapabilityRange,
@@ -21,7 +22,7 @@ import {
 } from '../../../shared/profile-edit';
 import { Badge } from '../ui/Badge';
 import { Button, IconButton } from '../ui/Button';
-import { NumberField, parseNumber, parseRequired, TextField } from '../ui/fields';
+import { NumberField, parseNumber, parseRequired, TextField, type ParseResult } from '../ui/fields';
 import { Select } from '../ui/Select';
 import { Tabs } from '../ui/Tabs';
 import styles from './ProfileEditor.module.css';
@@ -109,6 +110,21 @@ export function ProfileEditor({
             value={profile.defaultRole}
             options={ROLES.map((role) => ({ value: role, label: role }))}
             onChange={(defaultRole) => onChange({ ...profile, defaultRole })}
+          />
+          <TextField
+            label="Beam angle (°)"
+            mono
+            inputMode="decimal"
+            value={profile.beamAngle}
+            format={(v) => (v === undefined ? '' : String(v))}
+            parse={(text) =>
+              text.trim() === '' ? { ok: true, value: undefined } : parseBeamAngle(text)
+            }
+            onCommit={(beamAngle) => {
+              const next = { ...profile, beamAngle };
+              if (beamAngle === undefined) delete next.beamAngle;
+              onChange(next);
+            }}
           />
         </div>
         <p className={styles.id}>
@@ -669,4 +685,12 @@ function OptionalNumberField({
       onCommit={onCommit}
     />
   );
+}
+
+function parseBeamAngle(text: string): ParseResult<number> {
+  const parsed = parseNumber(text, { integer: false });
+  if (!parsed.ok) return parsed;
+  return isBeamAngle(parsed.value)
+    ? parsed
+    : { ok: false, error: 'Must be more than 0 and at most 180' };
 }

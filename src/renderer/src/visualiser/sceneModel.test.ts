@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { Channel, FixtureProfile, Role } from '../../../shared/fixture-profile';
+import {
+  BEAM_ANGLE_DEFAULTS,
+  type Channel,
+  type FixtureProfile,
+  type Role,
+} from '../../../shared/fixture-profile';
 import { BEAM_UP_LENGTH, audienceY } from '../../../shared/aim';
 import {
   DEFAULT_MOUNTING,
@@ -9,13 +14,10 @@ import {
   type VenuePatch,
 } from '../../../shared/venue-patch';
 import {
-  BEAM_ANGLE_DEFAULTS,
   HAZE_MINIMUM,
   createHazeDensity,
   roomLight,
   AMBIENT_FULL,
-  KEY_FULL,
-  ROOM_MINIMUM,
   BODY_SIZES,
   beamAngle,
   buildScene,
@@ -305,6 +307,13 @@ describe('beamAngle', () => {
     expect(beamAngle(patchOf([f]), f)).toBe(degrees);
   });
 
+  it("uses the Profile's Beam angle over the Role's default", () => {
+    const f = fixture('a', 'wash');
+    const patch = patchOf([f]);
+    patch.profiles = patch.profiles.map((p) => (p.id === 'wash' ? { ...p, beamAngle: 40 } : p));
+    expect(beamAngle(patch, f)).toBe(40);
+  });
+
   it('has a default for every Role', () => {
     expect(Object.keys(BEAM_ANGLE_DEFAULTS).sort()).toEqual(
       ['Blinder', 'Effect', 'Pixel/Bar', 'Spot/Beam', 'Strobe', 'Wash'].sort(),
@@ -523,21 +532,17 @@ describe('roomLight', () => {
   it('is full white with no House Lights', () => {
     expect(roomLight(undefined)).toEqual({
       ambient: { red: 1, green: 1, blue: 1, intensity: AMBIENT_FULL },
-      key: KEY_FULL,
     });
   });
 
-  it('takes the House Lights colour and scales its strength by their intensity', () => {
+  it('takes the House Lights colour and scales the ambient by their intensity', () => {
     const lit = roomLight({ intensity: 0.5, red: 1, green: 0.5, blue: 0 });
     expect(lit.ambient).toMatchObject({ red: 1, green: 0.5, blue: 0 });
-    expect(lit.ambient.intensity).toBeGreaterThan(AMBIENT_FULL * ROOM_MINIMUM);
-    expect(lit.ambient.intensity).toBeLessThan(AMBIENT_FULL);
-    expect(lit.key).toBeLessThan(KEY_FULL);
+    expect(lit.ambient.intensity).toBeCloseTo(AMBIENT_FULL * 0.5);
   });
 
-  it('keeps a minimum when the House Lights are out', () => {
+  it('puts the ambient out with the House Lights', () => {
     const dark = roomLight({ intensity: 0, red: 1, green: 1, blue: 1 });
-    expect(dark.ambient.intensity).toBeCloseTo(AMBIENT_FULL * ROOM_MINIMUM);
-    expect(dark.key).toBeCloseTo(KEY_FULL * ROOM_MINIMUM);
+    expect(dark.ambient.intensity).toBe(0);
   });
 });

@@ -5,6 +5,41 @@ import { importOflFixture } from './ofl-import';
 const meta = { authors: ['test'], createDate: '2026-01-01', lastModifyDate: '2026-01-01' };
 
 describe('importOflFixture', () => {
+  describe('beam angle', () => {
+    const withLens = (physical: unknown) =>
+      importOflFixture(
+        {
+          name: 'Lensed',
+          categories: ['Dimmer'],
+          meta,
+          physical,
+          availableChannels: { Dimmer: { capability: { type: 'Intensity' } } },
+          modes: [{ name: '1ch', channels: ['Dimmer'] }],
+        } as never,
+        'Generic',
+      ).profile.beamAngle;
+
+    it('takes the midpoint of the lens range', () => {
+      expect(withLens({ lens: { degreesMinMax: [10, 30] } })).toBe(20);
+    });
+
+    it('takes a single value', () => {
+      expect(withLens({ lens: { degreesMinMax: [25, 25] } })).toBe(25);
+    });
+
+    it('leaves it out without lens data or with an unusable angle', () => {
+      expect(withLens(undefined)).toBeUndefined();
+      expect(withLens({ lens: {} })).toBeUndefined();
+      expect(withLens({ lens: { degreesMinMax: [0, 0] } })).toBeUndefined();
+      expect(withLens({ lens: { degreesMinMax: [100, 300] } })).toBeUndefined();
+    });
+
+    it('leaves it out when a range entry is not a number', () => {
+      expect(withLens({ lens: { degreesMinMax: ['10', 30] } })).toBeUndefined();
+      expect(withLens({ lens: { degreesMinMax: [10, null] } })).toBeUndefined();
+    });
+  });
+
   it('imports a dimmer-only fixture', () => {
     const result = importOflFixture(
       {

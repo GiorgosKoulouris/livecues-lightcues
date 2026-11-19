@@ -32,6 +32,7 @@ import type { HouseAmbient } from '../../../shared/protocol';
 import {
   CAMERA_FOV,
   createHazeDensity,
+  KEY_FULL,
   roomLight,
   strobeVisible,
   type Body,
@@ -112,7 +113,7 @@ function build(
   scene.background = new Color(BACKGROUND);
   const ambientLight = new AmbientLight(0xffffff, 0.9);
   scene.add(ambientLight);
-  const key = new DirectionalLight(0xffffff, 1.2);
+  const key = new DirectionalLight(0xffffff, KEY_FULL);
   key.position.set(3, 8, 6);
   scene.add(key);
 
@@ -236,7 +237,6 @@ function build(
       const room = roomLight(next);
       ambientLight.color.setRGB(room.ambient.red, room.ambient.green, room.ambient.blue);
       ambientLight.intensity = room.ambient.intensity;
-      key.intensity = room.key;
       invalidate();
     },
     setAssumedHaze(next) {

@@ -139,6 +139,7 @@
       "manufacturer": "Showtec",
       "model": "Club PAR 12/4 RGBW",
       "defaultRole": "Wash",
+      "beamAngle": 25,
       "modes": [
         {
           "name": "RGBW",
@@ -473,6 +474,7 @@
       "manufacturer": "Showtec",
       "model": "LED Blinder 2 COB",
       "defaultRole": "Blinder",
+      "beamAngle": 35,
       "modes": [
         {
           "name": "1-channel",
@@ -653,6 +655,7 @@
       "manufacturer": "Stairville",
       "model": "LED Bar 240/8",
       "defaultRole": "Pixel/Bar",
+      "beamAngle": 30,
       "modes": [
         {
           "name": "2-channel",
@@ -1274,6 +1277,7 @@
       "manufacturer": "Eurolite",
       "model": "LED TMH-9",
       "defaultRole": "Spot/Beam",
+      "beamAngle": 18,
       "modes": [
         {
           "name": "4-channel",

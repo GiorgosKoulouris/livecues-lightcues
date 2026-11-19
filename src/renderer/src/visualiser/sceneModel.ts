@@ -4,12 +4,13 @@
 // Patch: x from the centre line (Stage Left positive), y upstage from the
 // downstage edge, z up from the stage floor. Angles are degrees.
 import { audienceY, beamStrike, physicalAngles, type AimAngles } from '../../../shared/aim';
-import type { Role } from '../../../shared/fixture-profile';
+import { beamAngleOf } from '../../../shared/fixture-profile';
 import type { FixtureLight, HouseAmbient } from '../../../shared/protocol';
 import {
   DEFAULT_MOUNTING,
   fixtureMounting,
   fixtureRole,
+  patchProfile,
   fixtureZone,
   isMovingFixture,
   type PatchedFixture,
@@ -228,20 +229,10 @@ export function buildScene(patch: VenuePatch, aims: Aims = {}): SceneModel {
 // The highest a Fixture reaches, which sets the back wall's height.
 const stageTop = (patch: VenuePatch): number => Math.max(0, ...patch.fixtures.map((f) => f.height));
 
-// The full beam angle, in degrees, of a Role's Fixtures that give none.
-export const BEAM_ANGLE_DEFAULTS: Record<Role, number> = {
-  Wash: 25,
-  'Spot/Beam': 8,
-  Blinder: 60,
-  Strobe: 90,
-  'Pixel/Bar': 30,
-  Effect: 15,
-};
-
 // A Fixture's full beam angle, in degrees. The one place that decides it: the
-// Role's default for now, until Profiles carry a Beam angle.
+// Profile's Beam angle, else its Role's default.
 export function beamAngle(patch: VenuePatch, fixture: PatchedFixture): number {
-  return BEAM_ANGLE_DEFAULTS[fixtureRole(patch, fixture)];
+  return beamAngleOf(patchProfile(patch, fixture), fixtureRole(patch, fixture));
 }
 
 // The preview blinks no faster than this, in Hz, as `strobeBlink` does.
@@ -437,33 +428,27 @@ export function createHazeDensity(): HazeDensity {
   };
 }
 
-// The room's own light. The House Lights tint it and set its level; they have
-// no bodies in the scene. With no House Lights patched the room stays lit as
-// at full white.
+// The room's own light. The House Lights tint and set its ambient only; they
+// have no bodies in the scene. With no House Lights patched the ambient is full
+// white. The key light that shades the bodies is fixed at KEY_FULL.
 export interface RoomLight {
   // The ambient light's colour (each 0–1) and strength.
   ambient: { red: number; green: number; blue: number; intensity: number };
-  // The strength of the key light that shades the bodies and the stage.
-  key: number;
 }
 
-// The ambient strength at full house, and the share of it, and of the key
-// light, that stays when the House Lights are out, so the stage can be seen.
+// The ambient strength at full house, and the fixed strength of the key light.
 export const AMBIENT_FULL = 0.9;
 export const KEY_FULL = 1.2;
-export const ROOM_MINIMUM = 0.15;
 
 export function roomLight(house: HouseAmbient | undefined): RoomLight {
   const level = house ? clamp01(house.intensity) : 1;
-  const share = ROOM_MINIMUM + (1 - ROOM_MINIMUM) * level;
   const { red, green, blue } = house ?? { red: 1, green: 1, blue: 1 };
   return {
     ambient: {
       red: clamp01(red),
       green: clamp01(green),
       blue: clamp01(blue),
-      intensity: AMBIENT_FULL * share,
+      intensity: AMBIENT_FULL * level,
     },
-    key: KEY_FULL * share,
   };
 }

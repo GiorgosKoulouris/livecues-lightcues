@@ -16,6 +16,43 @@ import {
 } from './gdtf-test-files';
 
 describe('importGdtfFixture', () => {
+  describe('beam angle', () => {
+    const angleOf = (...geometries: string[]) =>
+      importGdtfFixture(
+        gdtfWithGeometries(
+          { Manufacturer: 'Generic', Name: 'Lamp' },
+          geometries,
+          mode('1ch', channel('1', 'Dimmer', channelFunction('Dimmer', '0/1'))),
+        ),
+      ).profile.beamAngle;
+
+    it('takes the BeamAngle of the first Beam geometry', () => {
+      expect(
+        angleOf(
+          geometry(
+            'Geometry',
+            'Body',
+            '<Beam Name="B1" BeamAngle="22.5"/>',
+            '<Beam Name="B2" BeamAngle="60"/>',
+          ),
+        ),
+      ).toBe(22.5);
+    });
+
+    it('finds a Beam nested under other geometries', () => {
+      expect(
+        angleOf(
+          geometry('Geometry', 'Body', geometry('Axis', 'Yoke', '<Beam Name="B" BeamAngle="12"/>')),
+        ),
+      ).toBe(12);
+    });
+
+    it('leaves it out without a Beam or a usable BeamAngle', () => {
+      expect(angleOf(geometry('Geometry', 'Body'))).toBeUndefined();
+      expect(angleOf(geometry('Geometry', 'Body', geometry('Beam', 'B')))).toBeUndefined();
+    });
+  });
+
   it('imports a dimmer-only fixture', () => {
     const result = importGdtfFixture(
       gdtf(

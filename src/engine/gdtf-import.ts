@@ -3,6 +3,7 @@ import { strFromU8, unzipSync } from 'fflate';
 import { isDeepStrictEqual } from 'node:util';
 import {
   DMX_MAX_VALUE,
+  isBeamAngle,
   type Capability,
   type CapabilityRange,
   type Channel,
@@ -152,6 +153,7 @@ export function importGdtfFixture(bytes: Uint8Array): FixtureImport {
     manufacturer,
     model,
     defaultRole: defaultRole(imported, geometries),
+    ...importedBeamAngle(fixtureType.Geometries),
     modes: imported.map(({ mode }) => mode),
   };
   return { profile, unsupported: report.features };
@@ -748,4 +750,22 @@ function dmxValue(text: string, width: number): number {
 // The top byte of a value `width` bytes wide: our ranges are 8-bit.
 function toCoarse(value: number, width: number): number {
   return Math.floor(value / 256 ** (width - 1));
+}
+
+// The `BeamAngle` of the first Beam geometry, depth first. Left out unless it
+// is a usable angle (more than 0, at most 180).
+function importedBeamAngle(root: GdtfGeometry | undefined): { beamAngle?: number } {
+  const beam = firstBeam(root);
+  const angle = beam === undefined ? NaN : Number(beam.BeamAngle);
+  return isBeamAngle(angle) ? { beamAngle: angle } : {};
+}
+
+function firstBeam(geometry: GdtfGeometry | undefined): GdtfGeometry | undefined {
+  for (const [element, child] of childGeometries(geometry)) {
+    if (element === 'GeometryReference') continue;
+    if (element === 'Beam') return child;
+    const found = firstBeam(child);
+    if (found) return found;
+  }
+  return undefined;
 }
