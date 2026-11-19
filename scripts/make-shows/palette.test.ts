@@ -29,7 +29,9 @@ describe('the Palette Show', () => {
       expect(show.triggers.some((t) => t.scene === scene.id && t.mode !== 'release')).toBe(true);
     }
     const house = (show.housePresets ?? []).map((p) => p.note?.note);
-    expect(house.some((n) => n !== undefined && notes.includes(n))).toBe(false);
+    const haze = (show.hazePresets ?? []).map((p) => p.note?.note);
+    expect([...house, ...haze].some((n) => n !== undefined && notes.includes(n))).toBe(false);
+    expect(new Set([...house, ...haze]).size).toBe(house.length + haze.length);
   });
 
   it('keeps Movement Scenes to aim and Hits to Flash', () => {

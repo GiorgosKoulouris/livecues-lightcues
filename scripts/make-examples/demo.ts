@@ -10,6 +10,7 @@ import type { FixtureProfile, Role } from '../../src/shared/fixture-profile';
 import type { Colour, RuleTarget, Scene, Show, Swatch, Trigger } from '../../src/shared/show';
 import {
   putFixtures,
+  putHazer,
   type Mounting,
   type PatchedFixture,
   type VenuePatch,
@@ -45,6 +46,34 @@ const HUNG: Mounting = {
   tiltInvert: false,
   panOffset: 0,
   tiltOffset: 0,
+};
+
+// A generic two-channel hazer, written by hand: the Open Fixture Library files
+// above have none. Haze, then fan.
+const HAZER_PROFILE: FixtureProfile = {
+  id: 'example/hazer',
+  manufacturer: 'Example',
+  model: 'Hazer',
+  defaultRole: 'Wash',
+  modes: [
+    {
+      name: '2-channel',
+      channels: [
+        {
+          kind: 'control',
+          name: 'Haze',
+          defaultValue: 0,
+          ranges: [{ from: 0, to: 255, capability: { type: 'haze' } }],
+        },
+        {
+          kind: 'control',
+          name: 'Fan',
+          defaultValue: 0,
+          ranges: [{ from: 0, to: 255, capability: { type: 'fan' } }],
+        },
+      ],
+    },
+  ],
 };
 
 // An 8 × 6 m stage: a front truss over the audience, moving heads on an
@@ -139,7 +168,23 @@ export function demoVenue(): VenuePatch {
     Object.values(kinds).find((p) => p.id === id),
   );
   if ('errors' in result) throw new Error(result.errors.join('\n'));
-  return result.patch;
+  // A hazer after the LED bar, on Universe 1.
+  const hazed = putHazer(
+    result.patch,
+    {
+      id: 'hazer',
+      name: 'Hazer',
+      profileId: HAZER_PROFILE.id,
+      mode: '2-channel',
+      universe: 1,
+      address: 61,
+      maxOutput: 1,
+      fanLevel: 1,
+    },
+    HAZER_PROFILE,
+  );
+  if ('errors' in hazed) throw new Error(hazed.errors.join('\n'));
+  return hazed.patch;
 }
 
 const zone = (row: ZoneRow, column: ZoneColumn, level: Zone['level']): Zone => ({
@@ -284,6 +329,9 @@ export function demoShow(): Show {
     ],
     baseLook: 'base-look',
     panelScenes: ['intro', 'verse', 'chorus', 'blinder-hit', 'circle', 'outro'],
+    hazePresets: [
+      { id: 'light-haze', name: 'Light haze', level: 0.3, fade: 2, note: { channel: 1, note: 36 } }, // C2
+    ],
   };
 }
 

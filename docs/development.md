@@ -68,7 +68,7 @@ A venue-independent Show of 61 Scenes by feeling, fired from the DAW on MIDI cha
 
 To change it:
 
-1. Edit the lists in `palette.ts`: Looks, Movement, Accents, Hits, notes, Fallback Panel and House Presets.
+1. Edit the lists in `palette.ts`: Looks, Movement, Accents, Hits, notes, Fallback Panel, House Presets and Haze Presets.
 2. Run `npm run show:palette`. It writes `Palette.lcshow` and `Palette cue sheet.md`, which holds the note map and how the Layers combine. The default folder is `temp/venue/`, which is git-ignored.
 3. Run `npm test` to check that the Show is valid and every note is unique.
 4. Open `Palette.lcshow` in the app with the venue's Venue Patch and read the Venue Check.

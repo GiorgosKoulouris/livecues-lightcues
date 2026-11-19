@@ -12,6 +12,7 @@ import { SidePanel, SidePanelToggle } from '../ui/SidePanel';
 import { Tabs } from '../ui/Tabs';
 import { useToast } from '../ui/Toast';
 import { useVenuePatch } from '../venue/useVenuePatch';
+import { HazePresetPanel } from './HazePresetPanel';
 import { HousePresetPanel } from './HousePresetPanel';
 import { LayerStack } from './LayerStack';
 import { ModeSwitch } from './ModeSwitch';
@@ -199,6 +200,12 @@ export function ShowView({ active }: { active: boolean }) {
             onPut={(preset) => void change({ type: 'putHousePreset', preset })}
             onMove={(id, to) => void change({ type: 'moveHousePreset', id, to })}
             onRemove={(id) => change({ type: 'removeHousePreset', id })}
+          />
+          <HazePresetPanel
+            show={show}
+            onPut={(preset) => void change({ type: 'putHazePreset', preset })}
+            onMove={(id, to) => void change({ type: 'moveHazePreset', id, to })}
+            onRemove={(id) => change({ type: 'removeHazePreset', id })}
           />
         </div>
       )}

@@ -80,12 +80,17 @@ const show: Show = {
     { id: 'dim', name: 'Dim', fade: 3 },
     { id: 'up', name: 'Up', fade: 5, note: { channel: 2, note: 10 } },
   ],
+  hazePresets: [
+    { id: 'light', name: 'Light', level: 0.3, fade: 3 },
+    { id: 'heavy', name: 'Heavy', level: 0.9, fade: 5, note: { channel: 2, note: 20 } },
+  ],
 };
 
 // `show` as version 4 had it, without House Presets, strobe, None or
 // sub-beat lengths.
-function asV4Show({ housePresets, ...rest }: Show): Show {
+function asV4Show({ housePresets, hazePresets, ...rest }: Show): Show {
   void housePresets;
+  void hazePresets;
   const inV4 = ({ strobe, movementEffect, intensityEffect, colourEffect }: Rule) =>
     strobe === undefined &&
     movementEffect !== 'None' &&
@@ -135,8 +140,8 @@ describe('.lcshow file', () => {
   it('rejects a file of an unknown version', () => {
     const saved = JSON.parse(saveShowFile(show));
 
-    expect(() => loadShowFile(JSON.stringify({ ...saved, version: 6 }))).toThrow(
-      'Unsupported Show version: 6',
+    expect(() => loadShowFile(JSON.stringify({ ...saved, version: 7 }))).toThrow(
+      'Unsupported Show version: 7',
     );
     expect(() => loadShowFile(JSON.stringify({ ...show }))).toThrow(
       'Unsupported Show version: undefined',
@@ -181,12 +186,33 @@ describe('.lcshow file', () => {
       [
         'Invalid Show:',
         'unknown field "housePresets"',
+        'unknown field "hazePresets"',
         'unknown field "scenes[1].rules[3].strobe"',
         'unknown field "scenes[1].rules[4].strobe"',
         'unknown field "scenes[1].rules[6].intensityEffect"',
         'unknown field "scenes[1].rules[6].colourEffect"',
       ].join('\n'),
     );
+  });
+
+  it('loads a version 5 file, which has no Haze Presets', () => {
+    const { hazePresets, ...v5 } = show;
+    void hazePresets;
+
+    expect(loadShowFile(JSON.stringify({ version: 5, ...v5 }))).toEqual(v5);
+    expect(() => loadShowFile(JSON.stringify({ version: 5, ...show }))).toThrow(
+      'Invalid Show:\nunknown field "hazePresets"',
+    );
+  });
+
+  it('rejects unknown fields and a non-list in Haze Presets', () => {
+    const odd = { ...show, hazePresets: [{ id: 'a', name: 'A', level: 0, fade: 0, extra: 1 }] };
+    expect(() => loadShowFile(JSON.stringify({ version: 6, ...odd }))).toThrow(
+      'Invalid Show:\nunknown field "hazePresets[0].extra"',
+    );
+    expect(() =>
+      loadShowFile(JSON.stringify({ ...show, version: 6, hazePresets: 'Light' })),
+    ).toThrow('Invalid Show: hazePresets must be a list');
   });
 
   it("reads a version 4 Rule's effect as its movement Effect, and version 5's as unknown", () => {
@@ -233,11 +259,13 @@ describe('.lcshow file', () => {
     delete saved.scenes[0].rules[0].target;
 
     expect(() => loadShowFile(JSON.stringify(saved))).toThrow(
-      'Invalid Show:\na Layer, Scene, Rule, Trigger or House Preset is missing fields',
+      'Invalid Show:\na Layer, Scene, Rule, Trigger, House Preset or Haze Preset is missing fields',
     );
     expect(() =>
       loadShowFile(JSON.stringify({ ...show, version: 5, housePresets: [null] })),
-    ).toThrow('Invalid Show:\na Layer, Scene, Rule, Trigger or House Preset is missing fields');
+    ).toThrow(
+      'Invalid Show:\na Layer, Scene, Rule, Trigger, House Preset or Haze Preset is missing fields',
+    );
     expect(() =>
       loadShowFile(JSON.stringify({ ...show, version: 5, housePresets: 'Dim' })),
     ).toThrow('Invalid Show: housePresets must be a list');

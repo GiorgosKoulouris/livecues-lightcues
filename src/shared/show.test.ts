@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
   emptyShow,
+  moveHazePreset,
   moveHousePreset,
+  putHazePreset,
   putHousePreset,
   putLayer,
   putScene,
   putTrigger,
+  removeHazePreset,
   removeHousePreset,
   removeLayer,
   removeScene,
@@ -14,7 +17,9 @@ import {
   setDefaultColour,
   setDefaultDirection,
   setPanelScenes,
+  findHazePresetOn,
   validateShow,
+  type HazePreset,
   type HousePreset,
   type Rule,
   type Scene,
@@ -483,5 +488,118 @@ describe('House Presets', () => {
     expect(
       putTrigger({ ...withTrigger, triggers: [], housePresets: [clash] }, withTrigger.triggers[0]!),
     ).toEqual({ errors: ['House Preset "Dim": note 1/60 is also a Trigger'] });
+  });
+});
+
+describe('Haze Presets', () => {
+  const light: HazePreset = { id: 'light', name: 'Light', level: 0.3, fade: 3 };
+  const heavy: HazePreset = {
+    id: 'heavy',
+    name: 'Heavy',
+    level: 0.9,
+    fade: 5,
+    note: { channel: 2, note: 20 },
+  };
+
+  function withPresets(...hazePresets: HazePreset[]): Show {
+    return { ...emptyShow(), hazePresets };
+  }
+
+  function shown(result: ReturnType<typeof putHazePreset>): Show {
+    if ('errors' in result) throw new Error(result.errors.join('\n'));
+    return result.show;
+  }
+
+  it('adds Haze Presets at the end, then edits them in place', () => {
+    const added = shown(putHazePreset(shown(putHazePreset(emptyShow(), light)), heavy));
+    expect(added.hazePresets).toEqual([light, heavy]);
+
+    const edited = shown(putHazePreset(added, { ...light, name: 'Mist', level: 0.1, fade: 0 }));
+    expect(edited.hazePresets).toEqual([{ ...light, name: 'Mist', level: 0.1, fade: 0 }, heavy]);
+  });
+
+  it('finds a Haze Preset by its note', () => {
+    expect(findHazePresetOn(withPresets(light, heavy), { channel: 2, note: 20 })).toEqual(heavy);
+    expect(findHazePresetOn(withPresets(light, heavy), { channel: 1, note: 20 })).toBeUndefined();
+  });
+
+  it('reorders Haze Presets', () => {
+    const last: HazePreset = { id: 'last', name: 'Last', level: 0, fade: 0 };
+    const before = withPresets(light, heavy, last);
+
+    expect(moveHazePreset(before, 'last', 0).hazePresets).toEqual([last, light, heavy]);
+    expect(moveHazePreset(before, 'light', 2).hazePresets).toEqual([heavy, last, light]);
+  });
+
+  it('removes a Haze Preset, leaving the Show without the list when it was the last', () => {
+    expect(removeHazePreset(withPresets(light, heavy), 'light')).toEqual(withPresets(heavy));
+    expect(removeHazePreset(withPresets(light), 'light')).toEqual(emptyShow());
+  });
+
+  it('holds at most eight Haze Presets', () => {
+    const eight = Array.from({ length: 8 }, (_, i) => ({
+      id: `p${i}`,
+      name: `P${i}`,
+      level: 0.5,
+      fade: 0,
+    }));
+
+    expect(validateShow(withPresets(...eight))).toEqual([]);
+    expect(putHazePreset(withPresets(...eight), light)).toEqual({
+      errors: ['Haze Presets: at most 8'],
+    });
+  });
+
+  it('rejects bad levels and fades, notes outside MIDI ranges and repeated ids', () => {
+    const presets = [
+      { ...light, level: 1.5, fade: -1 },
+      { ...heavy, level: Number.NaN, note: { channel: 17, note: 1.5 } },
+      { ...light, name: 'Again' },
+      { id: '', name: ' ', level: 0, fade: 0 },
+    ];
+
+    expect(validateShow(withPresets(...presets))).toEqual([
+      'Haze Preset "Light": level must be within 0–1',
+      'Haze Preset "Light": fade must be 0 seconds or more',
+      'Haze Preset "Heavy": level must be within 0–1',
+      'Haze Preset "Heavy": channel must be a whole number from 1 to 16',
+      'Haze Preset "Heavy": note must be a whole number from 0 to 127',
+      'Haze Preset " ": id is missing',
+      'Haze Preset " ": name is empty',
+      'Haze Preset id "light" is used twice',
+    ]);
+  });
+
+  it("rejects a note that is another Haze Preset's", () => {
+    expect(putHazePreset(withPresets(heavy), { ...light, note: { channel: 2, note: 20 } })).toEqual(
+      { errors: ['Haze Preset note 2/20 is used twice'] },
+    );
+  });
+
+  it("rejects a Haze Preset on a Trigger's note or a House Preset's, and the reverse", () => {
+    const withTrigger: Show = {
+      ...emptyShow(),
+      scenes: [scene({ id: 'verse', layer: 'layer-1' })],
+      triggers: [{ channel: 1, note: 60, scene: 'verse', mode: 'go' }],
+    };
+    const onTrigger = { ...light, note: { channel: 1, note: 60 } };
+    expect(putHazePreset(withTrigger, onTrigger)).toEqual({
+      errors: ['Haze Preset "Light": note 1/60 is also a Trigger'],
+    });
+    expect(
+      putTrigger(
+        { ...withTrigger, triggers: [], hazePresets: [onTrigger] },
+        withTrigger.triggers[0]!,
+      ),
+    ).toEqual({ errors: ['Haze Preset "Light": note 1/60 is also a Trigger'] });
+
+    const house: HousePreset = { id: 'dim', name: 'Dim', fade: 0, note: { channel: 3, note: 5 } };
+    const onHouse = { ...light, note: { channel: 3, note: 5 } };
+    expect(putHazePreset({ ...emptyShow(), housePresets: [house] }, onHouse)).toEqual({
+      errors: ['Haze Preset "Light": note 3/5 is also a House Preset'],
+    });
+    expect(putHousePreset({ ...emptyShow(), hazePresets: [onHouse] }, house)).toEqual({
+      errors: ['Haze Preset "Light": note 3/5 is also a House Preset'],
+    });
   });
 });

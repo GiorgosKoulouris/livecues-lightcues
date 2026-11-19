@@ -6,8 +6,10 @@ import {
   DEFAULT_DIRECTION,
   DIRECTIONS,
   ruleTargets,
+  showHazePresets,
   showHousePresets,
   type Direction,
+  type HazePreset,
   type HousePreset,
   type Scene,
   type Show,
@@ -19,6 +21,7 @@ import {
   fixtureMounting,
   houseLook,
   isMovingFixture,
+  patchHazers,
   patchHouse,
   type PatchedFixture,
   type VenuePatch,
@@ -125,4 +128,10 @@ export function unsetHousePresets(show: Show, patch: VenuePatch): HousePreset[] 
 export function lookPresetsNotInShow(show: Show, patch: VenuePatch): string[] {
   const ids = new Set(showHousePresets(show).map((p) => p.id));
   return Object.keys(patchHouse(patch).looks ?? {}).filter((id) => !ids.has(id));
+}
+
+// The Show's Haze Presets when this Venue Patch has no Hazer, in Show order:
+// not set up in this venue, so firing them does nothing.
+export function hazePresetsWithoutHazers(show: Show, patch: VenuePatch): HazePreset[] {
+  return patchHazers(patch).length === 0 ? showHazePresets(show) : [];
 }

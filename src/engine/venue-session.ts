@@ -4,7 +4,10 @@ import {
   addUniverse,
   emptyPatch,
   moveFixture,
+  patchHazers,
   patchHouse,
+  putHazer,
+  removeHazers,
   putFixture,
   putFixtures,
   putHouseGroup,
@@ -169,6 +172,14 @@ export function createVenueSession({
         }
         return { patch: removeHouseLights(patch, change.ids) };
       }
+      case 'putHazer':
+        return putHazer(patch, change.hazer, libraryProfile(change.hazer.profileId));
+      case 'removeHazers': {
+        const hazers = patchHazers(patch);
+        const missing = change.ids.find((id) => !hazers.some((h) => h.id === id));
+        if (missing !== undefined) return { errors: [`Hazer id "${missing}" is not in the patch`] };
+        return { patch: removeHazers(patch, change.ids) };
+      }
       case 'setStartupLook':
         return setStartupLook(patch, change.look);
       case 'setHouseLook':
@@ -246,7 +257,7 @@ export function createVenueSession({
 
 // What an edit changes, for merging quick edits into one undo step: the
 // stage, an existing Universe, the same existing Fixtures, an existing House
-// Group or House Light, the Startup look, or one house look. Adding,
+// Group, House Light or Hazer, the Startup look, or one house look. Adding,
 // removing and moving on the stage plan never merge.
 function mergeKey(patch: VenuePatch, change: VenueEdit): string | undefined {
   const patched = (id: string) => patch.fixtures.some((f) => f.id === id);
@@ -265,6 +276,10 @@ function mergeKey(patch: VenuePatch, change: VenueEdit): string | undefined {
     case 'putHouseLight': {
       const { id } = change.light;
       return lights.some((l) => l.id === id) ? `house light ${id}` : undefined;
+    }
+    case 'putHazer': {
+      const { id } = change.hazer;
+      return patchHazers(patch).some((h) => h.id === id) ? `hazer ${id}` : undefined;
     }
     case 'putUniverse': {
       const { number } = change.universe;

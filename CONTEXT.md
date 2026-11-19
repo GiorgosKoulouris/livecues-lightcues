@@ -58,6 +58,16 @@ Intensity and colour for some House Groups, defined in the Venue Patch for one H
 **Startup look**:
 The house look a Venue Patch sends from launch and when it is opened, and that Startup in Perform fades back to. Going to it sends the Groups it does not list to full white, as at launch. Full white when not set.
 
+### Haze
+
+**Hazer**:
+A haze machine on a Universe the app drives. Patched in the Venue Patch with a Profile that has a haze channel, a Universe, an address, a max output and a fan level, but no stage position, Zone, Role or Mounting. Scenes never target it, and Blackout, Grand Master, Freeze and Blind do not apply to it. Every Hazer follows the same Haze Preset. It sends the Haze Preset's level times its max output, and its fan level whenever that output is above 0 (0 otherwise). It is off at launch and when a Show or Venue Patch is opened, and holds its output when the MIDI Input is lost.
+_Avoid_: Fogger, smoke machine, atmosphere
+
+**Haze Preset**:
+A named slot in the Show with a haze level (0–100%), a fade and an optional MIDI note, that takes every Hazer to that level. Fired by its note (Go only) or its button in Perform and on the Fallback Panel. One holds at a time. Haze Off, built into every Show, takes the Hazers to 0 at once.
+_Avoid_: Haze Scene, haze cue, fog preset
+
 ### Show
 
 **Show**:
@@ -131,11 +141,11 @@ _Avoid_: MIDI device, controller
 The Scene designated as the safe fallback look, available from the Fallback Panel at any time. Going to it clears every other Layer.
 
 **Fallback Panel**:
-The always-visible manual controls that need no MIDI: Blackout, Base Look, Grand Master, Tap Tempo, Freeze, a few Scene buttons chosen per Show and the House Preset buttons, each with a keyboard shortcut. Also shows the MIDI Input status.
+The always-visible manual controls that need no MIDI: Blackout, Base Look, Grand Master, Tap Tempo, Freeze, a few Scene buttons chosen per Show, and the House Preset buttons, each with a keyboard shortcut, plus Haze Off and the Haze Preset buttons, which have none. Also shows the MIDI Input status.
 _Avoid_: Manual panel, fader panel
 
 **Blackout**:
-Takes every Fixture's intensity to 0 until turned off, in Blind too. The active Scenes stay active. House Lights are not affected.
+Takes every Fixture's intensity to 0 until turned off, in Blind too. The active Scenes stay active. House Lights and Hazers are not affected.
 
 **Default Direction**:
 The Direction a Show gives moving Fixtures where no Rule sets one, and the base of a movement Effect with none. Down unless changed.
@@ -144,14 +154,14 @@ The Direction a Show gives moving Fixtures where no Rule sets one, and the base 
 The colour a Show gives Fixtures where no Rule sets one. White unless changed.
 
 **Grand Master**:
-A global intensity scaler applied after all Scenes are combined. House Lights are not affected.
+A global intensity scaler applied after all Scenes are combined. House Lights and Hazers are not affected.
 
 **Monitor**:
 The default mode, where the preview mirrors exactly what is being sent to the rig.
 
 **Blind**:
-A mode where the preview updates but nothing is sent to the rig, except Blackout and House Lights, which always send.
+A mode where the preview updates but nothing is sent to the rig, except Blackout, House Lights and Hazers, which always send.
 _Avoid_: Offline, preview mode
 
 **Venue Check**:
-A report, produced when a Show is combined with a Venue Patch, listing Scenes whose targets are missing or only approximated in that rig, and House Presets that Venue Patch has no house look for (not set up in this venue). Strobe is approximated on a Fixture with no strobe channel, which stays steady, and on one whose strobe rate has no Hz span, taken as 1–20 Hz, or a span made from words such as slow and fast.
+A report, produced when a Show is combined with a Venue Patch, listing Scenes whose targets are missing or only approximated in that rig, House Presets that Venue Patch has no house look for (not set up in this venue), and Haze Presets when it has no Hazer. Strobe is approximated on a Fixture with no strobe channel, which stays steady, and on one whose strobe rate has no Hz span, taken as 1–20 Hz, or a span made from words such as slow and fast.

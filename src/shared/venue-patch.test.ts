@@ -16,7 +16,10 @@ import {
   putFixtures,
   patchHouse,
   putHouseGroup,
+  putHazer,
   putHouseLight,
+  patchHazers,
+  removeHazers,
   putUniverse,
   removeFixtures,
   removeHouseGroup,
@@ -27,6 +30,7 @@ import {
   setStartupLook,
   suggestZone,
   validatePatch,
+  type Hazer,
   type HouseLight,
   type HouseLook,
   type PatchedFixture,
@@ -885,3 +889,128 @@ describe('House looks', () => {
     });
   });
 });
+
+const hazeProfile: FixtureProfile = {
+  id: 'fos/haze-1200',
+  manufacturer: 'Fos',
+  model: 'Haze 1200',
+  defaultRole: 'Effect',
+  modes: [
+    {
+      name: '2ch',
+      channels: [
+        {
+          kind: 'control',
+          name: 'Haze',
+          defaultValue: 0,
+          ranges: [{ from: 0, to: 255, capability: { type: 'haze' } }],
+        },
+        {
+          kind: 'control',
+          name: 'Fan',
+          defaultValue: 0,
+          ranges: [{ from: 0, to: 255, capability: { type: 'fan' } }],
+        },
+      ],
+    },
+  ],
+};
+
+function hazer(overrides: Partial<Hazer> = {}): Hazer {
+  return {
+    id: 'z1',
+    name: 'Haze 1',
+    profileId: 'fos/haze-1200',
+    mode: '2ch',
+    universe: 1,
+    address: 207,
+    maxOutput: 1,
+    fanLevel: 1,
+    ...overrides,
+  };
+}
+
+describe('Hazers', () => {
+  it('has none in a new patch', () => {
+    expect(patchHazers(emptyPatch(stage))).toEqual([]);
+  });
+
+  it('adds a Hazer, embedding its Profile, and edits it in place', () => {
+    let patch = ok(putHazer(emptyPatch(stage), hazer(), hazeProfile));
+    patch = ok(putHazer(patch, hazer({ maxOutput: 0.5, fanLevel: 0.2 })));
+
+    expect(patch.hazers).toEqual([hazer({ maxOutput: 0.5, fanLevel: 0.2 })]);
+    expect(patch.profiles).toEqual([hazeProfile]);
+  });
+
+  it('removes a Hazer and its unused Profile copy, leaving no hazers key', () => {
+    const patch = ok(putHazer(emptyPatch(stage), hazer(), hazeProfile));
+
+    expect(removeHazers(patch, ['z1'])).toEqual(emptyPatch(stage));
+  });
+
+  it('rejects a mode with no haze channel', () => {
+    const noHaze = {
+      ...hazeProfile,
+      modes: [{ ...hazeProfile.modes[0]!, channels: [hazeProfile.modes[0]!.channels[1]!] }],
+    };
+    expect(putHazer(emptyPatch(stage), hazer(), noHaze)).toEqual({
+      errors: ['"Haze 1": mode "2ch" of Profile "fos/haze-1200" has no haze channel'],
+    });
+  });
+
+  it('rejects a max output or fan level outside 0–1', () => {
+    const patch = emptyPatch(stage);
+    expect(putHazer(patch, hazer({ maxOutput: 1.5 }), hazeProfile)).toEqual({
+      errors: ['"Haze 1": Max output must be from 0 to 1'],
+    });
+    expect(putHazer(patch, hazer({ fanLevel: -0.1 }), hazeProfile)).toEqual({
+      errors: ['"Haze 1": Fan level must be from 0 to 1'],
+    });
+    expect(putHazer(patch, hazer({ fanLevel: NaN }), hazeProfile)).toEqual({
+      errors: ['"Haze 1": Fan level must be from 0 to 1'],
+    });
+  });
+
+  it('rejects a Universe, Profile or mode the patch lacks', () => {
+    const patch = emptyPatch(stage);
+    expect(putHazer(patch, hazer({ universe: 2 }), hazeProfile)).toEqual({
+      errors: ['"Haze 1": Universe 2 is not in the patch'],
+    });
+    expect(putHazer(patch, hazer({ mode: '9ch' }), hazeProfile)).toEqual({
+      errors: ['"Haze 1": mode "9ch" is not in Profile "fos/haze-1200"'],
+    });
+    expect(putHazer(patch, hazer())).toEqual({
+      errors: ['"Haze 1": Profile "fos/haze-1200" is not in the patch'],
+    });
+  });
+
+  it('checks Hazers, Fixtures and House Lights together for overlaps', () => {
+    const base = withBar(patched(emptyPatch(stage), fixture()), houseLight({ address: 10 }));
+
+    expect(putHazer(base, hazer({ address: 3 }), hazeProfile)).toEqual({
+      errors: ['"Haze 1" (1.3–1.4) overlaps "Par 1" (1.1–1.3)'],
+    });
+    expect(putHazer(base, hazer({ address: 9 }), hazeProfile)).toEqual({
+      errors: ['"Haze 1" (1.9–1.10) overlaps "Bar 1" (1.10–1.10)'],
+    });
+    const hazy = ok(putHazer(base, hazer({ address: 20 }), hazeProfile));
+    expect(putFixture(hazy, fixture({ id: 'f2', name: 'Par 2', address: 21 }))).toEqual({
+      errors: ['"Haze 1" (1.20–1.21) overlaps "Par 2" (1.21–1.23)'],
+    });
+  });
+
+  it('removes a Universe together with its Hazers', () => {
+    let patch = addUniverseOk(emptyPatch(stage), 2);
+    patch = ok(putHazer(patch, hazer({ universe: 2 }), hazeProfile));
+
+    const removed = removeUniverse(patch, 2);
+
+    expect(removed.hazers).toEqual([]);
+    expect(removed.profiles).toEqual([]);
+  });
+});
+
+function addUniverseOk(patch: VenuePatch, number: number): VenuePatch {
+  return ok(putUniverse(patch, { number }));
+}

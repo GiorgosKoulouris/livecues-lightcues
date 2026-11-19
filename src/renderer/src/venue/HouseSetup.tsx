@@ -8,7 +8,6 @@ import {
   FULL_WHITE,
   houseLook,
   patchHouse,
-  patchProfile,
   putHouseLight,
   type HouseGroup,
   type HouseLight,
@@ -26,7 +25,8 @@ import { namedCount, removedMessage } from '../ui/removed';
 import { Select } from '../ui/Select';
 import { useToast } from '../ui/Toast';
 import { AddFixtureDialog } from './AddFixtureDialog';
-import { modeOptions, parseAddress, universeOptions } from './fixtures';
+import { AddressedRow } from './AddressedRow';
+import { HazerSetup } from './HazerSetup';
 import styles from './HouseSetup.module.css';
 
 interface HouseSetupProps {
@@ -137,6 +137,7 @@ export function HouseSetup({ patch, show, profiles, change }: HouseSetupProps) {
           Add House Group
         </Button>
       </section>
+      <HazerSetup patch={patch} show={show} profiles={profiles} change={change} />
       <section aria-label="Startup look" className={styles.section}>
         <h3 className={styles.heading}>Startup look</h3>
         <p className={styles.hint}>
@@ -290,13 +291,8 @@ function HouseGroupCard({
   );
 }
 
-// The select fields whose change can make a House Light not fit. Their
-// errors show below them.
-type CheckedField = 'mode' | 'universe';
-
 // A House Light's patch fields, as a stage Fixture's without position, Zone,
-// Role or Mounting. A choice that does not fit is not sent; its error shows
-// inline.
+// Role or Mounting, then its House Group.
 function HouseLightRow({
   patch,
   light,
@@ -308,78 +304,26 @@ function HouseLightRow({
   onPut(light: HouseLight): void;
   onRemove(): void;
 }) {
-  const [errors, setErrors] = useState<Partial<Record<CheckedField, string>>>({});
-  const profile = patchProfile(patch, light);
-
-  // Checks a change against the patch first, as the engine would.
-  function put(next: HouseLight, field?: CheckedField) {
-    const result = putHouseLight(patch, next);
-    if ('errors' in result && field) {
-      setErrors({ [field]: result.errors.join(' ') });
-      return;
-    }
-    setErrors({});
-    onPut(next);
-  }
-
   return (
-    <tr>
-      <td>
-        <TextField
-          label={`Name of ${light.name}`}
-          hideLabel
-          value={light.name}
-          parse={parseName}
-          onCommit={(name) => put({ ...light, name })}
-        />
-      </td>
-      <td className={styles.profile}>
-        {profile.manufacturer} {profile.model}
-      </td>
-      <td>
-        <Select
-          label={`Mode of ${light.name}`}
-          hideLabel
-          error={errors.mode}
-          value={light.mode}
-          options={modeOptions(profile)}
-          onChange={(mode) => put({ ...light, mode }, 'mode')}
-        />
-      </td>
-      <td>
-        <Select
-          label={`Universe of ${light.name}`}
-          hideLabel
-          error={errors.universe}
-          value={String(light.universe)}
-          options={universeOptions(patch)}
-          onChange={(universe) => put({ ...light, universe: Number(universe) }, 'universe')}
-        />
-      </td>
-      <td>
-        <TextField
-          label={`Address of ${light.name}`}
-          hideLabel
-          mono
-          className={styles.address}
-          value={light.address}
-          parse={(text) => parseAddress(patch, light, text)}
-          onCommit={(address) => put({ ...light, address })}
-        />
-      </td>
-      <td>
-        <Select
-          label={`House Group of ${light.name}`}
-          hideLabel
-          value={light.group}
-          options={patchHouse(patch).groups.map((g) => ({ value: g.id, label: g.name }))}
-          onChange={(group) => put({ ...light, group })}
-        />
-      </td>
-      <td className={styles.actions}>
-        <IconButton icon={<Trash2 />} label={`Remove ${light.name}`} onClick={onRemove} />
-      </td>
-    </tr>
+    <AddressedRow
+      patch={patch}
+      fixture={light}
+      check={(next) => putHouseLight(patch, next)}
+      onPut={onPut}
+      onRemove={onRemove}
+    >
+      {(put) => (
+        <td>
+          <Select
+            label={`House Group of ${light.name}`}
+            hideLabel
+            value={light.group}
+            options={patchHouse(patch).groups.map((g) => ({ value: g.id, label: g.name }))}
+            onChange={(group) => put({ ...light, group })}
+          />
+        </td>
+      )}
+    </AddressedRow>
   );
 }
 

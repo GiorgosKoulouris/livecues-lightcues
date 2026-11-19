@@ -1,4 +1,10 @@
-import { findHousePresetOn, findTrigger, type MidiNote, type Show } from '../../../shared/show';
+import {
+  findHazePresetOn,
+  findHousePresetOn,
+  findTrigger,
+  type MidiNote,
+  type Show,
+} from '../../../shared/show';
 
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
@@ -16,10 +22,11 @@ export function noteName(note: number): string {
   return `${NOTE_NAMES[note % 12]}${Math.floor(note / 12) - 1}`;
 }
 
-// The first note on channel 1 from C4 up that no Trigger or House Preset
-// uses, or C4 when every one is.
+// The first note on channel 1 from C4 up that no Trigger, House Preset or
+// Haze Preset uses, or C4 when every one is.
 export function freeNote(show: Show): MidiNote {
-  const used = (note: MidiNote) => findTrigger(show, note) ?? findHousePresetOn(show, note);
+  const used = (note: MidiNote) =>
+    findTrigger(show, note) ?? findHousePresetOn(show, note) ?? findHazePresetOn(show, note);
   for (let note = FIRST_NOTE.note; note <= 127; note++) {
     if (!used({ ...FIRST_NOTE, note })) return { ...FIRST_NOTE, note };
   }

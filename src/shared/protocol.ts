@@ -6,6 +6,7 @@ import type {
   Colour,
   Direction,
   EffectLength,
+  HazePreset,
   HousePreset,
   Layer,
   MidiNote,
@@ -16,6 +17,7 @@ import type {
 import type {
   HouseGroup,
   HouseLight,
+  Hazer,
   HouseLook,
   PatchedFixture,
   StageBounds,
@@ -124,11 +126,23 @@ export type EngineCommand =
   | { type: 'fireHousePreset'; id: string }
   // Crossfades the House Lights to the Startup look, Groups it does not set
   // to full white, over a fixed fade.
-  | { type: 'goStartupLook' };
+  | { type: 'goStartupLook' }
+  | { type: 'getHaze' }
+  // Crossfades every Hazer to the Haze Preset's level over its fade. Does
+  // nothing when the Show lacks the Haze Preset. Not in the undo history.
+  | { type: 'fireHazePreset'; id: string }
+  // Takes every Hazer to 0 at once, fan included.
+  | { type: 'hazeOff' };
+
+// What the Hazers went to last: Haze Off, or a Haze Preset by id, or none
+// when that Haze Preset was removed from the Show (the output holds). Off at
+// launch and when a Show or Venue Patch is opened.
+export type HazeFired = { type: 'off' } | { type: 'preset'; id: string } | { type: 'none' };
 
 // What the House Lights went to last: the Startup look, or a House Preset's
-// look, by House Preset id.
-export type HouseFired = { type: 'startup' } | { type: 'preset'; id: string };
+// look, by House Preset id, or none when that House Preset was removed from
+// the Show (the look holds).
+export type HouseFired = { type: 'startup' } | { type: 'preset'; id: string } | { type: 'none' };
 
 // Monitor sends the active Scenes to the Outputs. Blind holds the Outputs at
 // the frames sent last.
@@ -175,7 +189,12 @@ export type ShowEdit =
   | { type: 'putHousePreset'; preset: HousePreset }
   // Moves the House Preset to index `to`.
   | { type: 'moveHousePreset'; id: string; to: number }
-  | { type: 'removeHousePreset'; id: string };
+  | { type: 'removeHousePreset'; id: string }
+  // Adds at the end, or replaces the Haze Preset with the same id in place.
+  | { type: 'putHazePreset'; preset: HazePreset }
+  // Moves the Haze Preset to index `to`.
+  | { type: 'moveHazePreset'; id: string; to: number }
+  | { type: 'removeHazePreset'; id: string };
 
 // A change to the current Venue Patch. `putFixture` and `putFixtures` embed a
 // Fixture's Profile from the Profile Library when the patch does not have it
@@ -200,6 +219,10 @@ export type VenueEdit =
   // Fixture.
   | { type: 'putHouseLight'; light: HouseLight }
   | { type: 'removeHouseLights'; ids: string[] }
+  // Embeds the Hazer's Profile from the Profile Library. Its mode needs a
+  // haze channel.
+  | { type: 'putHazer'; hazer: Hazer }
+  | { type: 'removeHazers'; ids: string[] }
   // Without a look, the House Lights start at full white.
   | { type: 'setStartupLook'; look?: HouseLook }
   // The house look of the House Preset with id `preset`. Without a look, or
@@ -321,6 +344,9 @@ export type EngineEvent =
   // What the House Lights went to last, during its fade too. Sent on request
   // and after every change.
   | { type: 'house'; fired: HouseFired }
+  // What the Hazers went to last, during its fade too. Sent on request and
+  // after every change.
+  | { type: 'haze'; fired: HazeFired }
   // The MIDI input status. Sent on request and after every change.
   | { type: 'midiInput'; status: MidiInputStatus }
   // The Tempo and where it comes from. Sent on request and after every change
@@ -556,6 +582,7 @@ export const STATE_REQUESTS: readonly EngineCommand['type'][] = [
   'getShow',
   'getPlayback',
   'getHouse',
+  'getHaze',
   'listOutputs',
   'listMidiInputs',
   'getTempo',

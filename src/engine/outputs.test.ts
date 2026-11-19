@@ -10,6 +10,7 @@ import type {
 import type { Scene } from '../shared/show';
 import {
   DEFAULT_MOUNTING,
+  type Hazer,
   type HouseLight,
   type HouseLook,
   type PatchedFixture,
@@ -781,6 +782,148 @@ describe('engine House Lights', () => {
 
     const last = events.findLast((e) => e.type === 'dmxFrame');
     expect(last?.type === 'dmxFrame' && [last.values[0], last.values[9]]).toEqual([0, 255]);
+  });
+});
+
+describe('engine Hazers', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  const hazeProfile: FixtureProfile = {
+    id: 'acme/haze',
+    manufacturer: 'Acme',
+    model: 'Haze',
+    defaultRole: 'Wash',
+    modes: [
+      {
+        name: '2ch',
+        channels: [
+          control('Haze', [{ from: 0, to: 255, capability: { type: 'haze' } }]),
+          control('Fan', [{ from: 0, to: 255, capability: { type: 'fan' } }]),
+        ],
+      },
+    ],
+  };
+  const light = { id: 'light', name: 'Light', level: 0.6, fade: 5 };
+
+  // `playbackEngine` with a Hazer at 20, 50% max output and the fan at 40%,
+  // Haze Preset Light (60% over 5 s) and `wash` active.
+  async function hazeEngine() {
+    const engine = await playbackEngine();
+    engine.send({ type: 'saveProfile', requestId: 900, profile: hazeProfile });
+    const hazer: Hazer = {
+      ...{ id: 'z1', name: 'Haze 1', profileId: 'acme/haze', mode: '2ch' },
+      ...{ universe: 1, address: 20, maxOutput: 0.5, fanLevel: 0.4 },
+    };
+    engine.editVenue({ type: 'putHazer', hazer });
+    engine.editShow({ type: 'putHazePreset', preset: light });
+    engine.send({ type: 'goScene', sceneId: 'wash' });
+    await vi.advanceTimersByTimeAsync(2000);
+    // The haze and fan channels.
+    return { ...engine, haze: () => [engine.channel(20), engine.channel(21)] };
+  }
+
+  it('is off at launch', async () => {
+    const { haze } = await hazeEngine();
+
+    expect(haze()).toEqual([0, 0]);
+  });
+
+  it('fires a Haze Preset to its level times the max output over its fade, the fan on from the start', async () => {
+    const { send, haze } = await hazeEngine();
+
+    send({ type: 'fireHazePreset', id: 'light' });
+    await vi.advanceTimersByTimeAsync(100);
+    expect(haze()[1]).toBe(102);
+    await vi.advanceTimersByTimeAsync(2400);
+    expect(haze()[0]).toBeGreaterThan(30);
+    expect(haze()[0]).toBeLessThan(46);
+    await vi.advanceTimersByTimeAsync(3000);
+
+    expect(haze()).toEqual([77, 102]);
+  });
+
+  it('goes to 0 at once with Haze Off, fan included', async () => {
+    const { send, haze, events } = await hazeEngine();
+    send({ type: 'fireHazePreset', id: 'light' });
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(haze()[0]).toBeGreaterThan(0);
+
+    send({ type: 'hazeOff' });
+    await vi.advanceTimersByTimeAsync(100);
+
+    expect(haze()).toEqual([0, 0]);
+    expect(events.findLast((e) => e.type === 'haze')).toEqual({
+      type: 'haze',
+      fired: { type: 'off' },
+    });
+  });
+
+  it('ignores Blackout, the Grand Master, Freeze and Blind', async () => {
+    const { send, haze, level } = await hazeEngine();
+    send({ type: 'fireHazePreset', id: 'light' });
+    await vi.advanceTimersByTimeAsync(6000);
+
+    send({ type: 'setBlackout', on: true });
+    send({ type: 'setGrandMaster', level: 0 });
+    send({ type: 'setFreeze', on: true });
+    send({ type: 'setMode', mode: 'blind' });
+    await vi.advanceTimersByTimeAsync(100);
+    expect(level()).toBe(0);
+    expect(haze()).toEqual([77, 102]);
+
+    // Haze Off and Haze Presets still work through all of them.
+    send({ type: 'hazeOff' });
+    await vi.advanceTimersByTimeAsync(100);
+    expect(haze()).toEqual([0, 0]);
+    send({ type: 'fireHazePreset', id: 'light' });
+    await vi.advanceTimersByTimeAsync(6000);
+    expect(haze()).toEqual([77, 102]);
+  });
+
+  it('goes off when the Venue Patch or the Show is opened or replaced, not when edited', async () => {
+    const { send, editShow, editVenue, reopenVenue, haze } = await hazeEngine();
+    send({ type: 'fireHazePreset', id: 'light' });
+    await vi.advanceTimersByTimeAsync(6000);
+
+    editShow({ type: 'putHazePreset', preset: { ...light, name: 'Mist' } });
+    editVenue({ type: 'putUniverse', universe: { number: 1, output: 'EN1' } });
+    await vi.advanceTimersByTimeAsync(100);
+    expect(haze()).toEqual([77, 102]);
+
+    send({ type: 'newShow' });
+    await vi.advanceTimersByTimeAsync(100);
+    expect(haze()).toEqual([0, 0]);
+
+    editShow({ type: 'putHazePreset', preset: light });
+    send({ type: 'fireHazePreset', id: 'light' });
+    await vi.advanceTimersByTimeAsync(6000);
+    expect(haze()).toEqual([77, 102]);
+
+    reopenVenue('venue.lcvenue');
+    await vi.advanceTimersByTimeAsync(100);
+    expect(haze()).toEqual([0, 0]);
+  });
+
+  it('leaves the undo history alone', async () => {
+    const { send, events } = await hazeEngine();
+    const before = events.length;
+
+    send({ type: 'fireHazePreset', id: 'light' });
+    send({ type: 'hazeOff' });
+
+    expect(events.slice(before).map((e) => e.type)).toEqual(['haze', 'haze']);
+  });
+
+  it('shows in the channel monitor', async () => {
+    const { events, send } = await hazeEngine();
+    send({ type: 'fireHazePreset', id: 'light' });
+    send({ type: 'setBlackout', on: true });
+    send({ type: 'monitorUniverse', universe: 1 });
+    await vi.advanceTimersByTimeAsync(6000);
+
+    const last = events.findLast((e) => e.type === 'dmxFrame');
+    expect(last?.type === 'dmxFrame' && [last.values[19], last.values[20]]).toEqual([77, 102]);
   });
 });
 

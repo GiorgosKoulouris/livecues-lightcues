@@ -57,7 +57,8 @@ In **Venue Patch**:
 2. In the **Fixtures** tab, click **Add Fixture** and pick the Profile, Mode, Universe and DMX address.
 3. Drag each Fixture to its place on the stage plan. In the inspector, check its Role and Zone. For moving heads, set how they are mounted.
 4. If the venue's own lights, such as the bar, are on a Universe you drive, add them in the **House** tab: a House Group per area, then its House Lights. Set the **Startup look** they get from launch, or they stay at full white, and a look for each House Preset of the Show. Scenes, Blackout, the Grand Master, Freeze and Blind never reach them.
-5. **Save** the Venue Patch. Make one per venue.
+5. If a hazer is on a Universe you drive, click **Add Hazer** in the **House** tab and pick its Profile (one with a haze channel), Universe and address. Set its **max output** and **fan level**. It has no stage position. Re-import the Profile if its channels show as unsupported. Hazers are off at launch and when a Venue Patch opens.
+6. **Save** the Venue Patch. Make one per venue.
 
 ### 3. Build a Scene
 
@@ -80,16 +81,17 @@ In **Show**, on the **Triggers** tab:
 2. Click **Learn** and play the note, or type the channel and note.
 3. Pick the Scene and the mode: Go (start and stay), Flash (while held) or Release (clear the Layer). Click **Map**.
 4. For the House Lights, add House Presets under the Triggers, such as Dim and Up: a name, a fade and, if you like, a note. Each venue sets what they look like in its Venue Patch's **House** tab.
-5. **Save** the Show.
+5. For haze, add Haze Presets under the Triggers: a name, a level (0–100%), a fade and, if you like, a note (Go only). Each Hazer scales the level by its max output. **Haze Off** is built in and goes to 0 at once.
+6. **Save** the Show.
 
 ### 5. Perform
 
 ![Animation: Scenes fired one after another in Perform, with the Preview changing colour and the moving heads following](docs/images/demo.gif)
 *Scenes fired by hand with the Perform buttons, no MIDI, sped up. A MIDI Trigger fires them the same way.*
 
-Open **Perform** at the gig. It shows Blackout, Base Look, Grand Master, Tap Tempo and Freeze along the top, a House section while the Venue Patch has House Lights, every Scene button by Layer, and the Preview. The House section has **Startup** and a button per House Preset. Each fades the House Lights to its look; the last one fired stays lit. The top bar shows the MIDI Input. A red disc and "MIDI lost" mean it is lost, and Triggers do not fire until it returns.
+Open **Perform** at the gig. It shows Blackout, Base Look, Grand Master, Tap Tempo and Freeze along the top, a House section while the Venue Patch has House Lights, a Haze section while it has Hazers, every Scene button by Layer, and the Preview. The House section has **Startup** and a button per House Preset. Each fades the House Lights to its look; the last one fired stays lit. The Haze section has **Haze Off** and a button per Haze Preset, which fades every Hazer to its level. Blackout, Blind and Freeze do not affect haze. The top bar shows the MIDI Input. A red disc and "MIDI lost" mean it is lost, and Triggers do not fire until it returns.
 
-Fallback Panel keys: **B** Blackout, **0** Base Look, **1**–**9** Scene buttons, **-** / **+** Grand Master, **T** Tap Tempo, **F** Freeze, **Shift+1**–**8** House Presets. Pick the Base Look and the panel's Scene buttons in the Show settings.
+Fallback Panel keys: **B** Blackout, **0** Base Look, **1**–**9** Scene buttons, **-** / **+** Grand Master, **T** Tap Tempo, **F** Freeze, **Shift+1**–**8** House Presets. Haze Off and the Haze Presets are buttons with no keys. Pick the Base Look and the panel's Scene buttons in the Show settings.
 
 ## Troubleshooting
 

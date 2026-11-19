@@ -4,6 +4,13 @@ What changed in each LightCues release. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Added
+
+- Hazers: patch a haze machine in the Venue Patch's **House** tab with a Profile that has a haze channel, a Universe, an address, a max output and a fan level. It has no stage position. Scenes, Blackout, the Grand Master, Freeze and Blind never reach it. Hazers are off at launch and when a Show or Venue Patch opens, and hold their output if the MIDI Input is lost.
+- Haze Presets: up to 8 named slots per Show with a level (0–100%), a fade and an optional MIDI note (Go only). Every Hazer fades to the level times its max output, and sends its fan level while the output is above 0. **Haze Off** is built in and goes to 0 at once. Fire them from their note, from the Haze section in Perform (shown while the Venue Patch has Hazers) or from the Fallback Panel. They have no keys. The Venue Check lists Haze Presets when the Venue Patch has no Hazer.
+- Open Fixture Library and GDTF fog output and fan speed channels now import as haze and fan capabilities. Re-import a hazer's Profile to pick this up.
+- The Palette Show has four Haze Presets on notes E0–G0: Light, Medium, Heavy and Clear. The demo example has one on C2.
+
 ## [0.1.2] - 2026-11-12
 
 ### Added

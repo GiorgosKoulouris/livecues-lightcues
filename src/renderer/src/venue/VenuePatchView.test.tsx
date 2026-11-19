@@ -11,7 +11,9 @@ import {
   putFixture,
   putFixtures,
   putHouseGroup,
+  putHazer,
   putHouseLight,
+  removeHazers,
   putUniverse,
   removeFixtures,
   removeHouseGroup,
@@ -44,6 +46,28 @@ const par: FixtureProfile = {
   modes: [
     { name: '3ch', channels: channels(3) },
     { name: '6ch', channels: channels(6) },
+  ],
+};
+
+const haze: FixtureProfile = {
+  id: 'fos/haze',
+  manufacturer: 'Fos',
+  model: 'Haze',
+  defaultRole: 'Effect',
+  modes: [
+    {
+      name: '2ch',
+      channels: [
+        {
+          kind: 'control',
+          name: 'Haze',
+          defaultValue: 0,
+          ranges: [{ from: 0, to: 255, capability: { type: 'haze' } }],
+        },
+        { kind: 'control', name: 'Fan', defaultValue: 0, ranges: [] },
+      ],
+    },
+    { name: '1ch', channels: channels(1) },
   ],
 };
 
@@ -104,7 +128,15 @@ function answer(command: EngineCommand): EngineEvent[] {
     case 'getPlayback':
       return [playbackEvent()];
     case 'listProfiles':
-      return [{ type: 'profiles', entries: [{ profile: par, handEdited: false }] }];
+      return [
+        {
+          type: 'profiles',
+          entries: [
+            { profile: par, handEdited: false },
+            { profile: haze, handEdited: false },
+          ],
+        },
+      ];
     case 'editVenue': {
       const result = applied(patch, command.edit);
       if ('patch' in result) patch = result.patch;
@@ -159,6 +191,10 @@ function applied(current: VenuePatch, edit: VenueEdit): PatchResult {
       return setStartupLook(current, edit.look);
     case 'setHouseLook':
       return setHouseLook(current, edit.preset, edit.look);
+    case 'putHazer':
+      return putHazer(current, edit.hazer, edit.hazer.profileId === haze.id ? haze : par);
+    case 'removeHazers':
+      return { patch: removeHazers(current, edit.ids) };
   }
 }
 
@@ -835,6 +871,94 @@ describe('House', () => {
       screen.getByText('"Bar 2" (1.28–1.30) overlaps "Bar 1" (1.25–1.30)'),
     ).toBeInTheDocument();
     expect(edits()).toEqual([]);
+  });
+
+  describe('Hazers', () => {
+    it('adds a Hazer from a Profile with a haze channel, edits and removes it', async () => {
+      await openHouse();
+      const user = userEvent.setup();
+
+      await user.click(screen.getByRole('button', { name: 'Add Hazer' }));
+      const dialog = within(await screen.findByRole('dialog', { name: 'Add Hazer' }));
+      // Only the Profile with a haze channel, and only its haze mode.
+      expect(dialog.getByRole('combobox', { name: 'Profile' })).toHaveTextContent('Fos Haze');
+      expect(dialog.queryByRole('option', { name: /1ch/ })).toBeNull();
+      await user.click(dialog.getByRole('button', { name: 'Add' }));
+      expect(edits().at(-1)).toEqual({
+        type: 'putHazer',
+        hazer: expect.objectContaining({
+          name: 'Haze 1',
+          profileId: 'fos/haze',
+          mode: '2ch',
+          universe: 1,
+          address: 25,
+          maxOutput: 1,
+          fanLevel: 1,
+        }),
+      });
+
+      const max = await screen.findByRole('textbox', { name: 'Max output of Haze 1' });
+      await user.clear(max);
+      await user.type(max, '50');
+      expect(edits().at(-1)).toMatchObject({ type: 'putHazer', hazer: { maxOutput: 0.5 } });
+      const fan = screen.getByRole('textbox', { name: 'Fan level of Haze 1' });
+      await user.clear(fan);
+      await user.type(fan, '30');
+      expect(edits().at(-1)).toMatchObject({ type: 'putHazer', hazer: { fanLevel: 0.3 } });
+
+      await user.click(screen.getByRole('button', { name: 'Remove Haze 1' }));
+      expect(edits().at(-1)).toEqual({ type: 'removeHazers', ids: expect.any(Array) });
+      expect(await screen.findByRole('status')).toHaveTextContent('Removed Haze 1');
+    });
+
+    it('does not send an address that overlaps a Fixture', async () => {
+      patch = {
+        ...PATCH,
+        profiles: [par, haze],
+        hazers: [
+          {
+            ...{ id: 'z1', name: 'Haze 1', profileId: 'fos/haze', mode: '2ch' },
+            ...{ universe: 1, address: 100, maxOutput: 1, fanLevel: 1 },
+          },
+        ],
+      };
+      await openHouse();
+
+      await userEvent.type(
+        await screen.findByRole('textbox', { name: 'Address of Haze 1' }),
+        '{Control>}a{/Control}3',
+      );
+
+      expect(edits()).toEqual([]);
+    });
+  });
+
+  describe('Venue Check for Haze Presets', () => {
+    const hazePresets = {
+      layers: [],
+      scenes: [],
+      triggers: [],
+      hazePresets: [
+        { id: 'light', name: 'Light', level: 0.3, fade: 5 },
+        { id: 'heavy', name: 'Heavy', level: 0.9, fade: 5 },
+      ],
+    } satisfies Show;
+
+    it('lists the Haze Presets of the Show when the patch has no Hazer', async () => {
+      show = hazePresets;
+      await openHouse();
+
+      const hazers = within(await screen.findByRole('region', { name: 'Hazers' }));
+      expect(hazers.getByText('Not set up in this venue')).toBeInTheDocument();
+      expect(hazers.getByText(/Haze Presets Light, Heavy do nothing/)).toBeInTheDocument();
+    });
+
+    it('lists nothing when the Show has no Haze Preset', async () => {
+      await openHouse();
+
+      const hazers = within(await screen.findByRole('region', { name: 'Hazers' }));
+      expect(hazers.queryByText('Not set up in this venue')).toBeNull();
+    });
   });
 
   describe('house looks', () => {

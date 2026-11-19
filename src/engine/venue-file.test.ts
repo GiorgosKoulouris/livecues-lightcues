@@ -8,9 +8,11 @@ import {
   patchProfile,
   putFixture,
   putHouseGroup,
+  putHazer,
   putHouseLight,
   setHouseLook,
   setStartupLook,
+  type Hazer,
   type HouseLight,
   type PatchedFixture,
   type PatchResult,
@@ -101,7 +103,7 @@ describe('.lcvenue file', () => {
     const standing = fixture({ id: 'standing', profileId: 'acme/led-bar', address: 2, mounting });
     const saved = saveVenueFile(patch([hung, handMade], [standing, handMade]));
 
-    expect(JSON.parse(saved).version).toBe(3);
+    expect(JSON.parse(saved).version).toBe(4);
     expect(loadVenueFile(saved).fixtures).toEqual([hung, standing]);
   });
 
@@ -142,6 +144,70 @@ describe('.lcvenue file', () => {
 
     expect(patchHouse(opened)).toEqual(patchHouse(lit));
     expect(opened.profiles).toEqual([handMade]);
+  });
+
+  it('keeps the Hazers, saving version 4', () => {
+    const haze: FixtureProfile = {
+      ...handMade,
+      id: 'fos/haze',
+      modes: [
+        {
+          name: '1ch',
+          channels: [
+            {
+              kind: 'control',
+              name: 'Haze',
+              defaultValue: 0,
+              ranges: [{ from: 0, to: 255, capability: { type: 'haze' } }],
+            },
+          ],
+        },
+      ],
+    };
+    const hazer: Hazer = {
+      ...{ id: 'z1', name: 'Haze 1', profileId: 'fos/haze', mode: '1ch' },
+      ...{ universe: 1, address: 20, maxOutput: 0.5, fanLevel: 1 },
+    };
+    const hazy = ok(putHazer(patch(), hazer, haze));
+
+    const saved = saveVenueFile(hazy);
+
+    expect(JSON.parse(saved).version).toBe(4);
+    expect(loadVenueFile(saved).hazers).toEqual([hazer]);
+
+    // Max output and fan level are 1 when absent.
+    const bare = JSON.parse(saved);
+    delete bare.hazers[0].maxOutput;
+    delete bare.hazers[0].fanLevel;
+    expect(loadVenueFile(JSON.stringify(bare)).hazers).toEqual([
+      { ...hazer, maxOutput: 1, fanLevel: 1 },
+    ]);
+  });
+
+  it('opens a version 3 file with no Hazers', () => {
+    const v3 = { ...JSON.parse(saveVenueFile(patch())), version: 3 };
+
+    expect(loadVenueFile(JSON.stringify(v3)).hazers).toBeUndefined();
+  });
+
+  it('rejects a Hazer whose mode has no haze channel', () => {
+    const saved = JSON.parse(
+      saveVenueFile(patch([fixture({ profileId: 'acme/led-bar' }), handMade])),
+    );
+    saved.hazers = [
+      {
+        id: 'z1',
+        name: 'Z',
+        profileId: 'acme/led-bar',
+        mode: '1ch',
+        universe: 1,
+        address: 50,
+        maxOutput: 1,
+        fanLevel: 1,
+      },
+    ];
+
+    expect(() => loadVenueFile(JSON.stringify(saved))).toThrow('has no haze channel');
   });
 
   it('opens a version 2 file, which has no House', () => {

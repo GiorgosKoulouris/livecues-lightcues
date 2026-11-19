@@ -1,6 +1,12 @@
 import type { CSSProperties, ReactNode } from 'react';
-import type { HouseFired, TempoSource } from '../../../shared/protocol';
-import { beatsText, type HousePreset, type Scene, type Show } from '../../../shared/show';
+import type { HazeFired, HouseFired, TempoSource } from '../../../shared/protocol';
+import {
+  beatsText,
+  type HazePreset,
+  type HousePreset,
+  type Scene,
+  type Show,
+} from '../../../shared/show';
 import { isActive } from '../show/scenes';
 import type { PlaybackState } from '../show/usePlayback';
 import { Badge } from '../ui/Badge';
@@ -176,6 +182,50 @@ export function HousePresetButton({
       onClick={() => window.engine.send({ type: 'fireHousePreset', id: preset.id })}
     >
       <span className={styles.name}>{preset.name}</span> <Key>{housePresetKey(index)}</Key>
+    </Button>
+  );
+}
+
+// Takes every Hazer to 0 at once. It has no key. Pressed while it is the one
+// fired last, and at launch.
+export function HazeOffButton({
+  fired,
+  className,
+}: {
+  fired: HazeFired | undefined;
+  className?: string;
+}) {
+  return (
+    <Button
+      size="lg"
+      className={className}
+      aria-pressed={fired === undefined || fired.type === 'off'}
+      onClick={() => window.engine.send({ type: 'hazeOff' })}
+    >
+      <span className={styles.name}>Haze Off</span>
+    </Button>
+  );
+}
+
+// Fires a Haze Preset. It has no key. Pressed while it is the one fired last,
+// during its fade too.
+export function HazePresetButton({
+  preset,
+  fired,
+  className,
+}: {
+  preset: HazePreset;
+  fired: HazeFired | undefined;
+  className?: string;
+}) {
+  return (
+    <Button
+      size="lg"
+      className={className}
+      aria-pressed={fired?.type === 'preset' && fired.id === preset.id}
+      onClick={() => window.engine.send({ type: 'fireHazePreset', id: preset.id })}
+    >
+      <span className={styles.name}>{preset.name}</span>
     </Button>
   );
 }

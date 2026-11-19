@@ -12,14 +12,8 @@ import {
   type HouseSetting,
   type VenuePatch,
 } from '../shared/venue-patch';
-import {
-  blend,
-  clamp,
-  colourLevels,
-  lerp,
-  levelChannels,
-  type ColourLevels,
-} from './scene-resolution';
+import { crossfadeProgress, type Crossfade } from './crossfade';
+import { blend, colourLevels, lerp, levelChannels, type ColourLevels } from './scene-resolution';
 
 // What a House Group shows: intensity 0–1 and its colour's levels.
 export interface GroupLevel {
@@ -30,13 +24,9 @@ export interface GroupLevel {
 // Seconds the Startup look button crossfades over.
 const STARTUP_FADE_S = 2;
 
-// A House Group's crossfade from `from` to `setting`, started at `since`
-// (seconds), over `fade` seconds.
-interface GroupFade {
-  from: GroupLevel;
+// A House Group's crossfade to `setting`, whose level is `to`.
+interface GroupFade extends Crossfade<GroupLevel> {
   setting: HouseSetting;
-  since: number;
-  fade: number;
 }
 
 export interface HouseOptions {
@@ -84,7 +74,7 @@ export function createHouse({ patch, show, now, emit }: HouseOptions) {
     fades = new Map(
       Object.entries(look).map(([group, setting]) => [
         group,
-        { from: settingLevel(setting), setting, since: 0, fade: 0 },
+        { from: settingLevel(setting), to: settingLevel(setting), setting, since: 0, fade: 0 },
       ]),
     );
     record(last);
@@ -96,7 +86,7 @@ export function createHouse({ patch, show, now, emit }: HouseOptions) {
     fades = new Map(fades);
     for (const [group, setting] of Object.entries(look)) {
       const from = Object.hasOwn(current, group) ? current[group]! : WHITE_LEVEL;
-      fades.set(group, { from, setting, since, fade });
+      fades.set(group, { from, to: settingLevel(setting), setting, since, fade });
     }
     record(last);
   }
@@ -114,6 +104,13 @@ export function createHouse({ patch, show, now, emit }: HouseOptions) {
       const look = preset && houseLook(patch(), id);
       if (!preset || !look) return;
       crossfade(look, preset.fade, { type: 'preset', id });
+    },
+    // After the Show is edited: if the held House Preset is gone nothing is
+    // held any more. The look holds. A House Preset's look is in the Venue
+    // Patch, so other edits change nothing.
+    showEdited(): void {
+      if (fired.type !== 'preset' || findHousePreset(show(), fired.id)) return;
+      record({ type: 'none' });
     },
     // Crossfades to the Startup look, the Groups it does not set to full
     // white, over STARTUP_FADE_S.
@@ -152,9 +149,9 @@ function settingLevel({ intensity, colour }: HouseSetting): GroupLevel {
 }
 
 // What a Group fading as `fade` shows at `time` (seconds).
-function fadeLevel({ from, setting, since, fade }: GroupFade, time: number): GroupLevel {
-  const p = fade > 0 ? clamp((time - since) / fade) : 1;
-  const to = settingLevel(setting);
+function fadeLevel(fade: GroupFade, time: number): GroupLevel {
+  const { from, to } = fade;
+  const p = crossfadeProgress(fade, time);
   return {
     intensity: lerp(from.intensity, to.intensity, p),
     colour: blend(from.colour, to.colour, p),

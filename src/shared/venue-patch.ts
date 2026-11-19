@@ -5,7 +5,13 @@
 // Stage Left (the audience's right). y runs from the downstage edge, positive
 // upstage; y < 0 is in front of the stage. height is above the stage floor.
 import { colourProblems, inRange, type Colour } from './colour';
-import { ROLES, type FixtureMode, type FixtureProfile, type Role } from './fixture-profile';
+import {
+  ROLES,
+  modeHasHaze,
+  type FixtureMode,
+  type FixtureProfile,
+  type Role,
+} from './fixture-profile';
 
 export const ZONE_ROWS = ['Front', 'Downstage', 'Midstage', 'Upstage'] as const;
 export type ZoneRow = (typeof ZONE_ROWS)[number];
@@ -97,10 +103,10 @@ export const DEFAULT_MOUNTING: Mounting = {
   tiltOffset: 0,
 };
 
-// What stage Fixtures and House Lights both have: a Profile mode at an
+// What stage Fixtures, House Lights and Hazers all have: a Profile mode at an
 // address.
 export interface AddressedFixture {
-  // Unique in the patch, across stage Fixtures and House Lights.
+  // Unique in the patch, across stage Fixtures, House Lights and Hazers.
   id: string;
   name: string;
   // An embedded Profile and one of its modes.
@@ -155,6 +161,15 @@ export interface House {
   looks?: Record<string, HouseLook>;
 }
 
+// A haze machine. No stage position, Zone, Role or Mounting.
+export interface Hazer extends AddressedFixture {
+  // 0–1, scales every Haze Preset level. A file without it loads as 1.
+  maxOutput: number;
+  // 0–1, the fan channel's level while the output is above 0. A file without
+  // it loads as 1.
+  fanLevel: number;
+}
+
 export interface VenuePatch {
   stage: StageBounds;
   universes: Universe[];
@@ -164,6 +179,8 @@ export interface VenuePatch {
   profiles: FixtureProfile[];
   // Absent means no House Groups or House Lights.
   house?: House;
+  // Absent means no Hazers.
+  hazers?: Hazer[];
 }
 
 export type PatchResult = { patch: VenuePatch } | { errors: string[] };
@@ -275,13 +292,14 @@ export function fixturesInUniverse(patch: VenuePatch, number: number): PatchedFi
   return patch.fixtures.filter((f) => f.universe === number);
 }
 
-// The stage Fixtures and House Lights in a Universe.
+// The stage Fixtures, House Lights and Hazers in a Universe.
 export function addressedInUniverse(patch: VenuePatch, number: number): AddressedFixture[] {
   return addressedFixtures(patch).filter((f) => f.universe === number);
 }
 
-// Removes a Universe together with its Fixtures and House Lights.
+// Removes a Universe together with its Fixtures, House Lights and Hazers.
 export function removeUniverse(patch: VenuePatch, number: number): VenuePatch {
+  const hazers = patch.hazers?.filter((h) => h.universe !== number);
   const house = patch.house && {
     ...patch.house,
     lights: patch.house.lights.filter((l) => l.universe !== number),
@@ -291,6 +309,7 @@ export function removeUniverse(patch: VenuePatch, number: number): VenuePatch {
     universes: patch.universes.filter((u) => u.number !== number),
     fixtures: patch.fixtures.filter((f) => f.universe !== number),
     ...(house && { house }),
+    ...(hazers && { hazers }),
   });
 }
 
@@ -338,18 +357,36 @@ export function putHouseLight(
   light: HouseLight,
   profile?: FixtureProfile,
 ): PatchResult {
-  if (profile && profile.id !== light.profileId) {
+  const embedded = embedProfile(patch, light, profile);
+  if ('errors' in embedded) return embedded;
+  const house = patchHouse(patch);
+  const lights = putById(house.lights, light);
+  return validated(dropUnusedProfiles({ ...patch, ...embedded, house: { ...house, lights } }));
+}
+
+// The patch's Profiles with `profile` added for `fixture` unless the patch
+// already has a copy, or the errors when `profile` is not the Fixture's.
+function embedProfile(
+  patch: VenuePatch,
+  fixture: AddressedFixture,
+  profile?: FixtureProfile,
+): { profiles: FixtureProfile[] } | { errors: string[] } {
+  if (profile && profile.id !== fixture.profileId) {
     return {
-      errors: [`"${light.name}": Profile "${profile.id}" given for Profile "${light.profileId}"`],
+      errors: [
+        `"${fixture.name}": Profile "${profile.id}" given for Profile "${fixture.profileId}"`,
+      ],
     };
   }
-  const house = patchHouse(patch);
-  const lights = house.lights.some((l) => l.id === light.id)
-    ? house.lights.map((l) => (l.id === light.id ? light : l))
-    : [...house.lights, light];
-  const embeds = patch.profiles.some((p) => p.id === light.profileId);
-  const profiles = profile && !embeds ? [...patch.profiles, profile] : patch.profiles;
-  return validated(dropUnusedProfiles({ ...patch, profiles, house: { ...house, lights } }));
+  const embeds = patch.profiles.some((p) => p.id === fixture.profileId);
+  return { profiles: profile && !embeds ? [...patch.profiles, profile] : patch.profiles };
+}
+
+// `items` with `item` added at the end, or replacing the one with its id.
+function putById<T extends { id: string }>(items: T[], item: T): T[] {
+  return items.some((other) => other.id === item.id)
+    ? items.map((other) => (other.id === item.id ? item : other))
+    : [...items, item];
 }
 
 // Removes House Lights, and the Profile copies no one uses any more.
@@ -359,6 +396,28 @@ export function removeHouseLights(patch: VenuePatch, ids: string[]): VenuePatch 
     ...patch,
     house: { ...house, lights: house.lights.filter((l) => !ids.includes(l.id)) },
   });
+}
+
+// The patch's Hazers.
+export function patchHazers(patch: VenuePatch): Hazer[] {
+  return patch.hazers ?? [];
+}
+
+// Adds a Hazer, or replaces the one with the same id. Its Profile is embedded
+// as for a stage Fixture.
+export function putHazer(patch: VenuePatch, hazer: Hazer, profile?: FixtureProfile): PatchResult {
+  const embedded = embedProfile(patch, hazer, profile);
+  if ('errors' in embedded) return embedded;
+  const hazers = putById(patchHazers(patch), hazer);
+  return validated(dropUnusedProfiles({ ...patch, ...embedded, hazers }));
+}
+
+// Removes Hazers, and the Profile copies no one uses any more.
+export function removeHazers(patch: VenuePatch, ids: string[]): VenuePatch {
+  const hazers = patchHazers(patch).filter((h) => !ids.includes(h.id));
+  const next: VenuePatch = { ...patch, hazers };
+  if (hazers.length === 0) delete next.hazers;
+  return dropUnusedProfiles(next);
 }
 
 // Sets the house look sent from launch; undefined leaves the House Lights at
@@ -398,9 +457,9 @@ function withLooks(house: House, looks: (readonly [string, HouseLook])[]): House
   return next;
 }
 
-// The stage Fixtures and House Lights: everything with an address.
+// The stage Fixtures, House Lights and Hazers: everything with an address.
 export function addressedFixtures(patch: VenuePatch): AddressedFixture[] {
-  return [...patch.fixtures, ...patchHouse(patch).lights];
+  return [...patch.fixtures, ...patchHouse(patch).lights, ...patchHazers(patch)];
 }
 
 function dropUnusedProfiles(patch: VenuePatch): VenuePatch {
@@ -423,6 +482,7 @@ export function validatePatch(patch: VenuePatch): string[] {
   const problems = [
     ...patch.fixtures.map((f) => ({ fixture: f, problem: fixtureProblem(patch, f) })),
     ...patchHouse(patch).lights.map((l) => ({ fixture: l, problem: houseLightProblem(patch, l) })),
+    ...patchHazers(patch).map((h) => ({ fixture: h, problem: hazerProblem(patch, h) })),
   ];
   for (const { fixture, problem } of problems) {
     if (problem) {
@@ -525,6 +585,21 @@ function houseLightProblem(patch: VenuePatch, light: HouseLight): string | undef
     return `House Group "${light.group}" is not in the patch`;
   }
   return addressedProblem(patch, light);
+}
+
+function hazerProblem(patch: VenuePatch, hazer: Hazer): string | undefined {
+  const problem = addressedProblem(patch, hazer);
+  if (problem) return problem;
+  if (!modeHasHaze(fixtureMode(patch, hazer))) {
+    return `mode "${hazer.mode}" of Profile "${hazer.profileId}" has no haze channel`;
+  }
+  for (const [name, value] of [
+    ['Max output', hazer.maxOutput],
+    ['Fan level', hazer.fanLevel],
+  ] as const) {
+    if (!(value >= 0 && value <= 1)) return `${name} must be from 0 to 1`;
+  }
+  return undefined;
 }
 
 // Why a Fixture's Universe, Profile, mode or address is invalid, if one is.

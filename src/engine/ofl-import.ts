@@ -38,6 +38,9 @@ interface OflCapability {
   brightness?: string;
   brightnessStart?: string;
   brightnessEnd?: string;
+  fogOutput?: string;
+  fogOutputStart?: string;
+  fogOutputEnd?: string;
   switchChannels?: Record<string, string | null>;
 }
 
@@ -303,6 +306,7 @@ function importChannel(
   const context: CapabilityContext = {
     wheel: (wheelName) => fixture.wheels?.[wheelName ?? name],
     report: (feature) => report.add({ channel: name, feature, held: defaultByte(0) }),
+    hazer: fixture.categories.some((category) => category === 'Hazer' || category === 'Smoke'),
   };
   const oflCapabilities = channel.capabilities ?? [
     { ...channel.capability!, dmxRange: [0, 256 ** resolution - 1] },
@@ -331,6 +335,8 @@ interface CapabilityContext {
   wheel(name: string | undefined): { slots: OflWheelSlot[] } | undefined;
   // Reports a feature that was read only in part.
   report(feature: string): void;
+  // Whether the fixture is a Hazer or Smoke machine, whose Speed is a fan.
+  hazer: boolean;
 }
 
 function importCapability(cap: OflCapability, context: CapabilityContext): Capability {
@@ -410,6 +416,17 @@ function importCapability(cap: OflCapability, context: CapabilityContext): Capab
       return { type: 'panTiltSpeed', speed: relativeSpeed() };
     case 'WheelSlot':
       return importWheelSlot(cap, context);
+    case 'FogOutput':
+      return {
+        type: 'haze',
+        level: span(
+          pair(cap.fogOutputStart ?? cap.fogOutput, cap.fogOutputEnd ?? cap.fogOutput, fogOutput),
+          'fog output not in %',
+        ),
+      };
+    case 'Speed':
+      if (context.hazer) return { type: 'fan', level: relativeSpeed() };
+      break;
   }
   return unsupported(cap.type);
 }
@@ -481,6 +498,11 @@ function percent(value: string): number | undefined {
 function relative(value: string): number | undefined {
   const fraction = percent(value);
   return fraction !== undefined && fraction >= 0 && fraction <= 1 ? fraction : undefined;
+}
+
+// Fog output as a fraction of full output. Volumes per time have no fixed fraction.
+function fogOutput(value: string): number | undefined {
+  return value === 'off' ? 0 : percent(value);
 }
 
 function milliseconds(value: string): number | undefined {

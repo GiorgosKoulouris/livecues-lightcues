@@ -80,7 +80,8 @@
   color: var(--legend-dim);
 }
 
-.address {
+.address,
+.percent {
   width: var(--address-field-width);
 }
 

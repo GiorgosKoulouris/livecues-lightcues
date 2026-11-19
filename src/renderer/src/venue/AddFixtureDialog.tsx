@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { FixtureProfile } from '../../../shared/fixture-profile';
+import type { FixtureMode, FixtureProfile } from '../../../shared/fixture-profile';
 import {
   addressedFixtures,
   type AddressedFixture,
@@ -20,12 +20,14 @@ interface AddFixtureDialogProps {
   patch: VenuePatch;
   // The Profile Library's Profiles.
   profiles: FixtureProfile[];
+  // Offers only the modes it accepts, and the Profiles with one.
+  modeFilter?: (mode: FixtureMode) => boolean;
   // Resolves to whether the Fixture was added; the dialog stays open if not.
   // The caller places it: on the stage, or in a House Group.
   onAdd(fixture: AddressedFixture): Promise<boolean>;
 }
 
-// Patches a new Fixture or House Light: Profile, mode, Universe, name and
+// Patches a new Fixture, House Light or Hazer: Profile, mode, Universe, name and
 // address. The address starts after the Universe's last Fixture or House
 // Light.
 export function AddFixtureDialog({
@@ -45,6 +47,7 @@ export function AddFixtureDialog({
 function AddFixtureForm({
   patch,
   profiles,
+  modeFilter = () => true,
   onAdd,
   onCancel,
 }: Omit<AddFixtureDialogProps, 'title' | 'open' | 'onOpenChange'> & { onCancel(): void }) {
@@ -53,7 +56,7 @@ function AddFixtureForm({
   const choices = [
     ...patch.profiles,
     ...profiles.filter((p) => !patch.profiles.some((e) => e.id === p.id)),
-  ];
+  ].filter((p) => p.modes.some(modeFilter));
   const [id] = useState(() => crypto.randomUUID());
   const [profileId, setProfileId] = useState(choices[0]?.id);
   const [modeName, setModeName] = useState<string>();
@@ -62,7 +65,8 @@ function AddFixtureForm({
   const [typedName, setTypedName] = useState<string>();
   const [typedAddress, setTypedAddress] = useState<number>();
   const profile = choices.find((p) => p.id === profileId) ?? choices[0];
-  const mode = profile?.modes.find((m) => m.name === modeName) ?? profile?.modes[0];
+  const modes = profile?.modes.filter(modeFilter) ?? [];
+  const mode = modes.find((m) => m.name === modeName) ?? modes[0];
   // The patch as it would be with the Profile embedded, to check the address.
   const withProfile: VenuePatch =
     profile && !patch.profiles.includes(profile)
@@ -119,7 +123,7 @@ function AddFixtureForm({
       <Select
         label="Mode"
         value={base.mode}
-        options={modeOptions(profile)}
+        options={modeOptions({ ...profile, modes })}
         onChange={setModeName}
       />
       <InlineInput label="Name" edit={name} />

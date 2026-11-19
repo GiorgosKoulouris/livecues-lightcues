@@ -6,6 +6,14 @@
 import { colourProblems, inRange, type Colour } from './colour';
 import { ROLES, type Role } from './fixture-profile';
 import {
+  findListedOn,
+  listProblems,
+  moveListed,
+  presetProblems,
+  putListed,
+  removeListed,
+} from './preset-list';
+import {
   fixtureRole,
   fixtureZone,
   isZone,
@@ -189,6 +197,18 @@ export interface HousePreset {
   note?: MidiNote;
 }
 
+// A named slot every Hazer goes to (ADR 0018). Its note only does Go.
+export interface HazePreset {
+  // Unique in the Show.
+  id: string;
+  name: string;
+  // 0–1, scaled by each Hazer's max output.
+  level: number;
+  // Seconds to crossfade from the current output.
+  fade: number;
+  note?: MidiNote;
+}
+
 export interface Show {
   // In display order.
   layers: Layer[];
@@ -205,6 +225,9 @@ export interface Show {
   panelScenes?: string[];
   // In order, at most `MAX_HOUSE_PRESETS`. None when absent.
   housePresets?: HousePreset[];
+  // In order, at most `MAX_HAZE_PRESETS`. None when absent. Haze Off is built
+  // in and not listed.
+  hazePresets?: HazePreset[];
 }
 
 // The Fallback Panel's Scene buttons, one per shortcut key 1–9.
@@ -212,6 +235,10 @@ export const MAX_PANEL_SCENES = 9;
 
 // The House Preset slots, one per Fallback Panel shortcut Shift+1–8.
 export const MAX_HOUSE_PRESETS = 8;
+
+// The most Haze Presets: it limits the width of the button row in Perform and
+// on the Fallback Panel. Haze has no keys.
+export const MAX_HAZE_PRESETS = 8;
 
 export type ShowResult = { show: Show } | { errors: string[] };
 
@@ -278,8 +305,24 @@ export function removeTrigger(show: Show, note: MidiNote): Show {
   return { ...show, triggers: show.triggers.filter((t) => !sameNote(t, note)) };
 }
 
+// The two kinds of Preset list in a Show, by the Show's field. Their edits
+// share one shape (preset-list.ts).
+type PresetKey = 'housePresets' | 'hazePresets';
+type PresetOf<K extends PresetKey> = NonNullable<Show[K]>[number];
+
+function presetsOf<K extends PresetKey>(show: Show, key: K): PresetOf<K>[] {
+  return (show[key] ?? []) as PresetOf<K>[];
+}
+
+// The Show with the list replaced; without any left, the Show has no list.
+function withPresets<K extends PresetKey>(show: Show, key: K, list: PresetOf<K>[]): Show {
+  const next = { ...show };
+  delete next[key];
+  return list.length > 0 ? { ...next, [key]: list } : next;
+}
+
 export function showHousePresets(show: Show): HousePreset[] {
-  return show.housePresets ?? [];
+  return presetsOf(show, 'housePresets');
 }
 
 export function findHousePreset(show: Show, id: string): HousePreset | undefined {
@@ -288,30 +331,56 @@ export function findHousePreset(show: Show, id: string): HousePreset | undefined
 
 // The House Preset a channel and note fire, if any.
 export function findHousePresetOn(show: Show, note: MidiNote): HousePreset | undefined {
-  return showHousePresets(show).find((p) => p.note !== undefined && sameNote(p.note, note));
+  return findListedOn(showHousePresets(show), note);
 }
 
 // Adds a House Preset at the end, or replaces the one with the same id in
 // place.
 export function putHousePreset(show: Show, preset: HousePreset): ShowResult {
-  const presets = put(showHousePresets(show), preset, (p) => p.id === preset.id);
-  return validated({ ...show, housePresets: presets });
+  return validated({ ...show, housePresets: putListed(showHousePresets(show), preset) });
 }
 
 // Moves a House Preset to index `to`.
 export function moveHousePreset(show: Show, id: string, to: number): Show {
-  const presets = [...showHousePresets(show)];
-  const from = presets.findIndex((p) => p.id === id);
-  if (from < 0) return show;
-  presets.splice(to, 0, ...presets.splice(from, 1));
-  return { ...show, housePresets: presets };
+  const list = showHousePresets(show);
+  const moved = moveListed(list, id, to);
+  return moved === list ? show : { ...show, housePresets: moved };
 }
 
 // Removes a House Preset; without any left, the Show has no list.
 export function removeHousePreset(show: Show, id: string): Show {
-  const { housePresets, ...rest } = show;
-  const left = (housePresets ?? []).filter((p) => p.id !== id);
-  return left.length > 0 ? { ...rest, housePresets: left } : rest;
+  return withPresets(show, 'housePresets', removeListed(showHousePresets(show), id));
+}
+
+export function showHazePresets(show: Show): HazePreset[] {
+  return presetsOf(show, 'hazePresets');
+}
+
+export function findHazePreset(show: Show, id: string): HazePreset | undefined {
+  return showHazePresets(show).find((p) => p.id === id);
+}
+
+// The Haze Preset a channel and note fire, if any.
+export function findHazePresetOn(show: Show, note: MidiNote): HazePreset | undefined {
+  return findListedOn(showHazePresets(show), note);
+}
+
+// Adds a Haze Preset at the end, or replaces the one with the same id in
+// place.
+export function putHazePreset(show: Show, preset: HazePreset): ShowResult {
+  return validated({ ...show, hazePresets: putListed(showHazePresets(show), preset) });
+}
+
+// Moves a Haze Preset to index `to`.
+export function moveHazePreset(show: Show, id: string, to: number): Show {
+  const list = showHazePresets(show);
+  const moved = moveListed(list, id, to);
+  return moved === list ? show : { ...show, hazePresets: moved };
+}
+
+// Removes a Haze Preset; without any left, the Show has no list.
+export function removeHazePreset(show: Show, id: string): Show {
+  return withPresets(show, 'hazePresets', removeListed(showHazePresets(show), id));
 }
 
 // Designates a Scene as the Base Look; undefined leaves the Show without one.
@@ -395,6 +464,7 @@ export function validateShow(show: Show): string[] {
     errors.push(`Fallback Panel: ${problem}`);
   }
   errors.push(...housePresetErrors(show));
+  errors.push(...hazePresetErrors(show));
   return errors;
 }
 
@@ -437,8 +507,7 @@ function housePresetErrors(show: Show): string[] {
   for (const { id, name, fade, note } of presets) {
     const at = `House Preset "${name}": `;
     // Venue Patches key their house looks by the id.
-    if (typeof id !== 'string' || id === '') errors.push(`${at}id is missing`);
-    if (typeof name !== 'string' || name.trim() === '') errors.push(`${at}name is empty`);
+    errors.push(...presetProblems({ id, name }, at));
     if (!Number.isFinite(fade) || fade < 0) errors.push(`${at}fade must be 0 seconds or more`);
     if (note === undefined) continue;
     errors.push(...noteProblems(note).map((problem) => at + problem));
@@ -446,14 +515,32 @@ function housePresetErrors(show: Show): string[] {
       errors.push(`${at}note ${note.channel}/${note.note} is also a Trigger`);
     }
   }
-  for (const id of duplicates(presets.map((p) => p.id))) {
-    errors.push(`House Preset id "${id}" is used twice`);
+  errors.push(...listProblems('House Preset', presets, MAX_HOUSE_PRESETS));
+  return errors;
+}
+
+// A Haze Preset note may not also be a Trigger's or a House Preset's, so a
+// note does one thing.
+function hazePresetErrors(show: Show): string[] {
+  const presets = showHazePresets(show);
+  const errors: string[] = [];
+  for (const { id, name, level, fade, note } of presets) {
+    const at = `Haze Preset "${name}": `;
+    errors.push(...presetProblems({ id, name }, at));
+    if (!Number.isFinite(level) || level < 0 || level > 1) {
+      errors.push(`${at}level must be within 0–1`);
+    }
+    if (!Number.isFinite(fade) || fade < 0) errors.push(`${at}fade must be 0 seconds or more`);
+    if (note === undefined) continue;
+    errors.push(...noteProblems(note).map((problem) => at + problem));
+    if (findTrigger(show, note)) {
+      errors.push(`${at}note ${note.channel}/${note.note} is also a Trigger`);
+    }
+    if (findHousePresetOn(show, note)) {
+      errors.push(`${at}note ${note.channel}/${note.note} is also a House Preset`);
+    }
   }
-  const notes = presets.flatMap(({ note }) => (note ? [`${note.channel}/${note.note}`] : []));
-  for (const key of duplicates(notes)) errors.push(`House Preset note ${key} is used twice`);
-  if (presets.length > MAX_HOUSE_PRESETS) {
-    errors.push(`House Presets: at most ${MAX_HOUSE_PRESETS}`);
-  }
+  errors.push(...listProblems('Haze Preset', presets, MAX_HAZE_PRESETS));
   return errors;
 }
 

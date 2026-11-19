@@ -154,6 +154,34 @@ describe('engine MIDI Triggers', () => {
     expect(fired()).toEqual([{ type: 'house', fired: { type: 'preset', id: 'dim' } }]);
   });
 
+  it('fires a Haze Preset with its note, Go only, and holds it when the port is lost', async () => {
+    const { midi, edit, events, select, engine } = midiEngine();
+    midi.plug('Pads');
+    edit({
+      type: 'putHazePreset',
+      preset: { id: 'light', name: 'Light', level: 0.5, fade: 0, note: { channel: 2, note: 50 } },
+    });
+    select('Pads');
+    await vi.advanceTimersByTimeAsync(1000);
+    const fired = () => events.filter((e) => e.type === 'haze');
+    const before = fired().length;
+
+    midi.send('Pads', noteOn(2, 50));
+    midi.send('Pads', noteOff(2, 50));
+    midi.send('Pads', noteOn(2, 51));
+    expect(fired().slice(before)).toEqual([
+      { type: 'haze', fired: { type: 'preset', id: 'light' } },
+    ]);
+
+    midi.unplug('Pads');
+    await vi.advanceTimersByTimeAsync(1000);
+    engine.handle({ type: 'getHaze' });
+    expect(fired().slice(before)).toEqual([
+      { type: 'haze', fired: { type: 'preset', id: 'light' } },
+      { type: 'haze', fired: { type: 'preset', id: 'light' } },
+    ]);
+  });
+
   it('goes again with a Go Trigger on the active Scene, rather than toggling it off', async () => {
     const { midi, scenes, map, select, active } = midiEngine();
     midi.plug('Pads');

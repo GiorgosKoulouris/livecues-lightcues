@@ -1,12 +1,14 @@
 import { useId, useState } from 'react';
-import type { HouseFired } from '../../../shared/protocol';
-import { showHousePresets, type Show } from '../../../shared/show';
-import { patchHouse, type VenuePatch } from '../../../shared/venue-patch';
+import type { HazeFired, HouseFired } from '../../../shared/protocol';
+import { showHazePresets, showHousePresets, type Show } from '../../../shared/show';
+import { patchHazers, patchHouse, type VenuePatch } from '../../../shared/venue-patch';
 import {
   BaseLookButton,
   BlackoutButton,
   FreezeButton,
   GrandMasterFader,
+  HazeOffButton,
+  HazePresetButton,
   HousePresetButton,
   Key,
   SpeedLimitBadge,
@@ -34,14 +36,24 @@ interface PerformViewProps {
   playback: PlaybackState | undefined;
   tempo: TempoState | undefined;
   house: HouseFired | undefined;
+  haze: HazeFired | undefined;
 }
 
 // The gig view: Blackout, the Base Look, the Grand Master, Tap Tempo and Freeze along the top,
-// the House section while the Venue Patch has House Lights, every Scene as a
-// button grouped by Layer, each Layer with a small Clear, and the Preview with
+// the House section while the Venue Patch has House Lights, the Haze section
+// while it has Hazers, every Scene as a button grouped by Layer, each Layer
+// with a small Clear, and the Preview with
 // Monitor/Blind. Nothing is edited here. It replaces the Fallback Panel strip,
 // whose keys still work.
-export function PerformView({ active, show, patch, playback, tempo, house }: PerformViewProps) {
+export function PerformView({
+  active,
+  show,
+  patch,
+  playback,
+  tempo,
+  house,
+  haze,
+}: PerformViewProps) {
   // The Preview column, below 1280px where it is hidden by default.
   const [sideOpen, setSideOpen] = useState(false);
 
@@ -73,6 +85,7 @@ export function PerformView({ active, show, patch, playback, tempo, house }: Per
       <div className={styles.body}>
         <div className={styles.groups}>
           {patchHouse(patch).lights.length > 0 && <HouseSection show={show} fired={house} />}
+          {patchHazers(patch).length > 0 && <HazeSection show={show} fired={haze} />}
           {show.scenes.length === 0 ? (
             <p className={styles.empty}>No Scenes: add them in the Show view.</p>
           ) : (
@@ -129,6 +142,34 @@ function HouseSection({ show, fired }: { show: Show; fired: HouseFired | undefin
       </div>
       {presets.length === 0 && (
         <p className={styles.empty}>No House Presets: add them in the Show view.</p>
+      )}
+    </section>
+  );
+}
+
+// Haze Off and each Haze Preset, the one fired last pressed.
+function HazeSection({ show, fired }: { show: Show; fired: HazeFired | undefined }) {
+  const headingId = useId();
+  const presets = showHazePresets(show);
+
+  return (
+    <section aria-labelledby={headingId} className={styles.layer}>
+      <h3 id={headingId} className={styles.heading}>
+        Haze
+      </h3>
+      <div className={styles.scenes}>
+        <HazeOffButton fired={fired} className={styles.scene} />
+        {presets.map((preset) => (
+          <HazePresetButton
+            key={preset.id}
+            preset={preset}
+            fired={fired}
+            className={styles.scene}
+          />
+        ))}
+      </div>
+      {presets.length === 0 && (
+        <p className={styles.empty}>No Haze Presets: add them in the Show view.</p>
       )}
     </section>
   );

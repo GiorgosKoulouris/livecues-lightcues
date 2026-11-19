@@ -331,6 +331,16 @@ describe('capability fields', () => {
     expect(capabilityOf()).not.toHaveProperty('hz');
   });
 
+  it('edits a haze level and offers haze and fan', async () => {
+    const user = setup({ profile: control({ type: 'intensity' }) });
+    await user.selectOptions(screen.getByLabelText('Capability of channel 1 range 1'), 'haze');
+    expect(capabilityOf()).toMatchObject({ type: 'haze' });
+    await user.type(screen.getByLabelText('Level of channel 1 range 1, start'), '1');
+    expect(capabilityOf()).toMatchObject({ type: 'haze', level: [1, 1] });
+    await user.selectOptions(screen.getByLabelText('Capability of channel 1 range 1'), 'fan');
+    expect(capabilityOf()).toMatchObject({ type: 'fan' });
+  });
+
   it('edits an emitter', async () => {
     const user = setup({ profile: control({ type: 'emitter', emitter: 'red' }) });
     await user.selectOptions(screen.getByLabelText('Emitter of channel 1 range 1'), 'green');

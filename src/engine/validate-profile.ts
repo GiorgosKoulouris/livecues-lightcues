@@ -1,9 +1,10 @@
-import type {
-  Capability,
-  Channel,
-  FixtureMode,
-  FixtureProfile,
-  Span,
+import {
+  isHazeOrFan,
+  type Capability,
+  type Channel,
+  type FixtureMode,
+  type FixtureProfile,
+  type Span,
 } from '../shared/fixture-profile';
 
 // Checks a hand-made or edited Profile before it enters the Profile Library.
@@ -83,6 +84,9 @@ function validateCapability(capability: Capability): string[] {
     if (span != null && !isSpan(span)) {
       return [`${capability.type} ${field} must be two finite numbers`];
     }
+  }
+  if (isHazeOrFan(capability) && capability.level?.some((l) => l < 0 || l > 1)) {
+    return [`${capability.type} level must be within 0–1`];
   }
   if (capability.type === 'panTiltSpeed' && capability.speed?.some((s) => s < 0 || s > 1)) {
     return ['panTiltSpeed speed must be within 0–1'];

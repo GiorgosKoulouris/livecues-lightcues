@@ -1,0 +1,21 @@
+.note {
+  --channel-width: 64px;
+  --note-width: 80px;
+
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.channel {
+  width: var(--channel-width);
+}
+
+.noteNumber {
+  width: var(--note-width);
+}
+
+.none {
+  align-self: center;
+  color: var(--legend-dim);
+}

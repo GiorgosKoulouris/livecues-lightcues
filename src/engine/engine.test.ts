@@ -256,6 +256,7 @@ describe('engine Venue Patch', () => {
         canRedo: false,
       },
       { type: 'house', fired: { type: 'startup' } },
+      { type: 'haze', fired: { type: 'off' } },
       { type: 'venueDone', requestId: 1, errors: [] },
     ]);
   });
@@ -353,6 +354,91 @@ describe('engine Venue Patch undo', () => {
     redo();
     expect(venue().patch.fixtures).toEqual([]);
     expect(venue()).toMatchObject({ canRedo: false });
+  });
+});
+
+describe('engine Hazers', () => {
+  const haze: FixtureProfile = {
+    id: 'fos/haze',
+    manufacturer: 'Fos',
+    model: 'Haze',
+    defaultRole: 'Effect',
+    modes: [
+      {
+        name: '1ch',
+        channels: [
+          {
+            kind: 'control',
+            name: 'Haze',
+            defaultValue: 0,
+            ranges: [{ from: 0, to: 255, capability: { type: 'haze' } }],
+          },
+        ],
+      },
+    ],
+  };
+  const hazer = {
+    ...{ id: 'z1', name: 'Haze 1', profileId: 'fos/haze', mode: '1ch' },
+    ...{ universe: 1, address: 207, maxOutput: 1, fanLevel: 1 },
+  };
+  const setup = () => {
+    const files = new Map<string, string>();
+    const engine = venueEngine(files);
+    engine.engine.handle({ type: 'saveProfile', requestId: 0, profile: haze });
+    return { ...engine, files };
+  };
+
+  it('adds a Hazer with a copy of its Profile from the library', () => {
+    const { edit, patch } = setup();
+
+    expect(edit({ type: 'putHazer', hazer })).toEqual([]);
+
+    expect(patch()).toMatchObject({ profiles: [haze], hazers: [hazer] });
+  });
+
+  it('rejects overlaps and a mode with no haze channel', () => {
+    const { edit } = setup();
+    edit({ type: 'putFixture', fixture: fixture({ address: 207 }) });
+
+    expect(edit({ type: 'putHazer', hazer })).toEqual([
+      '"Haze 1" (1.207–1.207) overlaps "Dimmer 1" (1.207–1.207)',
+    ]);
+    expect(
+      edit({ type: 'putHazer', hazer: { ...hazer, profileId: 'acme/dimmer', mode: '1ch' } }),
+    ).toEqual(['"Haze 1": mode "1ch" of Profile "acme/dimmer" has no haze channel']);
+  });
+
+  it('edits and removes a Hazer, each undoable', () => {
+    const { edit, patch, undo, redo } = setup();
+    edit({ type: 'putHazer', hazer });
+    edit({ type: 'putHazer', hazer: { ...hazer, maxOutput: 0.5 } });
+    undo();
+    expect(patch().hazers).toEqual([hazer]);
+    redo();
+    expect(patch().hazers).toEqual([{ ...hazer, maxOutput: 0.5 }]);
+
+    expect(edit({ type: 'removeHazers', ids: ['z1'] })).toEqual([]);
+    expect(patch()).toMatchObject({ profiles: [] });
+    expect(patch().hazers).toBeUndefined();
+    undo();
+    expect(patch().hazers).toEqual([{ ...hazer, maxOutput: 0.5 }]);
+  });
+
+  it('rejects removing a Hazer that is not in the patch', () => {
+    expect(setup().edit({ type: 'removeHazers', ids: ['z1'] })).toEqual([
+      'Hazer id "z1" is not in the patch',
+    ]);
+  });
+
+  it('saves and opens a Hazer', () => {
+    const { edit, save, files, patch } = setup();
+    edit({ type: 'putHazer', hazer });
+    expect(save('/venues/a.lcvenue')).toEqual([]);
+
+    const other = venueEngine(files);
+    expect(other.open('/venues/a.lcvenue')).toEqual([]);
+    expect(other.patch().hazers).toEqual([hazer]);
+    void patch;
   });
 });
 
@@ -746,6 +832,56 @@ describe('engine House Presets', () => {
 
     undo();
     expect(show().show.housePresets).toEqual([dim]);
+  });
+});
+
+describe('engine Haze Presets', () => {
+  const light = { id: 'light', name: 'Light', level: 0.3, fade: 3 };
+  const heavy = { id: 'heavy', name: 'Heavy', level: 0.9, fade: 5 };
+
+  it('adds, edits, reorders and removes Haze Presets, each undoable', () => {
+    const { edit, undo, show } = showEngine();
+    edit({ type: 'putHazePreset', preset: light });
+    edit({ type: 'putHazePreset', preset: heavy });
+    edit({ type: 'putHazePreset', preset: { ...light, name: 'Mist' } });
+    edit({ type: 'moveHazePreset', id: 'heavy', to: 0 });
+    edit({ type: 'removeHazePreset', id: 'light' });
+    expect(show().show.hazePresets).toEqual([heavy]);
+
+    undo();
+    expect(show().show.hazePresets).toEqual([heavy, { ...light, name: 'Mist' }]);
+    undo();
+    expect(show().show.hazePresets?.map((p) => p.id)).toEqual(['light', 'heavy']);
+    undo();
+    expect(show().show.hazePresets).toEqual([light, heavy]);
+  });
+
+  it('rejects moving or removing a Haze Preset the Show does not have, or moving out of the list', () => {
+    const { edit } = showEngine();
+    edit({ type: 'putHazePreset', preset: light });
+
+    expect(edit({ type: 'removeHazePreset', id: 'heavy' })).toEqual([
+      'Haze Preset id "heavy" is not in the Show',
+    ]);
+    expect(edit({ type: 'moveHazePreset', id: 'heavy', to: 0 })).toEqual([
+      'Haze Preset id "heavy" is not in the Show',
+    ]);
+    expect(edit({ type: 'moveHazePreset', id: 'light', to: 1 })).toEqual([
+      'Haze Preset position 1 is not in the list',
+    ]);
+  });
+
+  it('undoes quick edits to the same Haze Preset as one step', () => {
+    const clock = { now: 0 };
+    const { edit, undo, show } = showEngine(undefined, clock);
+    edit({ type: 'putHazePreset', preset: light });
+    for (const level of [0.4, 0.5, 0.6]) {
+      clock.now += 400;
+      edit({ type: 'putHazePreset', preset: { ...light, level } });
+    }
+
+    undo();
+    expect(show().show.hazePresets).toEqual([light]);
   });
 });
 

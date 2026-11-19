@@ -3,6 +3,7 @@ import type { Capability, Channel, FixtureProfile } from './fixture-profile';
 import type { Rule, Show } from './show';
 import {
   DEFAULT_MOUNTING,
+  type Hazer,
   type HouseLook,
   type PatchedFixture,
   type VenuePatch,
@@ -10,6 +11,7 @@ import {
 import {
   approximatedAims,
   approximatedStrobes,
+  hazePresetsWithoutHazers,
   lookPresetsNotInShow,
   unsetHousePresets,
 } from './venue-check';
@@ -265,5 +267,27 @@ describe('unsetHousePresets', () => {
       'old',
     ]);
     expect(lookPresetsNotInShow(show([]), patch())).toEqual([]);
+  });
+});
+
+describe('hazePresetsWithoutHazers', () => {
+  const light = { id: 'light', name: 'Light', level: 0.3, fade: 2 };
+  const heavy = { id: 'heavy', name: 'Heavy', level: 0.9, fade: 5 };
+  const hazer: Hazer = {
+    ...{ id: 'h', name: 'Haze', profileId: 'test/haze', mode: 'mode' },
+    ...{ universe: 1, address: 100, maxOutput: 1, fanLevel: 1 },
+  };
+
+  it('lists every Haze Preset, in Show order, when the Venue Patch has no Hazer', () => {
+    const presets = show([], { hazePresets: [light, heavy] });
+
+    expect(hazePresetsWithoutHazers(presets, patch())).toEqual([light, heavy]);
+  });
+
+  it('lists none when the Venue Patch has a Hazer, or the Show has no Haze Preset', () => {
+    const presets = show([], { hazePresets: [light, heavy] });
+
+    expect(hazePresetsWithoutHazers(presets, { ...patch(), hazers: [hazer] })).toEqual([]);
+    expect(hazePresetsWithoutHazers(show([]), patch())).toEqual([]);
   });
 });

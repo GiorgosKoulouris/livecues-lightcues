@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { HouseFired } from '../../../shared/protocol';
+import type { HazeFired, HouseFired } from '../../../shared/protocol';
 import type { Scene, Show } from '../../../shared/show';
 import { emptyPatch, type VenuePatch } from '../../../shared/venue-patch';
 import type { TempoState } from '../panel/useTempo';
@@ -67,7 +67,8 @@ function renderView(
   {
     patch = emptyPatch({ width: 10, depth: 6 }),
     house,
-  }: { patch?: VenuePatch; house?: HouseFired } = {},
+    haze,
+  }: { patch?: VenuePatch; house?: HouseFired; haze?: HazeFired } = {},
 ) {
   render(
     <UiProvider>
@@ -78,6 +79,7 @@ function renderView(
         playback={playback}
         tempo={TEMPO}
         house={house}
+        haze={haze}
       />
     </UiProvider>,
   );
@@ -283,5 +285,60 @@ describe('PerformView House', () => {
     renderView(HOUSE_SHOW);
 
     expect(screen.queryByRole('region', { name: 'House' })).toBeNull();
+  });
+});
+
+describe('PerformView Haze', () => {
+  const SHOW_WITH_HAZE: Show = {
+    ...SHOW,
+    hazePresets: [
+      { id: 'light', name: 'Light haze', level: 0.3, fade: 5 },
+      { id: 'thick', name: 'Thick haze', level: 0.8, fade: 2 },
+    ],
+  };
+  const HAZE_PATCH: VenuePatch = {
+    ...emptyPatch({ width: 10, depth: 6 }),
+    hazers: [
+      {
+        ...{ id: 'z1', name: 'Haze 1', profileId: 'fos/haze', mode: '1ch' },
+        ...{ universe: 1, address: 20, maxOutput: 1, fanLevel: 1 },
+      },
+    ],
+  };
+  const haze = () => screen.getByRole('region', { name: 'Haze' });
+
+  it('shows Haze Off and each Haze Preset with no key, the last fired pressed', () => {
+    renderView(SHOW_WITH_HAZE, PLAYBACK, true, {
+      patch: HAZE_PATCH,
+      haze: { type: 'preset', id: 'light' },
+    });
+
+    const buttons = within(haze()).getAllByRole('button');
+    expect(buttons.map((b) => b.textContent)).toEqual(['Haze Off', 'Light haze', 'Thick haze']);
+    expect(buttons.map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'true', 'false']);
+  });
+
+  it('fires a Haze Preset and Haze Off', async () => {
+    renderView(SHOW_WITH_HAZE, PLAYBACK, true, { patch: HAZE_PATCH });
+
+    await userEvent.click(within(haze()).getByRole('button', { name: /Thick haze/ }));
+    await userEvent.click(within(haze()).getByRole('button', { name: /Haze Off/ }));
+
+    expect(engine.sent.filter((c) => c.type !== 'startPreview')).toEqual([
+      { type: 'fireHazePreset', id: 'thick' },
+      { type: 'hazeOff' },
+    ]);
+  });
+
+  it('says where to add Haze Presets when the Show has none', () => {
+    renderView(SHOW, PLAYBACK, true, { patch: HAZE_PATCH });
+
+    expect(within(haze()).getByText('No Haze Presets: add them in the Show view.')).toBeVisible();
+  });
+
+  it('leaves the Haze section out with no Hazers, even with Haze Presets', () => {
+    renderView(SHOW_WITH_HAZE);
+
+    expect(screen.queryByRole('region', { name: 'Haze' })).toBeNull();
   });
 });

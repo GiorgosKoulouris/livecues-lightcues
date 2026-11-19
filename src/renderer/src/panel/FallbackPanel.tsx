@@ -1,5 +1,5 @@
-import type { HouseFired } from '../../../shared/protocol';
-import { showHousePresets, type Show } from '../../../shared/show';
+import type { HazeFired, HouseFired } from '../../../shared/protocol';
+import { showHazePresets, showHousePresets, type Show } from '../../../shared/show';
 import { isActive } from '../show/scenes';
 import type { PlaybackState } from '../show/usePlayback';
 import { Button } from '../ui/Button';
@@ -8,6 +8,8 @@ import {
   BlackoutButton,
   FreezeButton,
   GrandMasterFader,
+  HazeOffButton,
+  HazePresetButton,
   HousePresetButton,
   Key,
   SpeedLimitBadge,
@@ -22,13 +24,15 @@ interface FallbackPanelProps {
   playback: PlaybackState | undefined;
   tempo: TempoState | undefined;
   house: HouseFired | undefined;
+  haze: HazeFired | undefined;
 }
 
 // Manual control that needs no MIDI: Blackout, the Base Look, the Grand
 // Master, Tap Tempo, Freeze, the Show's Scene buttons and its House Presets,
-// each showing its keyboard shortcut (`usePanelKeys`). Docked as a strip below
+// each showing its keyboard shortcut (`usePanelKeys`), then Haze Off and the
+// Haze Presets, which have none. Docked as a strip below
 // every view but Perform. Blackout's key is sunk while it is on.
-export function FallbackPanel({ show, playback, tempo, house }: FallbackPanelProps) {
+export function FallbackPanel({ show, playback, tempo, house, haze }: FallbackPanelProps) {
   if (!show || !playback) {
     return (
       <section aria-label="Fallback Panel" className={styles.strip}>
@@ -40,6 +44,7 @@ export function FallbackPanel({ show, playback, tempo, house }: FallbackPanelPro
     (id) => show.scenes.find((s) => s.id === id) ?? [],
   );
   const housePresets = showHousePresets(show);
+  const hazePresets = showHazePresets(show);
 
   return (
     <section aria-label="Fallback Panel" className={styles.strip}>
@@ -66,9 +71,17 @@ export function FallbackPanel({ show, playback, tempo, house }: FallbackPanelPro
         )}
       </div>
       {housePresets.length > 0 && (
-        <div className={styles.housePresets} role="group" aria-label="House Preset buttons">
+        <div className={styles.presets} role="group" aria-label="House Preset buttons">
           {housePresets.map((preset, i) => (
             <HousePresetButton key={preset.id} preset={preset} index={i} fired={house} />
+          ))}
+        </div>
+      )}
+      {hazePresets.length > 0 && (
+        <div className={styles.presets} role="group" aria-label="Haze Preset buttons">
+          <HazeOffButton fired={haze} />
+          {hazePresets.map((preset) => (
+            <HazePresetButton key={preset.id} preset={preset} fired={haze} />
           ))}
         </div>
       )}

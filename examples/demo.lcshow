@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "layers": [
     {
       "id": "looks",
@@ -421,5 +421,17 @@
     "blinder-hit",
     "circle",
     "outro"
+  ],
+  "hazePresets": [
+    {
+      "id": "light-haze",
+      "name": "Light haze",
+      "level": 0.3,
+      "fade": 2,
+      "note": {
+        "channel": 1,
+        "note": 36
+      }
+    }
   ]
 }

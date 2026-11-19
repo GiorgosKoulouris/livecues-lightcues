@@ -9,10 +9,11 @@ import {
   type LibraryImportResult,
   type RestoreResult,
 } from '../shared/protocol';
-import { findHousePresetOn, findTrigger, validateShow } from '../shared/show';
+import { findHazePresetOn, findHousePresetOn, findTrigger, validateShow } from '../shared/show';
 import { validatePatch } from '../shared/venue-patch';
 import { profileName } from '../shared/profile-edit';
 import { createChannelMonitor } from './channel-monitor';
+import { createHaze } from './haze';
 import { createHouse } from './house';
 import { withoutContents } from './log-safe';
 import {
@@ -154,6 +155,7 @@ export function createEngine({
     replaced: () => {
       playback.venueReplaced();
       house.venueReplaced();
+      haze.reset();
     },
     files: venueFiles,
     recent: recentFiles.of('venue'),
@@ -166,8 +168,15 @@ export function createEngine({
     files: showFiles,
     recent: recentFiles.of('show'),
     granted: grants.has,
-    edited: () => playback.showEdited(),
-    replaced: () => playback.showReplaced(),
+    edited: () => {
+      playback.showEdited();
+      house.showEdited();
+      haze.showEdited();
+    },
+    replaced: () => {
+      playback.showReplaced();
+      haze.reset();
+    },
   });
   const tempo = createTempo({ now, emit });
   const playback = createPlayback({
@@ -179,13 +188,14 @@ export function createEngine({
     patch: venue.patch,
   });
   const house = createHouse({ patch: venue.patch, show: show.show, now, emit });
+  const haze = createHaze({ patch: venue.patch, show: show.show, now, emit });
   const outputs =
     serialPorts &&
     createOutputs({
       ports: serialPorts,
       emit,
       universes: () => venue.patch().universes,
-      frames: () => house.frames(playback.frames()),
+      frames: () => haze.frames(house.frames(playback.frames())),
     });
 
   const preview = createPreview({ emit, lights: () => playback.lights() });
@@ -212,10 +222,12 @@ export function createEngine({
       return;
     }
     const trigger = findTrigger(show.show(), note);
-    // A House Preset's note only does Go.
+    // A House Preset's or Haze Preset's note only does Go.
     const preset = findHousePresetOn(show.show(), note);
+    const hazePreset = findHazePresetOn(show.show(), note);
     if (trigger) playback.fire(trigger);
     else if (preset) house.fire(preset.id);
+    else if (hazePreset) haze.fire(hazePreset.id);
   }
 
   function libraryChanged(): void {
@@ -363,6 +375,7 @@ export function createEngine({
     venue.restore(patched);
     show.restore(shown);
     house.venueReplaced();
+    haze.reset();
   }
 
   function resolveOnce(): void {
@@ -507,6 +520,15 @@ export function createEngine({
           break;
         case 'goStartupLook':
           house.goStartupLook();
+          break;
+        case 'getHaze':
+          haze.emitHaze();
+          break;
+        case 'fireHazePreset':
+          haze.fire(command.id);
+          break;
+        case 'hazeOff':
+          haze.off();
           break;
       }
     },

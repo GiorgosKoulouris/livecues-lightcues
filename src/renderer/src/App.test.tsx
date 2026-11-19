@@ -24,6 +24,7 @@ const SHOW: Show = {
   triggers: [],
   panelScenes: ['warm'],
   housePresets: [{ id: 'dim', name: 'Show dim', fade: 3 }],
+  hazePresets: [{ id: 'light', name: 'Light haze', level: 0.3, fade: 5 }],
 };
 
 const playback = (more: Partial<Extract<EngineEvent, { type: 'playback' }>> = {}): EngineEvent => ({
@@ -65,6 +66,8 @@ function answer(command: EngineCommand): EngineEvent[] {
       return [playback()];
     case 'getHouse':
       return [{ type: 'house', fired: { type: 'startup' } }];
+    case 'getHaze':
+      return [{ type: 'haze', fired: { type: 'off' } }];
     case 'getTempo':
       return [{ type: 'tempo', bpm: 120, source: 'default' }];
     case 'listMidiInputs':
@@ -216,6 +219,27 @@ describe('App shortcuts', () => {
     expect(dim).toHaveAttribute('aria-pressed', 'true');
     expect(currentView()).toHaveTextContent('Venue Patch');
     expect(panelCommands()).toEqual([]);
+  });
+
+  it('fires a Haze Preset from its button in any view, presses the one the engine reports, and has no Haze keys', async () => {
+    await renderApp();
+    const light = screen.getByRole('button', { name: /Light haze/ });
+    expect(screen.getByRole('button', { name: /Haze Off/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+
+    await userEvent.keyboard('{Alt>}1{/Alt}');
+    await userEvent.keyboard('{Alt>}0{/Alt}');
+    expect(engine.sent.filter((c) => c.type === 'fireHazePreset' || c.type === 'hazeOff')).toEqual(
+      [],
+    );
+
+    await userEvent.click(light);
+    expect(engine.sent.at(-1)).toEqual({ type: 'fireHazePreset', id: 'light' });
+    engine.emit({ type: 'haze', fired: { type: 'preset', id: 'light' } });
+    expect(light).toHaveAttribute('aria-pressed', 'true');
+    expect(currentView()).toHaveTextContent('Venue Patch');
   });
 
   it('fires the Scene button on a bare digit without switching view', async () => {

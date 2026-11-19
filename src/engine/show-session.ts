@@ -1,13 +1,17 @@
 import type { DocumentSnapshot, EngineCommand, EngineEvent, ShowEdit } from '../shared/protocol';
 import {
   emptyShow,
+  findHazePreset,
   findHousePreset,
   findTrigger,
+  moveHazePreset,
   moveHousePreset,
+  putHazePreset,
   putHousePreset,
   putLayer,
   putScene,
   putTrigger,
+  removeHazePreset,
   removeHousePreset,
   removeLayer,
   removeScene,
@@ -16,11 +20,13 @@ import {
   setDefaultColour,
   setDefaultDirection,
   setPanelScenes,
+  showHazePresets,
   showHousePresets,
   type Rule,
   type Show,
   type ShowResult,
 } from '../shared/show';
+import { editProblem } from '../shared/preset-list';
 import { createHistory } from './history';
 import { NOT_CHOSEN } from './path-grants';
 import type { RecentFile } from './recent-files';
@@ -152,20 +158,27 @@ export function createShowSession({
       case 'putHousePreset':
         return putHousePreset(show, change.preset);
       case 'moveHousePreset': {
-        const presets = showHousePresets(show);
-        if (!findHousePreset(show, change.id)) {
-          return { errors: [`House Preset id "${change.id}" is not in the Show`] };
-        }
-        if (!Number.isInteger(change.to) || change.to < 0 || change.to >= presets.length) {
-          return { errors: [`House Preset position ${change.to} is not in the list`] };
-        }
-        return { show: moveHousePreset(show, change.id, change.to) };
+        const problem = editProblem('House Preset', showHousePresets(show), change.id, change.to);
+        return problem
+          ? { errors: [problem] }
+          : { show: moveHousePreset(show, change.id, change.to) };
       }
-      case 'removeHousePreset':
-        if (!findHousePreset(show, change.id)) {
-          return { errors: [`House Preset id "${change.id}" is not in the Show`] };
-        }
-        return { show: removeHousePreset(show, change.id) };
+      case 'removeHousePreset': {
+        const problem = editProblem('House Preset', showHousePresets(show), change.id);
+        return problem ? { errors: [problem] } : { show: removeHousePreset(show, change.id) };
+      }
+      case 'putHazePreset':
+        return putHazePreset(show, change.preset);
+      case 'moveHazePreset': {
+        const problem = editProblem('Haze Preset', showHazePresets(show), change.id, change.to);
+        return problem
+          ? { errors: [problem] }
+          : { show: moveHazePreset(show, change.id, change.to) };
+      }
+      case 'removeHazePreset': {
+        const problem = editProblem('Haze Preset', showHazePresets(show), change.id);
+        return problem ? { errors: [problem] } : { show: removeHazePreset(show, change.id) };
+      }
     }
   }
 
@@ -236,7 +249,7 @@ export function createShowSession({
 }
 
 // What an edit changes, for merging quick edits into one undo step: an
-// existing Scene, Layer, Trigger or House Preset, or the Default Colour.
+// existing Scene, Layer, Trigger, House Preset or Haze Preset, or the Default Colour.
 // Adding and removing never merge, nor do adding, removing or reordering
 // Rules.
 function mergeKey(show: Show, change: ShowEdit): string | undefined {
@@ -257,6 +270,10 @@ function mergeKey(show: Show, change: ShowEdit): string | undefined {
     case 'putHousePreset': {
       const { id } = change.preset;
       return findHousePreset(show, id) ? `housePreset ${id}` : undefined;
+    }
+    case 'putHazePreset': {
+      const { id } = change.preset;
+      return findHazePreset(show, id) ? `hazePreset ${id}` : undefined;
     }
     case 'setDefaultColour':
       return 'defaultColour';

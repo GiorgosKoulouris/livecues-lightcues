@@ -622,6 +622,8 @@ function importCapability(channelFunction: GdtfChannelFunction): Capability {
   if (emitter) return { type: 'emitter', emitter };
   if (SHUTTER.test(attribute)) return shutter(channelFunction);
   if (STROBE.test(attribute)) return { type: 'strobe', hz: physical() };
+  if (HAZE.test(attribute)) return { type: 'haze' };
+  if (FAN.test(attribute)) return { type: 'fan' };
   switch (attribute) {
     case 'NoFeature':
       return { type: 'none' };
@@ -634,6 +636,11 @@ function importCapability(channelFunction: GdtfChannelFunction): Capability {
   }
   return unsupported(attribute);
 }
+
+// Fog1, Haze1; not FogType1.
+const HAZE = /^(Fog|Haze)\d*$/;
+// Fan1, Fans; not FanMode1. Blower stays unsupported: it is ambiguous.
+const FAN = /^Fans?\d*$/;
 
 const SHUTTER = /^Shutter\d+$/;
 // Color1, Color2, ...; not Color1WheelSpin and the like.

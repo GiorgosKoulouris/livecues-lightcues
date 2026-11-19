@@ -2,6 +2,7 @@ import { Plus, Radio, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import type { MidiInputStatus } from '../../../shared/protocol';
 import {
+  findHazePresetOn,
   findHousePresetOn,
   findTrigger,
   TRIGGER_MODES,
@@ -157,6 +158,7 @@ function NewTrigger({
 
   const mapped = findTrigger(show, { channel, note });
   const house = findHousePresetOn(show, { channel, note });
+  const haze = findHazePresetOn(show, { channel, note });
   const sceneId = show.scenes.some((s) => s.id === scene) ? scene : show.scenes[0]?.id;
 
   return (
@@ -190,7 +192,7 @@ function NewTrigger({
         variant="primary"
         icon={<Plus />}
         className={styles.map}
-        disabled={sceneId === undefined || house !== undefined}
+        disabled={sceneId === undefined || house !== undefined || haze !== undefined}
         onClick={() => {
           if (sceneId !== undefined) onPut({ channel, note, scene: sceneId, mode });
         }}
@@ -203,6 +205,11 @@ function NewTrigger({
       {house && (
         <span className={styles.clash}>
           This is the note of House Preset {house.name}. Change it there first.
+        </span>
+      )}
+      {haze && (
+        <span className={styles.clash}>
+          This is the note of Haze Preset {haze.name}. Change it there first.
         </span>
       )}
     </section>

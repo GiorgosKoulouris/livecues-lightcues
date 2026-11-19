@@ -18,7 +18,7 @@
 
 /* Scrolls sideways rather than wrapping, so the strip keeps its height. */
 .scenes,
-.housePresets {
+.presets {
   display: flex;
   gap: var(--space-2);
   min-width: 0;
@@ -26,7 +26,7 @@
 }
 
 /* After the Scene buttons, set apart from them. */
-.housePresets {
+.presets {
   padding-left: var(--space-3);
   border-left: 1px solid var(--line);
 }
@@ -37,6 +37,6 @@
 }
 
 .scenes button,
-.housePresets button {
+.presets button {
   flex-shrink: 0;
 }

@@ -3,8 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EngineCommand, EngineEvent, ShowEdit } from '../../../shared/protocol';
 import {
+  moveHazePreset,
   moveHousePreset,
+  putHazePreset,
   putHousePreset,
+  removeHazePreset,
   removeHousePreset,
   type Scene,
   type Show,
@@ -134,6 +137,14 @@ function applied(current: Show, edit: ShowEdit): Show {
       return moveHousePreset(current, edit.id, edit.to);
     case 'removeHousePreset':
       return removeHousePreset(current, edit.id);
+    case 'putHazePreset': {
+      const put = putHazePreset(current, edit.preset);
+      return 'show' in put ? put.show : current;
+    }
+    case 'moveHazePreset':
+      return moveHazePreset(current, edit.id, edit.to);
+    case 'removeHazePreset':
+      return removeHazePreset(current, edit.id);
     default:
       return current;
   }
@@ -752,5 +763,122 @@ describe('House Presets', () => {
     await act(async () => {});
     expect(edits()).toEqual([{ type: 'moveHousePreset', id: 'p1', to: 0 }]);
     expect(screen.getByRole('button', { name: 'Add House Preset' })).toBeDisabled();
+  });
+});
+
+describe('Haze Presets', () => {
+  const hazePresets = () => within(screen.getByRole('list', { name: 'Haze Presets' }));
+
+  async function openTriggers() {
+    await renderView();
+    await userEvent.click(screen.getByRole('tab', { name: 'Triggers' }));
+  }
+
+  it('adds, renames and removes a Haze Preset', async () => {
+    await openTriggers();
+    expect(screen.getByText(/No Haze Presets yet/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add Haze Preset' }));
+    expect(edits()).toEqual([
+      {
+        type: 'putHazePreset',
+        preset: { id: 'haze-1', name: 'Haze Preset 1', level: 0.5, fade: 5 },
+      },
+    ]);
+
+    const name = await hazePresets().findByLabelText('Name of Haze Preset 1');
+    await userEvent.clear(name);
+    await userEvent.type(name, 'Light{Enter}');
+    expect(edits().at(-1)).toEqual({
+      type: 'putHazePreset',
+      preset: { id: 'haze-1', name: 'Light', level: 0.5, fade: 5 },
+    });
+
+    await userEvent.click(hazePresets().getByRole('button', { name: 'Remove Haze Preset Light' }));
+    expect(edits().at(-1)).toEqual({ type: 'removeHazePreset', id: 'haze-1' });
+    expect(await screen.findByText('Removed Light')).toBeInTheDocument();
+    expect(screen.getByText(/No Haze Presets yet/)).toBeInTheDocument();
+  });
+
+  it('sets the level in percent, the fade, and a note typed in, learned or cleared', async () => {
+    show = { ...SHOW, hazePresets: [{ id: 'light', name: 'Light', level: 0.3, fade: 5 }] };
+    await openTriggers();
+
+    const level = hazePresets().getByLabelText('Level of Light (%)');
+    await userEvent.clear(level);
+    await userEvent.type(level, '60{Enter}');
+    expect(edits().at(-1)).toEqual({
+      type: 'putHazePreset',
+      preset: { id: 'light', name: 'Light', level: 0.6, fade: 5 },
+    });
+
+    const fade = hazePresets().getByLabelText('Fade of Light (s)');
+    await userEvent.clear(fade);
+    await userEvent.type(fade, '2.5{Enter}');
+    expect(edits().at(-1)).toMatchObject({ preset: { level: 0.6, fade: 2.5 } });
+
+    // Note 60 on channel 1 is the Trigger's, so it takes the next free one.
+    await userEvent.click(hazePresets().getByRole('button', { name: 'Add a note to Light' }));
+    expect(edits().at(-1)).toMatchObject({ preset: { note: { channel: 1, note: 61 } } });
+
+    await userEvent.click(hazePresets().getByRole('button', { name: 'Learn a note for Light' }));
+    expect(sentOf('learnTrigger')).toHaveLength(1);
+    engine.emit({ type: 'triggerLearned', note: { channel: 3, note: 40 } });
+    expect(edits().at(-1)).toMatchObject({ preset: { note: { channel: 3, note: 40 } } });
+  });
+
+  it('clears a note', async () => {
+    show = {
+      ...SHOW,
+      hazePresets: [
+        { id: 'light', name: 'Light', level: 0.3, fade: 5, note: { channel: 2, note: 9 } },
+      ],
+    };
+    await openTriggers();
+
+    await userEvent.click(hazePresets().getByRole('button', { name: 'Clear the note of Light' }));
+
+    expect(edits().at(-1)).toEqual({
+      type: 'putHazePreset',
+      preset: { id: 'light', name: 'Light', level: 0.3, fade: 5 },
+    });
+  });
+
+  it('reorders Haze Presets with the keyboard, and adds no more than eight', async () => {
+    const eight = Array.from({ length: 8 }, (_, i) => ({
+      id: `p${i}`,
+      name: `P${i}`,
+      level: 0.5,
+      fade: 0,
+    }));
+    show = { ...SHOW, hazePresets: eight };
+    await openTriggers();
+
+    hazePresets().getByRole('button', { name: 'Move P1' }).focus();
+    await userEvent.keyboard(' ');
+    await userEvent.keyboard('{ArrowUp}');
+    await userEvent.keyboard(' ');
+    await act(async () => {});
+    expect(edits()).toEqual([{ type: 'moveHazePreset', id: 'p1', to: 0 }]);
+    expect(screen.getByRole('button', { name: 'Add Haze Preset' })).toBeDisabled();
+  });
+
+  it("warns when a new Trigger's note is a Haze Preset's, and picks a free note past it", async () => {
+    show = {
+      ...SHOW,
+      hazePresets: [
+        { id: 'light', name: 'Light', level: 0.3, fade: 5, note: { channel: 1, note: 62 } },
+      ],
+    };
+    await renderView();
+    await userEvent.click(screen.getByRole('tab', { name: 'Triggers' }));
+    const form = within(screen.getByRole('region', { name: 'New Trigger' }));
+
+    const note = form.getByLabelText('Note');
+    await userEvent.clear(note);
+    await userEvent.type(note, '62{Enter}');
+
+    expect(form.getByText(/note of Haze Preset Light/)).toBeInTheDocument();
+    expect(form.getByRole('button', { name: 'Map' })).toBeDisabled();
   });
 });

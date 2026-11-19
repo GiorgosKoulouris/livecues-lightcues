@@ -49,8 +49,20 @@ export type Capability =
   | { type: 'shutter'; effect: 'open' | 'closed' }
   | { type: 'strobe'; hz?: Span; assumed?: true }
   | { type: 'strobeSpeed'; hz?: Span; assumed?: true }
+  // `level` is the output fraction across the range; 0→1 when absent.
+  | { type: 'haze'; level?: Span }
+  // Fan speed of a haze machine, the same shape.
+  | { type: 'fan'; level?: Span }
   // Kept so the channel still occupies its DMX slot; reported on import.
   | { type: 'unsupported'; feature: string };
+
+// Whether a capability is a Hazer's haze output or fan speed, the two whose
+// `level` is the output fraction across the range.
+export function isHazeOrFan(
+  capability: Capability,
+): capability is Extract<Capability, { type: 'haze' | 'fan' }> {
+  return capability.type === 'haze' || capability.type === 'fan';
+}
 
 // An inclusive 8-bit DMX range of a channel and what it does.
 export interface CapabilityRange {
@@ -88,4 +100,13 @@ export interface UnsupportedFeature {
   // The 8-bit default the channel is held at when nothing drives it. Absent
   // on mode-level lines and on channels left out of the Profile.
   held?: number;
+}
+
+// Whether a mode has a haze channel, so its Profile can be patched as a Hazer.
+export function modeHasHaze(mode: FixtureMode): boolean {
+  return mode.channels.some(
+    (channel) =>
+      channel.kind === 'control' &&
+      channel.ranges.some(({ capability }) => capability.type === 'haze'),
+  );
 }

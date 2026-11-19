@@ -28,14 +28,14 @@ LightCues runs a band's lighting at live shows from a Windows laptop. The DAW or
 
 - **At the gig:** the room is dark. A bright screen ruins night vision and can be seen from the stage. This is why the theme is dark only (ADR 0003).
 - **Prep (home or rehearsal):** import Fixture Profiles (Open Fixture Library `.json`, GDTF `.gdtf`), build Scenes and Rules, map MIDI Triggers.
-- **Load-in at each venue:** make or open a Venue Patch: stage size, Universes and Outputs, Fixtures placed on the stage plan, House Lights.
+- **Load-in at each venue:** make or open a Venue Patch: stage size, Universes and Outputs, Fixtures placed on the stage plan, House Lights, Hazers.
 - **MIDI routes:** rtpMIDI from a DAW on another laptop, loopMIDI from a DAW on the same PC, or a hardware controller.
 - **Hardware:** Enttec DMX USB Pro or DMXking ultraDMX (FTDI USB serial). The Virtual Output needs no hardware.
 
 ## Capabilities and Constraints
 
 - Four views: Show, Venue Patch, Profile Library, Perform (Ctrl+1 to Ctrl+4).
-- The Fallback Panel is on screen in every view: Blackout, Base Look, Grand Master, Tap Tempo, Freeze, chosen Scene buttons and House Presets, each with a key (B, 0, 1–9, -/+, T, F, Shift+1–8). If MIDI drops, the current look holds.
+- The Fallback Panel is on screen in every view: Blackout, Base Look, Grand Master, Tap Tempo, Freeze, chosen Scene buttons and House Presets, each with a key (B, 0, 1–9, -/+, T, F, Shift+1–8), plus Haze Off and the Haze Presets, which have none. If MIDI drops, the current look holds.
 - Blind edits without changing the real lights. The Preview shows the stage from above and from the front.
 - Undo history lives in the engine. Edits commit instantly, with no Save-per-field (ADRs 0004, 0005).
 - The engine runs in a separate process from the UI (ADR 0002).

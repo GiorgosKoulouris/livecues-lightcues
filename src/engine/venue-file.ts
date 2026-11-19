@@ -1,5 +1,6 @@
 import {
   validatePatch,
+  type Hazer,
   type House,
   type HouseSetting,
   type VenuePatch,
@@ -10,10 +11,11 @@ import {
 //
 // Version 2 adds each Fixture's optional Mounting. Version 3 adds the
 // optional House: House Groups, House Lights, the Startup look and the house
-// looks. Older files still load, without them.
+// looks. Version 4 adds the optional Hazers, whose max output and fan level
+// are 1 when absent. Older files still load, without them.
 
-const VERSION = 3;
-const READABLE_VERSIONS = [1, 2, 3];
+const VERSION = 4;
+const READABLE_VERSIONS = [1, 2, 3, 4];
 
 interface VenueFile extends VenuePatch {
   version: number;
@@ -40,8 +42,17 @@ export function loadVenueFile(json: string): VenuePatch {
       'Invalid Venue Patch: a House needs groups, lights and a colour per house look setting',
     );
   }
+  if (patch.hazers !== undefined && !Array.isArray(patch.hazers)) {
+    throw new Error('Invalid Venue Patch: hazers must be a list');
+  }
+  if (patch.hazers) patch.hazers = patch.hazers.map(withHazerDefaults);
   throwIfInvalid(validatePatch(patch));
   return patch;
+}
+
+// `hazer` with max output and fan level 1 when absent.
+function withHazerDefaults(hazer: Hazer): Hazer {
+  return { ...hazer, maxOutput: hazer.maxOutput ?? 1, fanLevel: hazer.fanLevel ?? 1 };
 }
 
 function throwIfInvalid(errors: string[]): void {

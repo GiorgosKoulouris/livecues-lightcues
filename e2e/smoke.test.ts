@@ -55,6 +55,48 @@ test('a Scene reaches the Virtual Output and Blackout clears it', async () => {
   }
 });
 
+// The example's Hazer: Universe 1, haze at 61 and fan at 62. The Haze Preset
+// Light haze is the first Haze Preset button.
+const HAZE_CHANNEL = 60;
+const FAN_CHANNEL = 61;
+
+test('the Light haze button fires the haze and Haze Off turns it off', async () => {
+  const userData = mkdtempSync(join(tmpdir(), 'lightcues-e2e-'));
+  const app = await electron.launch({
+    args: [`--user-data-dir=${userData}`, '.'],
+    env: inheritedEnv(),
+  });
+  try {
+    const page = await app.firstWindow();
+    const sidebar = page.getByRole('navigation', { name: 'Views' });
+    const panel = page.getByRole('region', { name: 'Fallback Panel' });
+
+    await sidebar.getByRole('button', { name: 'Open example' }).click();
+    await page.getByRole('button', { name: 'Channel monitor' }).click();
+    const light = panel.getByRole('button', { name: /Light haze/ });
+    await expect(light).toHaveAttribute('aria-pressed', 'false');
+
+    await light.click();
+    await expect(light).toHaveAttribute('aria-pressed', 'true');
+    await expect
+      .poll(async () => (await monitorValues(page))[HAZE_CHANNEL], { message: 'haze channel up' })
+      .toBeGreaterThan(0);
+    expect((await monitorValues(page))[FAN_CHANNEL]).toBeGreaterThan(0);
+
+    const off = panel.getByRole('button', { name: /Haze Off/ });
+    await off.click();
+    await expect(off).toHaveAttribute('aria-pressed', 'true');
+    await expect
+      .poll(async () => (await monitorValues(page)).slice(HAZE_CHANNEL, FAN_CHANNEL + 1), {
+        message: 'haze and fan off',
+      })
+      .toEqual([0, 0]);
+  } finally {
+    await app.close();
+    rmSync(userData, { recursive: true, force: true });
+  }
+});
+
 // This process's environment, without a dev server URL: the app loads the
 // built renderer.
 function inheritedEnv(): Record<string, string> {

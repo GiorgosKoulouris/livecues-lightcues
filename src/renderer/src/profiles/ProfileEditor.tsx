@@ -447,6 +447,8 @@ const CAPABILITY_TYPES: Capability['type'][] = [
   'shutter',
   'strobe',
   'strobeSpeed',
+  'haze',
+  'fan',
   'none',
 ];
 
@@ -571,6 +573,16 @@ function CapabilityFields({ name, capability, onChange }: CapabilityProps) {
             { value: 'closed', label: 'closed' },
           ]}
           onChange={(effect) => onChange({ ...capability, effect })}
+        />
+      );
+    case 'haze':
+    case 'fan':
+      return (
+        <SpanInput
+          label={`Level of ${name}`}
+          unit="0 off – 1 full"
+          span={capability.level}
+          onChange={(level) => onChange({ ...capability, level })}
         />
       );
     case 'strobe':

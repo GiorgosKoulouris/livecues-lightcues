@@ -12,6 +12,7 @@ import {
   type Colour,
   type Direction,
   type EffectLength,
+  type HazePreset,
   type HousePreset,
   type Layer,
   type Rule,
@@ -671,6 +672,17 @@ const HOUSE_PRESETS: HousePreset[] = [
   { id: 'walk-out', name: 'Walk-out', fade: 3, note: { channel: CHANNEL, note: 15 } }, // D#0
 ];
 
+// ---------------------------------------------------------------- Haze
+
+// Levels are scaled by each Hazer's max output in the Venue Patch. Haze Off is
+// built in; Clear is its slow, DAW-driven twin.
+const HAZE_PRESETS: HazePreset[] = [
+  { id: 'haze-light', name: 'Light', level: 0.25, fade: 8, note: { channel: CHANNEL, note: 16 } }, // E0
+  { id: 'haze-medium', name: 'Medium', level: 0.5, fade: 8, note: { channel: CHANNEL, note: 17 } }, // F0
+  { id: 'haze-heavy', name: 'Heavy', level: 0.8, fade: 8, note: { channel: CHANNEL, note: 18 } }, // F#0
+  { id: 'haze-clear', name: 'Clear', level: 0, fade: 10, note: { channel: CHANNEL, note: 19 } }, // G0
+];
+
 // ---------------------------------------------------------------- Show
 
 const RELEASES = [
@@ -712,6 +724,7 @@ export function paletteShow(): Show {
     baseLook: BASE_LOOK.scene.id,
     panelScenes: PANEL,
     housePresets: HOUSE_PRESETS,
+    hazePresets: HAZE_PRESETS,
   };
 }
 
@@ -759,6 +772,16 @@ function cueSheet(show: Show): string {
         'House look set per venue',
       ),
     ),
+    ...HAZE_PRESETS.map((p) =>
+      row(
+        p.note?.note ?? 0,
+        `Haze: ${p.name}`,
+        'Haze',
+        'Go',
+        `${p.fade}s`,
+        `Every Hazer to ${Math.round(p.level * 100)}% of its max output`,
+      ),
+    ),
   ].sort((a, b) => Number(a.split('|')[2]) - Number(b.split('|')[2]));
   const panel = (show.panelScenes ?? [])
     .map((id, i) => `${i + 1}. ${show.scenes.find((s) => s.id === id)?.name ?? id}`)
@@ -791,6 +814,10 @@ ${panel}
 ## House Presets (Shift+1–3)
 
 Set the house look for each one in the venue's Venue Patch, or the Venue Check reports it.
+
+## Haze Presets (buttons in Perform and on the Fallback Panel, no keys)
+
+Every Hazer goes to the level times its max output, set per Hazer in the Venue Patch. Haze Off is built in and has no note: it goes to 0 at once. Clear fades to 0 and is the DAW's way to take haze out. Haze starts off at launch.
 `;
 }
 

@@ -826,6 +826,54 @@ describe('importOflFixture', () => {
   });
 });
 
+describe('hazers', () => {
+  const hazer = (categories: string[]) => ({
+    name: 'Haze 1200',
+    categories,
+    meta,
+    availableChannels: {
+      Haze: { capability: { type: 'FogOutput', fogOutputStart: '0%', fogOutputEnd: '100%' } },
+      Fan: { capability: { type: 'Speed', speedStart: '10%', speedEnd: 'fast' } },
+    },
+    modes: [{ name: '2ch', channels: ['Haze', 'Fan'] }],
+  });
+
+  it('imports FogOutput as haze and Speed on a Hazer as fan', () => {
+    const { profile, unsupported } = importOflFixture(hazer(['Hazer']), 'Fos');
+
+    const [haze, fan] = profile.modes[0]!.channels;
+    expect(haze).toMatchObject({
+      ranges: [{ capability: { type: 'haze', level: [0, 1] } }],
+    });
+    expect(fan).toMatchObject({
+      ranges: [{ capability: { type: 'fan', level: [0.1, 1] } }],
+    });
+    expect(unsupported).toEqual([]);
+  });
+
+  it('imports Speed on a Smoke fixture as fan, and FogOutput without a level', () => {
+    const fixture = hazer(['Smoke']);
+    fixture.availableChannels.Haze = { capability: { type: 'FogOutput' } } as never;
+    const { profile } = importOflFixture(fixture, 'Fos');
+
+    expect(profile.modes[0]!.channels[0]).toMatchObject({
+      ranges: [{ capability: { type: 'haze' } }],
+    });
+    expect(profile.modes[0]!.channels[1]).toMatchObject({
+      ranges: [{ capability: { type: 'fan' } }],
+    });
+  });
+
+  it('keeps Speed unsupported on other fixtures', () => {
+    const { profile, unsupported } = importOflFixture(hazer(['Effect']), 'Fos');
+
+    expect(profile.modes[0]!.channels[1]).toMatchObject({
+      ranges: [{ capability: { type: 'unsupported', feature: 'Speed' } }],
+    });
+    expect(unsupported).toEqual([{ channel: 'Fan', feature: 'Speed', held: 0 }]);
+  });
+});
+
 // A fixture with a dimmer and one ColorIntensity channel per colour.
 function colourFixture(colours: string[]) {
   const colourChannels = Object.fromEntries(

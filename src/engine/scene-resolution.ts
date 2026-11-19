@@ -3,7 +3,12 @@
 // hardware.
 import { aimAt, aimDmx, turnAim, type AimAngles, type Turn } from '../shared/aim';
 import { dmxByte, fixed, toDmx, type Point } from '../shared/dmx-point';
-import type { CapabilityRange, Channel, Emitter } from '../shared/fixture-profile';
+import {
+  isHazeOrFan,
+  type CapabilityRange,
+  type Channel,
+  type Emitter,
+} from '../shared/fixture-profile';
 import type { FixtureLight } from '../shared/protocol';
 import {
   DEFAULT_DIRECTION,
@@ -781,20 +786,34 @@ interface FixtureOutput {
   strobe?: { hz: number; drives: Map<string, StrobeDrive> };
 }
 
-// The DMX values of a Fixture's channels, offset 0 first. A control channel
-// with fine channels is set with 16-bit precision.
+// The DMX values of a Fixture's channels, offset 0 first.
 function encodeChannels(channels: Channel[], output: FixtureOutput): number[] {
+  return encodeControls(
+    channels,
+    (channel) => channelPoint(channel, output),
+    output.aim && aimDmx(channels, output.aim),
+  );
+}
+
+// The DMX values of `channels`, offset 0 first: each control channel set where
+// `pointOf` says, or left at its default when it says undefined. A control
+// channel with fine channels is set with 16-bit precision. `overrides` (by offset) values
+// win over both.
+export function encodeControls(
+  channels: Channel[],
+  pointOf: (channel: Extract<Channel, { kind: 'control' }>) => Point | undefined,
+  overrides?: Map<number, number>,
+): number[] {
   const fineNames = new Set(channels.flatMap((c) => (c.kind === 'fine' ? [c.of] : [])));
   const values = new Map<string, number>();
   for (const channel of channels) {
     if (channel.kind !== 'control') continue;
-    const point = channelPoint(channel, output);
+    const point = pointOf(channel);
     if (point) values.set(channel.name, toDmx(point, fineNames.has(channel.name)));
   }
-  const aim = output.aim && aimDmx(channels, output.aim);
   return channels.map((channel, offset) => {
-    const aimed = aim?.get(offset);
-    if (aimed !== undefined) return aimed;
+    const set = overrides?.get(offset);
+    if (set !== undefined) return set;
     if (channel.kind === 'unused') return 0;
     if (channel.kind === 'control') {
       const value = values.get(channel.name);
@@ -834,14 +853,15 @@ function channelPoint(
   return levelPoint(same, (mix[emitter.emitter] ?? 0) * emitterScale);
 }
 
-// The point that sets `level` (0–1) on intensity or emitter `ranges`. Each
-// range's `level` span says how output varies across it. The first range
-// whose span holds `level` is used, or else the first range.
-function levelPoint(ranges: CapabilityRange[], level: number): Point {
+// The point that sets `level` (0–1) on intensity, emitter, haze or fan
+// `ranges`. Each range's `level` span says how output varies across it. The
+// first range whose span holds `level` is used, or else the first range.
+export function levelPoint(ranges: CapabilityRange[], level: number): Point {
   const span = ({ capability }: CapabilityRange): [number, number] =>
-    ((capability.type === 'intensity' || capability.type === 'emitter') && capability.level) || [
-      0, 1,
-    ];
+    ((capability.type === 'intensity' ||
+      capability.type === 'emitter' ||
+      isHazeOrFan(capability)) &&
+      capability.level) || [0, 1];
   const holds = (range: CapabilityRange) => {
     const [a, b] = span(range);
     return Math.min(a, b) <= level && level <= Math.max(a, b);

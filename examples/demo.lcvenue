@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "stage": {
     "width": 8,
     "depth": 6
@@ -1842,6 +1842,59 @@
           ]
         }
       ]
+    },
+    {
+      "id": "example/hazer",
+      "manufacturer": "Example",
+      "model": "Hazer",
+      "defaultRole": "Wash",
+      "modes": [
+        {
+          "name": "2-channel",
+          "channels": [
+            {
+              "kind": "control",
+              "name": "Haze",
+              "defaultValue": 0,
+              "ranges": [
+                {
+                  "from": 0,
+                  "to": 255,
+                  "capability": {
+                    "type": "haze"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "control",
+              "name": "Fan",
+              "defaultValue": 0,
+              "ranges": [
+                {
+                  "from": 0,
+                  "to": 255,
+                  "capability": {
+                    "type": "fan"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "hazers": [
+    {
+      "id": "hazer",
+      "name": "Hazer",
+      "profileId": "example/hazer",
+      "mode": "2-channel",
+      "universe": 1,
+      "address": 61,
+      "maxOutput": 1,
+      "fanLevel": 1
     }
   ]
 }

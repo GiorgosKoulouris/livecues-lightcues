@@ -888,6 +888,40 @@ describe('GDTF default Role', () => {
     expect(roleOf('Dimmer', 'Shutter1Strobe', 'ColorAdd_W')).toBe('Wash');
   });
 
+  it('imports Fog and Haze as haze and Fan as fan, leaving FogType, FanMode and Blower unsupported', () => {
+    const { profile, unsupported } = importGdtfFixture(
+      gdtfWithGeometries(
+        { Manufacturer: 'Generic', Name: 'Hazer' },
+        [geometry('Geometry', 'Body')],
+        mode(
+          'test',
+          ...['Fog1', 'Haze1', 'Fans', 'Fan1', 'FogType1', 'FanMode1', 'Blower1'].map(
+            (attribute, i) =>
+              channel(
+                { Offset: `${i + 1}`, Geometry: 'Body' },
+                attribute,
+                channelFunction(attribute, '0/1'),
+              ),
+          ),
+        ),
+      ),
+    );
+
+    const types = profile.modes[0]!.channels.map((c) =>
+      c.kind === 'control' ? c.ranges[0]!.capability.type : c.kind,
+    );
+    expect(types).toEqual([
+      'haze',
+      'haze',
+      'fan',
+      'fan',
+      'unsupported',
+      'unsupported',
+      'unsupported',
+    ]);
+    expect(unsupported.map((u) => u.feature)).toEqual(['FogType1', 'FanMode1', 'Blower1']);
+  });
+
   it('is Effect for a haze, fog or fan machine with no emitters or dimmer', () => {
     expect(roleOf('Haze1', 'Fans')).toBe('Effect');
     expect(roleOf('Fog1', 'FogType1', 'Control1')).toBe('Effect');

@@ -507,6 +507,24 @@ describe('strings', () => {
   });
 });
 
+describe('haze and fan', () => {
+  it('passes a level within 0–1 or none', () => {
+    for (const type of ['haze', 'fan'] as const) {
+      expect(validateProfile(profile([control('H', { type })]))).toEqual([]);
+      expect(validateProfile(profile([control('H', { type, level: [0.2, 1] })]))).toEqual([]);
+    }
+  });
+
+  it('fails a level outside 0–1 or not two numbers', () => {
+    expect(validateProfile(profile([control('H', { type: 'haze', level: [0, 2] })]))).toEqual([
+      'Mode "Standard", channel 1 "H": haze level must be within 0–1',
+    ]);
+    expect(validateProfile(profile([control('F', { type: 'fan', level: [NaN, 1] })]))).toEqual([
+      'Mode "Standard", channel 1 "F": fan level must be two finite numbers',
+    ]);
+  });
+});
+
 describe('prototype keys', () => {
   // As a library file brings them: JSON.parse makes `__proto__` an own key.
   const hostile = JSON.parse(`{

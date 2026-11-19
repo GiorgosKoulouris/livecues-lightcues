@@ -137,7 +137,7 @@ function firingHouse(
   let venue = patch();
   for (const [id, look] of Object.entries(looks)) venue = ok(setHouseLook(venue, id, look));
   if (startup) venue = ok(setStartupLook(venue, startup));
-  const show: Show = { ...emptyShow(), housePresets: presets };
+  let show: Show = { ...emptyShow(), housePresets: presets };
   const clock = { now: 0 };
   const events: EngineEvent[] = [];
   const h = createHouse({
@@ -153,7 +153,11 @@ function firingHouse(
     const frame = h.frames(new Map()).get(1)!;
     return [...frame.slice(0, 10), frame[19]!];
   };
-  return { house: h, events, at, clock };
+  const edit = (next: HousePreset[]) => {
+    show = { ...show, housePresets: next };
+    h.showEdited();
+  };
+  return { house: h, events, at, clock, edit };
 }
 
 const preset = (id: string, fade: number): HousePreset => ({ id, name: id, fade });
@@ -278,5 +282,28 @@ describe('firing House Presets', () => {
     expect(at(0)[0]).toBe(255);
     expect(restartedAt(0)[0]).toBe(51);
     expect(events.at(-1)).toEqual({ type: 'house', fired: { type: 'preset', id: 'dim' } });
+  });
+});
+
+describe('editing the Show while a House Preset is held', () => {
+  it('holds the look and reports none when the held House Preset is removed', () => {
+    const { house, at, events, edit } = firingHouse([preset('dim', 0), preset('up', 0)], { dim });
+    house.fire('dim');
+
+    edit([preset('up', 0)]);
+
+    expect(at(0)[0]).toBe(51);
+    expect(events.at(-1)).toEqual({ type: 'house', fired: { type: 'none' } });
+  });
+
+  it('does not report again when another House Preset is removed, or for the Startup look', () => {
+    const { house, events, edit } = firingHouse([preset('dim', 0), preset('up', 0)], { dim });
+    edit([preset('dim', 0)]);
+    house.fire('dim');
+    events.length = 0;
+
+    edit([preset('dim', 0)]);
+
+    expect(events).toEqual([]);
   });
 });
