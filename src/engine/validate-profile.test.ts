@@ -494,6 +494,20 @@ describe('numbers', () => {
     }
   });
 
+  it('fails a prism rotation speed outside 0–1 and an unnamed gobo slot', () => {
+    const channels = [
+      control('Rotation', { type: 'prismRotation', speed: [0, 2] }),
+      control('Gobo', { type: 'goboSlot', name: ' ' }),
+      control('Good', { type: 'goboSlot', name: 'Open', open: true }),
+      control('Prism', { type: 'prism', effect: 'in' }),
+      control('Spin', { type: 'prismRotation', speed: [1, 0] }),
+    ];
+    expect(validateProfile(profile(channels))).toEqual([
+      'Mode "Standard", channel 1 "Rotation": prismRotation speed must be within 0–1',
+      'Mode "Standard", channel 2 "Gobo": gobo slot name is required',
+    ]);
+  });
+
   it('passes a span left out or null, which reads as not given', () => {
     for (const degrees of [undefined, null]) {
       const pan = { type: 'pan', degrees } as Capability;

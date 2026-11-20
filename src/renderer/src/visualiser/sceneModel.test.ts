@@ -23,10 +23,16 @@ import {
   buildScene,
   cameraPresets,
   fixtureLooks,
+  PRISM_BEAMS,
+  PRISM_SPREAD,
+  PRISM_TURN,
+  splitBeams,
   strobeVisible,
   surroundings,
   trussRows,
   type Body,
+  type Cone,
+  type Point,
 } from './sceneModel';
 
 const control = (name: string, type: 'pan' | 'tilt' | 'intensity'): Channel => ({
@@ -345,6 +351,72 @@ describe('strobeVisible', () => {
   });
 });
 
+describe('splitBeams', () => {
+  const cone = {
+    origin: { x: 1, y: 2, z: 5 },
+    direction: { x: 0, y: 0, z: -1 },
+    length: 4,
+    halfAngle: 10,
+  };
+  const dot = (a: Point, b: Point) => a.x * b.x + a.y * b.y + a.z * b.z;
+  const angleFrom = (a: Point, b: Point) => (Math.acos(dot(a, b)) * 180) / Math.PI;
+  const turnOf = (beam: Cone) => Math.atan2(beam.direction.y, beam.direction.x);
+
+  it('splits the beam into several around the aim, from the same lens', () => {
+    const beams = splitBeams(cone, 'on', 0);
+    expect(beams).toHaveLength(PRISM_BEAMS);
+    expect(PRISM_BEAMS).toBeGreaterThan(1);
+    for (const beam of beams) {
+      expect(beam.origin).toEqual(cone.origin);
+      expect(beam.length).toBe(cone.length);
+      expect(beam.halfAngle).toBe(cone.halfAngle);
+      expect(Math.hypot(beam.direction.x, beam.direction.y, beam.direction.z)).toBeCloseTo(1);
+      expect(angleFrom(beam.direction, cone.direction)).toBeCloseTo(PRISM_SPREAD);
+    }
+    // Spread evenly around the aim.
+    const turns = beams.map(turnOf);
+    const gap = (a: number, b: number) => Math.abs(Math.atan2(Math.sin(b - a), Math.cos(b - a)));
+    expect(gap(turns[0]!, turns[1]!)).toBeCloseTo((2 * Math.PI) / PRISM_BEAMS);
+    expect(gap(turns[1]!, turns[2]!)).toBeCloseTo((2 * Math.PI) / PRISM_BEAMS);
+  });
+
+  it('holds still when the prism is on', () => {
+    expect(splitBeams(cone, 'on', 0)).toEqual(splitBeams(cone, 'on', 7.3));
+  });
+
+  it('turns about the aim at a fixed speed, the same however long it runs', () => {
+    for (const rate of ['slow', 'fast'] as const) {
+      const at = (seconds: number) => splitBeams(cone, rate, seconds)[0]!;
+      const expected = (PRISM_TURN[rate] * 0.1 * Math.PI) / 180;
+      // The size of the turn over 0.1 s, wrapped to a half turn either way.
+      const step = (from: number) => {
+        const d = turnOf(at(from + 0.1)) - turnOf(at(from));
+        return Math.abs(Math.atan2(Math.sin(d), Math.cos(d)));
+      };
+      expect(step(0)).toBeCloseTo(expected);
+      expect(step(5)).toBeCloseTo(expected);
+      // Still the same angle off the aim.
+      expect(angleFrom(at(3).direction, cone.direction)).toBeCloseTo(PRISM_SPREAD);
+    }
+  });
+
+  it('turns faster for fast than for slow', () => {
+    expect(PRISM_TURN.fast).toBeGreaterThan(PRISM_TURN.slow);
+    expect(PRISM_TURN.slow).toBeGreaterThan(0);
+  });
+
+  it('holds still under reduced motion', () => {
+    expect(splitBeams(cone, 'fast', 3, true)).toEqual(splitBeams(cone, 'fast', 0, true));
+  });
+
+  it('splits a beam that aims along another axis', () => {
+    const slanted = { ...cone, direction: { x: 0.6, y: 0, z: -0.8 } };
+    for (const beam of splitBeams(slanted, 'slow', 1.5)) {
+      expect(angleFrom(beam.direction, slanted.direction)).toBeCloseTo(PRISM_SPREAD);
+    }
+  });
+});
+
 describe('fixtureLooks', () => {
   const white = { intensity: 1, red: 1, green: 1, blue: 1 };
   const look = (
@@ -379,6 +451,14 @@ describe('fixtureLooks', () => {
     const { cone, pool } = look(patch, 'a', white);
     expect(cone?.direction).toEqual({ x: 0, y: 0, z: 1 });
     expect(pool).toBeUndefined();
+  });
+
+  it('carries the prism through, with the single cone kept for the renderer to split', () => {
+    const patch = patchOf([fixture('a', 'wash', { height: 5 })]);
+    const shown = look(patch, 'a', { ...white, prism: 'slow' });
+    expect(shown.prism).toBe('slow');
+    expect(shown.cone).toBeDefined();
+    expect(look(patch, 'a', white)).not.toHaveProperty('prism');
   });
 
   it("passes the light's colour and intensity through", () => {

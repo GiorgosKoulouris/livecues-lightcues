@@ -19,6 +19,9 @@ import {
   type EffectLength,
   type Scene,
   type Show,
+  type GoboSetting,
+  PRISM_BEHAVIOUR,
+  type PrismSetting,
   type StrobeRate,
   type Swatch,
 } from '../shared/show';
@@ -29,9 +32,11 @@ import {
   strobeHz,
   type StrobeDrive,
 } from '../shared/strobe';
+import { goboPrismDrive, hasPrism, rotationSpan, type GoboPrismDrive } from '../shared/gobo-prism';
 import {
   colourEffectMix,
   effectTurn,
+  fanPosition,
   intensityScale,
   spreadDelay,
   spreadPositions,
@@ -227,7 +232,16 @@ function fixtureLight(channels: Channel[], output: FixtureOutput): FixtureLight 
     blue,
     ...(output.aim && { aim: output.aim }),
     ...(output.strobe && { strobe: output.strobe.hz }),
+    ...previewPrism(channels, output),
   };
+}
+
+// The prism a Fixture shows in the preview: only one that has a prism, with it
+// set in or turning.
+function previewPrism(channels: Channel[], output: FixtureOutput): Pick<FixtureLight, 'prism'> {
+  const prism = output.goboPrism?.prism;
+  const preview = prism && PRISM_BEHAVIOUR[prism].preview;
+  return preview && hasPrism(channels) ? { prism: preview } : {};
 }
 
 // What a Fixture is set to once the Layers are combined, and the channels of
@@ -254,6 +268,8 @@ function fixtureOutput(
   let turn: Turn | undefined;
   let scale: number | undefined;
   let strobe: StrobeRate | undefined;
+  let prism: PrismSetting | undefined;
+  let gobo: GoboSetting | undefined;
   const entries = byChange(show, active);
   for (const entry of entries) {
     const look = layerLook(show, patch, fixture, entry, time, beat, runs);
@@ -264,6 +280,8 @@ function fixtureOutput(
     turn = combinedTurn(turn, look);
     scale = combinedScale(scale, look);
     strobe = look.strobe ?? strobe;
+    prism = look.prism ?? prism;
+    gobo = look.gobo ?? gobo;
   }
   const shown =
     effectColour === undefined || effectColour === NO_EFFECT
@@ -275,6 +293,10 @@ function fixtureOutput(
   if (hz > 0 && output.intensity > 0) {
     const drives = strobeDrives(channels);
     if (drives.size > 0) output.strobe = { hz, drives };
+  }
+  // Prism and gobo are set whether or not the Fixture is lit.
+  if (prism !== undefined || gobo !== undefined) {
+    output.goboPrism = { prism, gobo, slot: fixture.goboSlot };
   }
   if (isMovingFixture(patch, fixture)) {
     output.direction = direction ?? show.defaultDirection ?? DEFAULT_DIRECTION;
@@ -457,6 +479,8 @@ interface Look {
   scale?: number;
   scaleFade?: Fade<number>;
   strobe?: StrobeRate;
+  prism?: PrismSetting;
+  gobo?: GoboSetting;
 }
 
 // An Effect fading `p` (0–1) of the way between two looks' values. An absent
@@ -546,7 +570,7 @@ function fadeBetween<T>(from: T | undefined, to: T | undefined, p: number): Fade
 // movement Effect's turn, an intensity Effect's scale and a colour Effect's
 // colour fade from the one before, or the one below, so the size, depth or
 // colour fades in with the Scene. Both looks' Effects keep running to `beat`.
-// Strobe is the new look's at once, not crossfaded.
+// Strobe, prism and gobo are the new look's at once, not crossfaded.
 function layerLook(
   show: Show,
   patch: VenuePatch,
@@ -572,6 +596,8 @@ function layerLook(
   if (colour) look.colour = colour;
   if (target.direction) look.direction = target.direction;
   if (target.strobe) look.strobe = target.strobe;
+  if (target.prism) look.prism = target.prism;
+  if (target.gobo) look.gobo = target.gobo;
   // A fade underway before is taken as over the Fixture held still and steady.
   // A colour Effect's fade keeps fading under this one.
   const beforeTurn = before.turnFade ? combinedTurn(STILL, before) : before.turn;
@@ -615,6 +641,8 @@ function sceneLook(
     }
     if (rule.direction !== undefined) look.direction = rule.direction;
     if (rule.strobe !== undefined) look.strobe = rule.strobe;
+    if (rule.prism !== undefined) look.prism = rule.prism;
+    if (rule.gobo !== undefined) look.gobo = rule.gobo;
     const effect = rule.movementEffect;
     if (effect === NO_EFFECT && moving) {
       look.turn = STILL;
@@ -624,7 +652,13 @@ function sceneLook(
       );
       const delay = spreadDelay(effect.spread, fixture, targeted);
       const run = runs[scene.id]?.[index];
-      look.turn = effectTurn(run ? { ...effect, ...run } : effect, beat, delay, fixture.id);
+      look.turn = effectTurn(
+        run ? { ...effect, ...run } : effect,
+        beat,
+        delay,
+        fixture.id,
+        fanPosition(fixture, targeted),
+      );
     }
     const intensityEffect = rule.intensityEffect;
     if (intensityEffect === NO_EFFECT) {
@@ -633,7 +667,10 @@ function sceneLook(
       const { spread } = intensityEffect;
       const targeted = patch.fixtures.filter((other) => ruleTargets(patch, other, rule));
       const delay = spreadDelay(spread, fixture, targeted);
-      look.scale = intensityScale(intensityEffect, beat, delay, spreadPositions(spread, targeted));
+      look.scale = intensityScale(intensityEffect, beat, delay, spreadPositions(spread, targeted), {
+        id: fixture.id,
+        targeted: targeted.map((other) => other.id),
+      });
     }
     const colourEffect = rule.colourEffect;
     if (colourEffect === NO_EFFECT) {
@@ -784,6 +821,9 @@ interface FixtureOutput {
   // The strobe rate in Hz, and what it sets on each strobe channel, by
   // channel name. Absent while steady.
   strobe?: { hz: number; drives: Map<string, StrobeDrive> };
+  // The prism and gobo settings, and the gobo slot the Venue Patch picks for
+  // the Fixture. Absent while neither is set.
+  goboPrism?: { prism?: PrismSetting; gobo?: GoboSetting; slot?: string };
 }
 
 // The DMX values of a Fixture's channels, offset 0 first.
@@ -832,11 +872,14 @@ export function encodeControls(
 // Where a control channel is set, or undefined to leave it at its default.
 function channelPoint(
   channel: Extract<Channel, { kind: 'control' }>,
-  { intensity, colour, mix, emitterScale, strobe }: FixtureOutput,
+  { intensity, colour, mix, emitterScale, strobe, goboPrism }: FixtureOutput,
 ): Point | undefined {
   const { ranges } = channel;
   const slots = ranges.filter((r) => r.capability.type === 'wheelSlot');
   if (slots.length > 0) return fixed(middle(nearestSlot(slots, colour)));
+  const goboPrismSet =
+    goboPrism && goboPrismDrive(channel, goboPrism.gobo, goboPrism.slot, goboPrism.prism);
+  if (goboPrismSet) return goboPrismPoint(goboPrismSet);
   const drive = strobe?.drives.get(channel.name);
   if (drive) return drive.kind === 'on' ? fixed(middle(drive.range)) : ratePoint(drive, strobe!.hz);
   const open = ranges.find(
@@ -869,6 +912,21 @@ export function levelPoint(ranges: CapabilityRange[], level: number): Point {
   const range = ranges.find(holds) ?? ranges[0]!;
   const [a, b] = span(range);
   const t = a === b ? 0 : clamp((level - a) / (b - a));
+  return { from: range.from, to: range.to, t };
+}
+
+// The point a gobo or prism drive sets: the middle of a range, or a rotation
+// speed clamped to the nearest range's span (the whole channel when it gives
+// none). A reversed span is walked backwards.
+function goboPrismPoint(drive: GoboPrismDrive): Point {
+  if (drive.kind === 'range') return fixed(middle(drive.range));
+  const off = (range: CapabilityRange) => {
+    const [a, b] = rotationSpan(range);
+    return Math.max(Math.min(a, b) - drive.speed, drive.speed - Math.max(a, b), 0);
+  };
+  const range = drive.ranges.reduce((best, r) => (off(r) < off(best) ? r : best));
+  const [a, b] = rotationSpan(range);
+  const t = a === b ? 0 : clamp((drive.speed - a) / (b - a));
   return { from: range.from, to: range.to, t };
 }
 

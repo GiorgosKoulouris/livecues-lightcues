@@ -103,8 +103,35 @@ describe('.lcvenue file', () => {
     const standing = fixture({ id: 'standing', profileId: 'acme/led-bar', address: 2, mounting });
     const saved = saveVenueFile(patch([hung, handMade], [standing, handMade]));
 
-    expect(JSON.parse(saved).version).toBe(4);
+    expect(JSON.parse(saved).version).toBe(5);
     expect(loadVenueFile(saved).fixtures).toEqual([hung, standing]);
+  });
+
+  it("keeps each Fixture's gobo slot, which version 4 files lack", () => {
+    const withGobo = fixture({ id: 'gobo', profileId: 'acme/led-bar', goboSlot: 'Star' });
+    const spot: FixtureProfile = {
+      ...handMade,
+      modes: [
+        {
+          name: '1ch',
+          channels: [
+            {
+              kind: 'control',
+              name: 'Gobo',
+              defaultValue: 0,
+              ranges: [{ from: 0, to: 255, capability: { type: 'goboSlot', name: 'Star' } }],
+            },
+          ],
+        },
+      ],
+    };
+    const saved = saveVenueFile(patch([withGobo, spot]));
+
+    expect(JSON.parse(saved).version).toBe(5);
+    expect(loadVenueFile(saved).fixtures[0]!.goboSlot).toBe('Star');
+    const plain = fixture({ id: 'plain', profileId: 'acme/led-bar' });
+    const v4 = { ...JSON.parse(saveVenueFile(patch([plain, handMade]))), version: 4 };
+    expect(loadVenueFile(JSON.stringify(v4)).fixtures[0]).not.toHaveProperty('goboSlot');
   });
 
   it('reopens Universes mapped to the Virtual Output', () => {
@@ -146,7 +173,7 @@ describe('.lcvenue file', () => {
     expect(opened.profiles).toEqual([handMade]);
   });
 
-  it('keeps the Hazers, saving version 4', () => {
+  it('keeps the Hazers, saving version 5', () => {
     const haze: FixtureProfile = {
       ...handMade,
       id: 'fos/haze',
@@ -172,7 +199,7 @@ describe('.lcvenue file', () => {
 
     const saved = saveVenueFile(hazy);
 
-    expect(JSON.parse(saved).version).toBe(4);
+    expect(JSON.parse(saved).version).toBe(5);
     expect(loadVenueFile(saved).hazers).toEqual([hazer]);
 
     // Max output and fan level are 1 when absent.

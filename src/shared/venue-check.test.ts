@@ -11,6 +11,7 @@ import {
 import {
   approximatedAims,
   approximatedStrobes,
+  fixtureUnsupportedGoboPrisms,
   hazePresetsWithoutHazers,
   lookPresetsNotInShow,
   unsetHousePresets,
@@ -50,6 +51,26 @@ const noTiltDegrees = profile('test/no-tilt-degrees', [
 // A bar that only tilts.
 const bar = profile('test/bar', [dimmer, tilt]);
 const par = profile('test/par', [dimmer]);
+// Gobo wheel with a gobo, and a prism.
+const spot = profile('test/spot', [
+  dimmer,
+  {
+    kind: 'control',
+    name: 'Gobo',
+    defaultValue: 0,
+    ranges: [
+      { from: 0, to: 9, capability: { type: 'goboSlot', name: 'Open', open: true } },
+      { from: 10, to: 255, capability: { type: 'goboSlot', name: 'Star' } },
+    ],
+  },
+  control('Prism', { type: 'prism', effect: 'in' }),
+]);
+// A gobo wheel with only an open slot, and a prism rotation only.
+const openOnly = profile('test/open-only', [
+  dimmer,
+  control('Gobo', { type: 'goboSlot', name: 'Open', open: true }),
+  control('Rotation', { type: 'prismRotation' }),
+]);
 const strobe = profile('test/strobe', [dimmer, control('Strobe', { type: 'strobe', hz: [1, 25] })]);
 // A strobe range that gives no Hz span.
 const unspanned = profile('test/unspanned', [dimmer, control('Strobe', { type: 'strobe' })]);
@@ -86,7 +107,19 @@ function patch(...fixtures: PatchedFixture[]): VenuePatch {
     stage: { width: 10, depth: 8 },
     universes: [{ number: 1 }],
     fixtures: fixtures.map((f, i) => ({ ...f, address: 1 + i * 3 })),
-    profiles: [mover, bare, noTiltDegrees, bar, par, strobe, unspanned, unspannedSpeed, wordy],
+    profiles: [
+      mover,
+      bare,
+      noTiltDegrees,
+      bar,
+      par,
+      strobe,
+      unspanned,
+      unspannedSpeed,
+      wordy,
+      spot,
+      openOnly,
+    ],
   };
 }
 
@@ -289,5 +322,68 @@ describe('hazePresetsWithoutHazers', () => {
 
     expect(hazePresetsWithoutHazers(presets, { ...patch(), hazers: [hazer] })).toEqual([]);
     expect(hazePresetsWithoutHazers(show([]), patch())).toEqual([]);
+  });
+});
+
+describe('fixtureUnsupportedGoboPrisms', () => {
+  function shows(...scenes: [string, Rule[]][]): Show {
+    return {
+      ...show([]),
+      scenes: scenes.map(([id, rules]) => ({
+        id,
+        name: id,
+        tags: [],
+        layer: 'l1',
+        fadeIn: 0,
+        rules,
+      })),
+    };
+  }
+
+  it('lists the Scenes that set Prism or Gobo on a Fixture without the hardware', () => {
+    const rig = patch(
+      fixture('par', par.id),
+      fixture('spot', spot.id),
+      fixture('open', openOnly.id),
+    );
+    const s = shows(
+      ['both', [{ target: {}, prism: 'On', gobo: 'Gobo' }]],
+      ['spin', [{ target: {}, prism: 'Rotate slow' }]],
+      ['steady', [{ target: {}, intensity: 1 }]],
+    );
+
+    const [parFx, spotFx, openFx] = rig.fixtures as [
+      PatchedFixture,
+      PatchedFixture,
+      PatchedFixture,
+    ];
+    expect(fixtureUnsupportedGoboPrisms(s, rig, parFx)).toEqual([
+      { fixtureId: 'par', kind: 'prism', scenes: ['both', 'spin'] },
+      { fixtureId: 'par', kind: 'gobo', scenes: ['both'] },
+    ]);
+    expect(fixtureUnsupportedGoboPrisms(s, rig, spotFx)).toEqual([]);
+    expect(fixtureUnsupportedGoboPrisms(s, rig, openFx)).toEqual([
+      { fixtureId: 'open', kind: 'gobo', scenes: ['both'] },
+    ]);
+  });
+
+  it('counts only Scenes whose Rules leave the Fixture with Prism or Gobo set', () => {
+    const rig = patch(fixture('par', par.id), fixture('wash', par.id, { role: 'Wash' }));
+    const s = shows(
+      ['off', [{ target: {}, prism: 'Off', gobo: 'Open' }]],
+      [
+        'stopped',
+        [
+          { target: {}, prism: 'On', gobo: 'Gobo' },
+          { target: { roles: ['Wash'] }, prism: 'Off', gobo: 'Open' },
+        ],
+      ],
+    );
+
+    expect(fixtureUnsupportedGoboPrisms(s, rig, rig.fixtures[0]!)).toEqual([
+      { fixtureId: 'par', kind: 'prism', scenes: ['stopped'] },
+      { fixtureId: 'par', kind: 'gobo', scenes: ['stopped'] },
+    ]);
+    expect(fixtureUnsupportedGoboPrisms(s, rig, rig.fixtures[1]!)).toEqual([]);
   });
 });

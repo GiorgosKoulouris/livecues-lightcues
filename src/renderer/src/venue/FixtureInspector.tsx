@@ -3,10 +3,13 @@ import { useState } from 'react';
 import { ASSUMED_DEGREES, type Approximation } from '../../../shared/aim';
 import { ROLES, type Role } from '../../../shared/fixture-profile';
 import type { Show } from '../../../shared/show';
+import { goboSlotNames } from '../../../shared/gobo-prism';
 import { ASSUMED_STROBE_HZ } from '../../../shared/strobe';
 import {
   fixtureApproximatedAims,
   fixtureApproximatedStrobe,
+  fixtureUnsupportedGoboPrisms,
+  type GoboPrismKind,
   type ApproximatedAim,
   type StrobeApproximation,
 } from '../../../shared/venue-check';
@@ -145,6 +148,7 @@ export function FixtureInspector({
           fixture={single}
           approximated={show ? fixtureApproximatedAims(show, patch, single) : []}
           strobe={show && strobeNote(show, patch, single)}
+          unsupported={show ? unsupportedNotes(show, patch, single) : []}
           modeError={errors.mode}
           onPut={(fixture, field) => put([fixture], field)}
         />
@@ -206,6 +210,33 @@ export function FixtureInspector({
   );
 }
 
+// The Gobo slot select value meaning "no override".
+const FIRST_GOBO_SLOT = '';
+
+const UNSUPPORTED_LABELS: Record<GoboPrismKind, string> = {
+  prism: 'it has no prism, so it stays as it is',
+  gobo: 'it has no gobo wheel with a gobo, so it stays as it is',
+};
+
+// The Scenes that set Prism or Gobo on a Fixture without the hardware for it,
+// by name.
+interface UnsupportedNote {
+  kind: GoboPrismKind;
+  scenes: string[];
+}
+
+function unsupportedNotes(
+  show: Show,
+  patch: VenuePatch,
+  fixture: PatchedFixture,
+): UnsupportedNote[] {
+  const name = (id: string) => show.scenes.find((s) => s.id === id)?.name ?? id;
+  return fixtureUnsupportedGoboPrisms(show, patch, fixture).map(({ kind, scenes }) => ({
+    kind,
+    scenes: scenes.map(name),
+  }));
+}
+
 // The Scenes that strobe a Fixture whose strobe is approximated, by name.
 function strobeNote(
   show: Show,
@@ -226,6 +257,7 @@ function SingleFields({
   fixture,
   approximated,
   strobe,
+  unsupported,
   modeError,
   onPut,
 }: {
@@ -233,9 +265,12 @@ function SingleFields({
   fixture: PatchedFixture;
   approximated: ApproximatedAim[];
   strobe: StrobeNote | undefined;
+  unsupported: UnsupportedNote[];
   modeError: string | undefined;
   onPut(fixture: PatchedFixture, field?: CheckedField): void;
 }) {
+  const mode = patchProfile(patch, fixture).modes.find((m) => m.name === fixture.mode);
+  const slots = mode ? goboSlotNames(mode.channels) : [];
   return (
     <div className={styles.fields}>
       <TextField
@@ -249,8 +284,27 @@ function SingleFields({
         error={modeError}
         value={fixture.mode}
         options={modeOptions(patchProfile(patch, fixture))}
-        onChange={(mode) => onPut({ ...fixture, mode }, 'mode')}
+        onChange={(mode) => {
+          const rest = { ...fixture };
+          delete rest.goboSlot;
+          onPut({ ...rest, mode }, 'mode');
+        }}
       />
+      {slots.length > 0 && (
+        <Select
+          label="Gobo slot"
+          value={fixture.goboSlot ?? FIRST_GOBO_SLOT}
+          options={[
+            { value: FIRST_GOBO_SLOT, label: `First gobo (${slots[0]})` },
+            ...slots.map((name) => ({ value: name, label: name })),
+          ]}
+          onChange={(slot) => {
+            const rest = { ...fixture };
+            delete rest.goboSlot;
+            onPut(slot === FIRST_GOBO_SLOT ? rest : { ...rest, goboSlot: slot });
+          }}
+        />
+      )}
       <TextField
         label="Address"
         mono
@@ -289,6 +343,18 @@ function SingleFields({
         />
       )}
       {approximated.length > 0 && <ApproximatedAims aims={approximated} />}
+      {unsupported.length > 0 && (
+        <section aria-label="Unsupported prism and gobo" className={styles.approximated}>
+          <h4 className={styles.legend}>Unsupported prism and gobo</h4>
+          <ul className={styles.aims}>
+            {unsupported.map(({ kind, scenes }) => (
+              <li key={kind}>
+                {UNSUPPORTED_LABELS[kind]}: set by {scenes.join(', ')}.
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {strobe && (
         <section aria-label="Approximated strobe" className={styles.approximated}>
           <h4 className={styles.legend}>Approximated strobe</h4>

@@ -11,7 +11,7 @@ A single lighting device occupying a block of DMX channels in one Universe.
 _Avoid_: Figure, light, device
 
 **Fixture Profile**:
-The manufacturer/model definition of a fixture type: its modes, channels and capabilities.
+The manufacturer/model definition of a fixture type: its modes, channels and capabilities. Capabilities include colour wheel slots, gobo wheel slots (open or a named gobo), prism in or out, and prism rotation speed (relative to the channel's fastest rate, slow to fast, direction dropped). Gobo indexing and rotation stay unsupported.
 _Avoid_: Fixture definition, personality
 
 **Cell**:
@@ -35,7 +35,7 @@ A panel in the Venue Patch view showing the 512 values an Output gets for one Un
 _Avoid_: DMX view, channel view
 
 **Venue Patch**:
-The per-venue description of the rig: which Fixtures exist, their Profile, Universe, address and position on stage.
+The per-venue description of the rig: which Fixtures exist, their Profile, Universe, address and position on stage, and optionally the gobo slot a Gobo Rule sends to a Fixture.
 _Avoid_: Rig file, setup
 
 ### House
@@ -71,7 +71,7 @@ _Avoid_: Haze Scene, haze cue, fog preset
 ### Visualiser
 
 **Visualiser**:
-A View that shows the rig in 3D: the stage, a back wall and an audience floor derived from the stage bounds, a bar of truss under each row of Overhead Fixtures, and a generic body for each Fixture (moving head, par, bar or blinder, by its Profile and Role, with Mounting applied). Read-only: hovering a Fixture shows its name, and the mouse orbits, zooms and pans the camera, with FOH, Top and Side presets. The free camera is kept while the app runs, never saved. The House Lights tint and set the Visualiser's ambient light (only; its key light stays full). Not the Preview, the 2D top-down and front views in Show and Perform.
+A View that shows the rig in 3D: the stage, a back wall and an audience floor derived from the stage bounds, a bar of truss under each row of Overhead Fixtures, and a generic body for each Fixture (moving head, par, bar or blinder, by its Profile and Role, with Mounting applied). Read-only: hovering a Fixture shows its name, and the mouse orbits, zooms and pans the camera, with FOH, Top and Side presets. A Fixture with its prism in is drawn as several split beams around its aim, turning at a fixed visual speed for Rotate slow and a faster one for Rotate fast; the Gobo is not drawn. The free camera is kept while the app runs, never saved. The House Lights tint and set the Visualiser's ambient light (only; its key light stays full). Not the Preview, the 2D top-down and front views in Show and Perform.
 _Avoid_: 3D preview, simulator
 
 **Beam angle**:
@@ -93,10 +93,10 @@ A reusable look or effect that targets Zones rather than specific Fixtures. Seve
 _Avoid_: Cue, preset
 
 **Rule**:
-One part of a Scene: a target (Zones × Roles) and the settings applied to it (intensity, colour, Direction, Effects, strobe). Later Rules in a Scene override earlier ones.
+One part of a Scene: a target (Zones × Roles) and the settings applied to it (intensity, colour, Direction, Effects, strobe, Prism, Gobo). Later Rules in a Scene override earlier ones.
 
 **Effect**:
-A time-varying change within a Rule, timed in beats of the Tempo. There are three kinds: movement, intensity and colour, and a Rule has one slot for each. A slot left unset leaves that kind to earlier Rules and lower Layers; set to None, it stops their Effect of that kind (a movement None holds the aim still, faded in like any Effect). Every Effect's length is 1/4, 1/2, 1, 2, 4, 8 or 16 beats. A movement Effect (Circle, Pan sweep, Tilt sweep, Ballyhoo) runs around a base Direction, which may come from another Scene; its size is in degrees. An intensity Effect (Pulse, Ramp up, Ramp down, Square, Chase) scales the intensity a Fixture gets, which may come from another Scene, by up to its depth (0–1); Chase lights one Spread position at a time. A colour Effect steps or fades through 2 to 4 colours, or runs a Rainbow (a hue cycle), in place of the Rule's colour: a Rule sets a colour or a colour Effect, not both. A colour set later stops it, and a colour None shows the colour under it. Size and depth fade in with the Scene, and a colour Effect crossfades from the colour before. A movement Effect too fast for a moving Fixture runs slower, under the Speed limit. Sequences over time are not Effects: the DAW sequences Scenes through Triggers. A spatial Effect is ordered by Fixture positions on stage (e.g. a left-to-right wave).
+A time-varying change within a Rule, timed in beats of the Tempo. There are three kinds: movement, intensity and colour, and a Rule has one slot for each. A slot left unset leaves that kind to earlier Rules and lower Layers; set to None, it stops their Effect of that kind (a movement None holds the aim still, faded in like any Effect). Every Effect's length is 1/4, 1/2, 1, 2, 4, 8 or 16 beats. A movement Effect (Circle, Pan sweep, Tilt sweep, Ballyhoo, Fan, Figure-8) runs around a base Direction, which may come from another Scene; its size is in degrees. A Fan turns each moving Fixture's pan out from centre stage in proportion to its distance from it, the outermost of the targeted moving Fixtures reaching the size at the half of the length and all closing again by its end, never crossing to the other side, so a Fixture on the centre line stays still; a Figure-8 is one pan cycle and two tilt cycles over the length. An intensity Effect (Pulse, Ramp up, Ramp down, Square, Chase, Random) scales the intensity a Fixture gets, which may come from another Scene, by up to its depth (0–1); Chase lights one Spread position at a time, or with a width of 1/4, 1/3 or 1/2 that share of them (at least one); Random lights that width's share of the Fixtures, picked afresh on each step (an Effect length divided by the Spread positions) but the same every cycle, and takes the width too (one Fixture without it). With one Spread position (In sync) a Random steps twice a cycle, as a Chase falls back to a half-cycle Square. A colour Effect steps or fades through 2 to 4 colours, or runs a Rainbow (a hue cycle), in place of the Rule's colour: a Rule sets a colour or a colour Effect, not both. A colour set later stops it, and a colour None shows the colour under it. Size and depth fade in with the Scene, and a colour Effect crossfades from the colour before. A movement Effect too fast for a moving Fixture runs slower, under the Speed limit. Sequences over time are not Effects: the DAW sequences Scenes through Triggers. A spatial Effect is ordered by Fixture positions on stage (e.g. a left-to-right wave).
 _Avoid_: Chase (for an Effect in general; Chase is one intensity Effect), FX
 
 **Speed limit**:
@@ -107,11 +107,19 @@ _Avoid_: Speed cap, max speed
 A Rule setting that makes the targeted Fixtures with a strobe channel flash: Off, Slow (2 Hz), Medium (6 Hz), Fast (12 Hz), or once per 1, 1/2 or 1/4 beat of the Tempo. Only the rate is sent; each Fixture times its own flashes, so they are not locked to the beat. Off stops strobe from earlier Rules and lower Layers. It snaps on and off at Scene start, and Freeze does not stop it. Not an Effect.
 _Avoid_: Flash (a Trigger mode), shutter
 
+**Prism**:
+A Rule setting for the targeted Fixtures with a prism: Off, On, Rotate slow or Rotate fast. On moves the prism into the beam; a rotation sends the prism's rotation speed at a fixed slow or fast point of the Profile's speed span, with the prism in. Only a rate is sent, so nothing is locked to the beat. Off moves the prism out and stops it from earlier Rules and lower Layers. It snaps on and off at Scene start, and Freeze does not stop it. Not an Effect.
+_Avoid_: Beam split (a Visualiser look, not the setting)
+
+**Gobo**:
+A Rule setting for the targeted Fixtures with a gobo wheel: Open or Gobo. Gobo sends the first slot of the wheel that is not open, or the gobo slot the Venue Patch picks for that Fixture. Open sends the open slot and stops the gobo from earlier Rules and lower Layers. It snaps on and off at Scene start, and Freeze does not stop it. Not an Effect.
+_Avoid_: Pattern, wheel (the Fixture's part, not the setting)
+
 **Focus Check**:
 A Venue Patch editor mode that sends every moving Fixture, open in white, to one chosen Direction on the real rig, in Blind too, so placement and Mounting can be corrected live. Blackout still wins. Ends when the editor is left.
 
 **Spread**:
-How an Effect is offset across the Fixtures it targets, by their stage positions: In sync, Left→Right, Mirrored (centre out) or Alternate.
+How an Effect is offset across the Fixtures it targets, by their stage positions: In sync, Left→Right, Right→Left, Mirrored (centre out), Edges→Centre, Front→Back (by stage y, from the front), Back→Front, Alternate or Random (a fixed order per Fixture, seeded by its id like Ballyhoo). Fixtures tied on the same x, |x| or y run together.
 _Avoid_: Phase, wings
 
 **Zone**:
@@ -178,4 +186,4 @@ A mode where the Preview and the Visualiser update but nothing is sent to the ri
 _Avoid_: Offline, preview mode
 
 **Venue Check**:
-A report, produced when a Show is combined with a Venue Patch, listing Scenes whose targets are missing or only approximated in that rig, House Presets that Venue Patch has no house look for (not set up in this venue), and Haze Presets when it has no Hazer. Strobe is approximated on a Fixture with no strobe channel, which stays steady, and on one whose strobe rate has no Hz span, taken as 1–20 Hz, or a span made from words such as slow and fast.
+A report, produced when a Show is combined with a Venue Patch, listing Scenes whose targets are missing or only approximated in that rig, House Presets that Venue Patch has no house look for (not set up in this venue), and Haze Presets when it has no Hazer. Strobe is approximated on a Fixture with no strobe channel, which stays steady, and on one whose strobe rate has no Hz span, taken as 1–20 Hz, or a span made from words such as slow and fast. Prism and Gobo Rules on Fixtures with no prism, or no gobo wheel with a slot other than open, stay as they are; like Strobe, they are noted on that Fixture in the Venue editor, not listed Venue-wide.

@@ -4,6 +4,8 @@ import { ROLES, type Role } from '../../../shared/fixture-profile';
 import {
   beatsText,
   DIRECTIONS,
+  GOBO_SETTINGS,
+  PRISM_SETTINGS,
   STROBE_HZ,
   STROBE_RATES,
   type Colour,
@@ -175,7 +177,7 @@ function RuleCard({
   onPut(rule: Rule): void;
   onRemove(): void;
 }) {
-  const { target, intensity, colour, direction, strobe } = rule;
+  const { target, intensity, colour, direction, strobe, prism, gobo } = rule;
   const { movementEffect, intensityEffect, colourEffect } = rule;
 
   // `undefined` leaves the attribute to earlier Rules.
@@ -255,6 +257,34 @@ function RuleCard({
               set(
                 'strobe',
                 STROBE_RATES.find((rate) => String(rate) === value),
+              )
+            }
+          />
+          <Select
+            label="Prism"
+            value={prism ?? ''}
+            options={[
+              { value: '', label: 'Not set' },
+              ...PRISM_SETTINGS.map((p) => ({ value: p, label: p })),
+            ]}
+            onChange={(value) =>
+              set(
+                'prism',
+                PRISM_SETTINGS.find((p) => p === value),
+              )
+            }
+          />
+          <Select
+            label="Gobo"
+            value={gobo ?? ''}
+            options={[
+              { value: '', label: 'Not set' },
+              ...GOBO_SETTINGS.map((g) => ({ value: g, label: g })),
+            ]}
+            onChange={(value) =>
+              set(
+                'gobo',
+                GOBO_SETTINGS.find((g) => g === value),
               )
             }
           />

@@ -13,6 +13,8 @@ import type {
   Scene,
   Show,
   Trigger,
+  PRISM_BEHAVIOUR,
+  PrismSetting,
 } from './show';
 import type {
   HouseGroup,
@@ -159,7 +161,13 @@ export interface FixtureLight {
   aim?: AimAngles;
   // The strobe rate in Hz, while it strobes.
   strobe?: number;
+  // The prism, while it is in the beam: on, or turning slow or fast. Only the
+  // Visualiser draws it.
+  prism?: PreviewPrism;
 }
+
+// How the prism looks in the preview.
+export type PreviewPrism = NonNullable<(typeof PRISM_BEHAVIOUR)[PrismSetting]['preview']>;
 
 // The House Lights' ambient: their intensity (0–1) and the colour they show at
 // full, red, green and blue each 0–1.

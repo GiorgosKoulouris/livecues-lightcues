@@ -3,6 +3,7 @@ import { useState } from 'react';
 import {
   DMX_MAX_VALUE,
   EMITTERS,
+  OPEN_GOBO_SLOT,
   isBeamAngle,
   ROLES,
   type Capability,
@@ -460,6 +461,9 @@ const CAPABILITY_TYPES: Capability['type'][] = [
   'pan',
   'tilt',
   'panTiltSpeed',
+  'goboSlot',
+  'prism',
+  'prismRotation',
   'shutter',
   'strobe',
   'strobeSpeed',
@@ -476,6 +480,10 @@ function defaultCapability(type: Capability['type']): Capability {
       return { type, slot: { name: 'Open', colour: '#ffffff' } };
     case 'shutter':
       return { type, effect: 'open' };
+    case 'goboSlot':
+      return { ...OPEN_GOBO_SLOT };
+    case 'prism':
+      return { type, effect: 'in' };
     case 'unsupported':
       return { type, feature: '' };
     default:
@@ -567,6 +575,58 @@ function CapabilityFields({ name, capability, onChange }: CapabilityProps) {
           unit="°"
           span={capability.degrees}
           onChange={(degrees) => onChange({ ...capability, degrees })}
+        />
+      );
+    case 'goboSlot':
+      return (
+        <>
+          <Select
+            label={`Gobo slot kind of ${name}`}
+            hideLabel
+            value={capability.open ? 'open' : 'gobo'}
+            options={[
+              { value: 'open', label: 'open' },
+              { value: 'gobo', label: 'gobo' },
+            ]}
+            onChange={(kind) =>
+              onChange(
+                kind === 'open'
+                  ? { ...OPEN_GOBO_SLOT }
+                  : { type: 'goboSlot', name: capability.open ? 'Gobo' : capability.name },
+              )
+            }
+          />
+          {!capability.open && (
+            <TextField
+              label={`Gobo name of ${name}`}
+              hideLabel
+              value={capability.name}
+              parse={parseRequired('Gobo name')}
+              onCommit={(goboName) => onChange({ type: 'goboSlot', name: goboName })}
+            />
+          )}
+        </>
+      );
+    case 'prism':
+      return (
+        <Select
+          label={`Prism of ${name}`}
+          hideLabel
+          value={capability.effect}
+          options={[
+            { value: 'in', label: 'in' },
+            { value: 'out', label: 'out' },
+          ]}
+          onChange={(effect) => onChange({ ...capability, effect })}
+        />
+      );
+    case 'prismRotation':
+      return (
+        <SpanInput
+          label={`Speed of ${name}`}
+          unit="0 slow – 1 fast"
+          span={capability.speed}
+          onChange={(speed) => onChange({ ...capability, speed })}
         />
       );
     case 'panTiltSpeed':

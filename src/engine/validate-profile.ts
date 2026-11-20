@@ -92,8 +92,14 @@ function validateCapability(capability: Capability): string[] {
   if (isHazeOrFan(capability) && capability.level?.some((l) => l < 0 || l > 1)) {
     return [`${capability.type} level must be within 0–1`];
   }
-  if (capability.type === 'panTiltSpeed' && capability.speed?.some((s) => s < 0 || s > 1)) {
-    return ['panTiltSpeed speed must be within 0–1'];
+  if (
+    (capability.type === 'panTiltSpeed' || capability.type === 'prismRotation') &&
+    capability.speed?.some((s) => s < 0 || s > 1)
+  ) {
+    return [`${capability.type} speed must be within 0–1`];
+  }
+  if (capability.type === 'goboSlot' && !capability.name.trim()) {
+    return ['gobo slot name is required'];
   }
   return [];
 }

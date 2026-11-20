@@ -5,9 +5,13 @@ import { validateShow, type Colour, type Rule, type Show } from '../shared/show'
 // Directions, movement Effects and the Default Direction and version 5 House
 // Presets, strobe and Effect slots; older files load without them. Version 5
 // renamed a Rule's `effect` to `movementEffect`. Version 6 added Haze Presets.
+// Version 7 added the Spreads Right→Left, Edges→Centre, Front→Back, Back→Front
+// and Random, the movement shapes Fan and Figure-8, and an intensity Effect's
+// width (Chase and Random): versions 1–6 load as they are, but may not have a
+// width. Version 7 also added a Rule's prism and gobo.
 
-const VERSION = 6;
-const VERSIONS = [1, 2, 3, 4, 5, VERSION];
+const VERSION = 7;
+const VERSIONS = [1, 2, 3, 4, 5, 6, VERSION];
 
 interface ShowFile extends Show {
   version: number;
@@ -100,12 +104,21 @@ function unknownFields(file: ShowFile): string[] {
     ['defaultDirection'],
     ['housePresets'],
     ['hazePresets'],
+    [], // 7: none at the top level; Effect fields are allowed below.
   ];
   allow(file, added.slice(0, file.version).flat(), '');
   // The Rule fields of each version, besides the target and colour.
   const ruleFields =
     file.version >= 5
-      ? ['intensity', 'direction', 'strobe', 'movementEffect', 'intensityEffect', 'colourEffect']
+      ? [
+          'intensity',
+          'direction',
+          'strobe',
+          'movementEffect',
+          'intensityEffect',
+          'colourEffect',
+          ...(file.version >= 7 ? ['prism', 'gobo'] : []),
+        ]
       : [['intensity'], [], [], ['direction', 'effect']].slice(0, file.version).flat();
   const movementField = file.version < 5 ? 'effect' : 'movementEffect';
   if (file.version !== 1 && file.defaultColour !== undefined) {
@@ -129,7 +142,10 @@ function unknownFields(file: ShowFile): string[] {
       };
       if (file.version >= 4) allowEffect(movementField, ['shape', 'size', 'length', 'spread']);
       if (file.version >= 5) {
-        allowEffect('intensityEffect', ['shape', 'depth', 'length', 'spread']);
+        allowEffect(
+          'intensityEffect',
+          ['shape', 'depth', 'length', 'spread'].concat(file.version >= 7 ? ['width'] : []),
+        );
         allowEffect('colourEffect', ['shape', 'colours', 'length', 'spread']);
         // validateShow reports a list or colour of the wrong type.
         const colours: unknown = (effects.colourEffect as { colours?: unknown } | null)?.colours;

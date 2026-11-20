@@ -511,6 +511,141 @@ describe('importGdtfFixture', () => {
     expect(profile.modes[0]!.channels[0]).toMatchObject({ defaultValue: 64 });
   });
 
+  it('imports gobo wheel slots, prism in or out and prism rotation', () => {
+    const { profile, unsupported } = importGdtfFixture(
+      gdtfWithWheels(
+        { Manufacturer: 'Generic', Name: 'Spot' },
+        [
+          wheel('Gobos', ['Open', '0.3127,0.3290,100'], ['Dots', '0.3127,0.3290,50']),
+          wheel('Prisms', ['Open', '0.3127,0.3290,100'], ['3-facet', '0.3127,0.3290,90']),
+        ],
+        mode(
+          '4ch',
+          channel(
+            '1',
+            'Gobo1',
+            channelFunction(
+              'Gobo1',
+              '0/1',
+              { Wheel: 'Gobos' },
+              channelSet('Open', '0/1', { WheelSlotIndex: '1' }),
+              channelSet('Dots', '10/1', { WheelSlotIndex: '2' }),
+              channelSet('Split', '20/1', { WheelSlotIndex: '0' }),
+            ),
+            channelFunction('Gobo1PosRotate', '30/1', { PhysicalFrom: '-60', PhysicalTo: '60' }),
+          ),
+          channel(
+            '2',
+            'Prism1',
+            channelFunction(
+              'Prism1',
+              '0/1',
+              { Wheel: 'Prisms' },
+              channelSet('Open', '0/1', { WheelSlotIndex: '1' }),
+              channelSet('3-facet', '10/1', { WheelSlotIndex: '2' }),
+            ),
+          ),
+          channel(
+            '3',
+            'Prism1',
+            channelFunction('Prism1', '0/1', { Name: 'Out' }),
+            channelFunction('Prism1', '10/1', { Name: '5-facet' }),
+          ),
+          channel(
+            '4',
+            'Prism1PosRotate',
+            channelFunction('Prism1PosRotate', '0/1', { PhysicalFrom: '0', PhysicalTo: '-90' }),
+            channelFunction('Prism1PosRotate', '128/1', { PhysicalFrom: '90', PhysicalTo: '0' }),
+          ),
+        ),
+      ),
+    );
+
+    const channels = profile.modes[0]!.channels;
+    expect(channels[0]).toMatchObject({
+      ranges: [
+        { from: 0, to: 9, capability: { type: 'goboSlot', name: 'Open', open: true } },
+        { from: 10, to: 19, capability: { type: 'goboSlot', name: 'Dots' } },
+        { from: 20, to: 29, capability: { type: 'unsupported', feature: 'Gobo1 between slots' } },
+        { from: 30, to: 255, capability: { type: 'unsupported', feature: 'Gobo1PosRotate' } },
+      ],
+    });
+    expect(channels[1]).toMatchObject({
+      ranges: [
+        { from: 0, to: 9, capability: { type: 'prism', effect: 'out' } },
+        { from: 10, to: 255, capability: { type: 'prism', effect: 'in' } },
+      ],
+    });
+    expect(channels[2]).toMatchObject({
+      ranges: [
+        { from: 0, to: 9, capability: { type: 'prism', effect: 'out' } },
+        { from: 10, to: 255, capability: { type: 'prism', effect: 'in' } },
+      ],
+    });
+    expect(channels[3]).toMatchObject({
+      ranges: [
+        { from: 0, to: 127, capability: { type: 'prismRotation', speed: [0, 1] } },
+        { from: 128, to: 255, capability: { type: 'prismRotation', speed: [1, 0] } },
+      ],
+    });
+    expect(unsupported.map((u) => u.feature)).toEqual(['Gobo1 between slots', 'Gobo1PosRotate']);
+  });
+
+  it.each([
+    ['Open', 'out'],
+    ['Prism Out', 'out'],
+    ['none', 'out'],
+    ['Prism OFF', 'out'],
+    ['None', 'out'],
+    ['Nozzle', 'in'],
+    ['Outline', 'in'],
+    ['Opening', 'in'],
+    ['No prism', 'in'],
+    ['Prism 3-facet', 'in'],
+  ])('guesses prism %s as %s from the function name', (name, effect) => {
+    const { profile } = importGdtfFixture(
+      gdtf(
+        { Manufacturer: 'Generic', Name: 'Spot' },
+        mode('1ch', channel('1', 'Prism1', channelFunction('Prism1', '0/1', { Name: name }))),
+      ),
+    );
+
+    expect(profile.modes[0]!.channels[0]).toMatchObject({
+      ranges: [{ capability: { type: 'prism', effect } }],
+    });
+  });
+
+  it('scales prism rotation to the whole channel, so slow stays slow in a bidirectional range', () => {
+    const rotate = (dmx: string, from: string, to: string) =>
+      channelFunction('Prism1PosRotate', dmx, { PhysicalFrom: from, PhysicalTo: to });
+    const { profile } = importGdtfFixture(
+      gdtfWithWheels(
+        { Manufacturer: 'Generic', Name: 'Spot' },
+        [],
+        mode(
+          '1ch',
+          channel(
+            '1',
+            'Prism1PosRotate',
+            rotate('0/1', '-100', '-25'),
+            rotate('64/1', '-25', '0'),
+            rotate('128/1', '0', '25'),
+            rotate('192/1', '25', '100'),
+          ),
+        ),
+      ),
+    );
+
+    expect(profile.modes[0]!.channels[0]).toMatchObject({
+      ranges: [
+        { from: 0, to: 63, capability: { type: 'prismRotation', speed: [1, 0.25] } },
+        { from: 64, to: 127, capability: { type: 'prismRotation', speed: [0.25, 0] } },
+        { from: 128, to: 191, capability: { type: 'prismRotation', speed: [0, 0.25] } },
+        { from: 192, to: 255, capability: { type: 'prismRotation', speed: [0.25, 1] } },
+      ],
+    });
+  });
+
   it('imports colour wheel slots with names and colours from the wheel', () => {
     const { profile, unsupported } = importGdtfFixture(
       gdtfWithWheels(
@@ -545,9 +680,9 @@ describe('importGdtfFixture', () => {
           ),
           channel(
             '2',
-            'Gobo1',
+            'Frost1',
             channelFunction(
-              'Gobo1',
+              'Frost1',
               '0/1',
               { Wheel: 'Gobos' },
               channelSet('Open', '0/1', { WheelSlotIndex: '1' }),
@@ -588,9 +723,9 @@ describe('importGdtfFixture', () => {
       },
       {
         kind: 'control',
-        name: 'Gobo1',
+        name: 'Frost1',
         defaultValue: 0,
-        ranges: [{ from: 0, to: 255, capability: { type: 'unsupported', feature: 'Gobo1' } }],
+        ranges: [{ from: 0, to: 255, capability: { type: 'unsupported', feature: 'Frost1' } }],
       },
     ]);
     expect(unsupported.map((u) => u.feature)).toEqual([
@@ -598,7 +733,7 @@ describe('importGdtfFixture', () => {
       'Color1 missing wheel slot',
       'Color1WheelSpin',
       'Color1WheelRandom',
-      'Gobo1',
+      'Frost1',
     ]);
   });
 

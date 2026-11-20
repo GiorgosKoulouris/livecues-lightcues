@@ -140,8 +140,8 @@ describe('.lcshow file', () => {
   it('rejects a file of an unknown version', () => {
     const saved = JSON.parse(saveShowFile(show));
 
-    expect(() => loadShowFile(JSON.stringify({ ...saved, version: 7 }))).toThrow(
-      'Unsupported Show version: 7',
+    expect(() => loadShowFile(JSON.stringify({ ...saved, version: 8 }))).toThrow(
+      'Unsupported Show version: 8',
     );
     expect(() => loadShowFile(JSON.stringify({ ...show }))).toThrow(
       'Unsupported Show version: undefined',
@@ -202,6 +202,78 @@ describe('.lcshow file', () => {
     expect(loadShowFile(JSON.stringify({ version: 5, ...v5 }))).toEqual(v5);
     expect(() => loadShowFile(JSON.stringify({ version: 5, ...show }))).toThrow(
       'Invalid Show:\nunknown field "hazePresets"',
+    );
+  });
+
+  it('loads a version 6 file, and saves version 7 with the new Spreads', () => {
+    const v6 = { version: 6, ...show };
+    expect(loadShowFile(JSON.stringify(v6))).toEqual(show);
+
+    const [rule] = show.scenes[0]!.rules;
+    const random: Show = {
+      ...show,
+      scenes: [
+        {
+          ...show.scenes[0]!,
+          rules: [
+            {
+              ...rule!,
+              intensityEffect: { shape: 'Chase', depth: 1, length: 1, spread: 'Random' },
+            },
+          ],
+        },
+        ...show.scenes.slice(1),
+      ],
+    };
+    const saved = JSON.parse(saveShowFile(random));
+    expect(saved.version).toBe(7);
+    expect(loadShowFile(JSON.stringify(saved))).toEqual(random);
+  });
+
+  it('keeps a Rule prism and gobo from version 7 on', () => {
+    const [first, ...others] = show.scenes;
+    const geared: Show = {
+      ...show,
+      scenes: [
+        { ...first!, rules: [{ target: {}, prism: 'Rotate fast', gobo: 'Gobo' }] },
+        ...others,
+      ],
+    };
+    const saved = saveShowFile(geared);
+    expect(JSON.parse(saved).version).toBe(7);
+    expect(loadShowFile(saved)).toEqual(geared);
+    expect(() => loadShowFile(JSON.stringify({ version: 6, ...geared }))).toThrow(
+      'unknown field "scenes[0].rules[0].prism"',
+    );
+  });
+
+  it('allows an intensity Effect width from version 7 on', () => {
+    const [first, ...others] = show.scenes;
+    const [rule] = first!.rules;
+    const wide: Show = {
+      ...show,
+      scenes: [
+        {
+          ...first!,
+          rules: [
+            {
+              ...rule!,
+              intensityEffect: {
+                shape: 'Chase',
+                depth: 1,
+                length: 1,
+                spread: 'Mirrored',
+                width: 0.5,
+              },
+            },
+          ],
+        },
+        ...others,
+      ],
+    };
+    expect(loadShowFile(saveShowFile(wide))).toEqual(wide);
+    expect(() => loadShowFile(JSON.stringify({ version: 6, ...wide }))).toThrow(
+      'unknown field "scenes[0].rules[0].intensityEffect.width"',
     );
   });
 

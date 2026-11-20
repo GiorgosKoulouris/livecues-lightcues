@@ -10,14 +10,17 @@ import {
   type IntensityEffect,
   type MovementEffect,
   type Spread,
+  EFFECT_WIDTHS,
 } from '../shared/show';
 import { DEFAULT_MOUNTING, type Mounting, type StagePosition } from '../shared/venue-patch';
 import {
   colourEffectMix,
   effectTurn,
+  fanPosition,
   intensityScale,
   spreadDelay,
   spreadPositions,
+  type SpreadFixture,
 } from './effects';
 
 // The turn a Pan sweep of 10° over 4 beats, changed by `overrides`, gives
@@ -83,6 +86,67 @@ describe('effectTurn', () => {
       const { pan, tilt } = turn({ shape: 'Circle' }, beat);
       expect(Math.hypot(pan, tilt)).toBeCloseTo(10, 6);
     }
+  });
+
+  describe('Fan', () => {
+    const rig = [{ x: -4 }, { x: 0 }, { x: 2 }, { x: 4 }].map((p) => ({ ...p, y: 0, height: 0 }));
+    const fan = (beat: number, x: number) =>
+      effectTurn(
+        { shape: 'Fan', size: 10, length: 4, spread: 'In sync' },
+        beat,
+        0,
+        'mover',
+        fanPosition({ x, y: 0, height: 0 }, rig),
+      );
+
+    it('opens each Fixture by its distance from centre, the outermost to size', () => {
+      expectTurn(fan(2, 4), 10, 0);
+      expectTurn(fan(2, -4), -10, 0);
+      expectTurn(fan(2, 2), 5, 0);
+    });
+
+    it('opens and closes once per length, peaking at the half and never crossing over', () => {
+      expectTurn(fan(0, 4), 0, 0);
+      expectTurn(fan(2, 4), 10, 0);
+      expectTurn(fan(4, 4), 0, 0);
+      expectTurn(fan(3, 4), 7.071068, 0);
+      expectTurn(fan(3, -4), -7.071068, 0);
+      expectTurn(fan(6, 4), 10, 0);
+    });
+
+    it('keeps its own cycle when a Spread delays it', () => {
+      const delayed = effectTurn(
+        { shape: 'Fan', size: 10, length: 4, spread: 'In sync' },
+        1,
+        0.5,
+        'mover',
+        1,
+      );
+      // Half a cycle behind at a quarter cycle in: it is 3/4 through the last cycle.
+      expect(delayed.pan).toBeCloseTo(10 * Math.sin(Math.PI * 0.75));
+    });
+
+    it('does not move a Fixture on the centre line', () => {
+      for (const beat of QUARTERS) expectTurn(fan(beat, 0), 0, 0);
+    });
+
+    it('does not move when every Fixture is on the centre line', () => {
+      const centre = { x: 0, y: 0, height: 0 };
+      expect(fanPosition(centre, [centre])).toBe(0);
+    });
+  });
+
+  describe('Figure-8', () => {
+    it('turns pan once and tilt twice per length, size degrees each way', () => {
+      const at = (beat: number) => turn({ shape: 'Figure-8' }, beat);
+      expectTurn(at(0), 0, 0);
+      expectTurn(at(0.5), 7.071068, 10);
+      expectTurn(at(1), 10, 0);
+      expectTurn(at(1.5), 7.071068, -10);
+      expectTurn(at(2), 0, 0);
+      expectTurn(at(3), -10, 0);
+      expectTurn(at(4), 0, 0);
+    });
   });
 
   describe('Ballyhoo', () => {
@@ -189,6 +253,102 @@ describe('intensityScale', () => {
     expectScales(scales(chase, { positions: 2, delay: 1 / 2 }), [0, 0, 1, 1]);
   });
 
+  describe('Chase width', () => {
+    const THIRD = EFFECT_WIDTHS[1];
+    // How many of `n` positions are lit at each step of a cycle, at `width`.
+    function litAt(n: number, width?: IntensityEffect['width']) {
+      const effect: IntensityEffect = {
+        shape: 'Chase',
+        depth: 1,
+        length: 4,
+        spread: 'Left→Right',
+        ...(width === undefined ? {} : { width }),
+      };
+      // Position i runs i/n of a cycle behind; a step is 4/n beats.
+      return Array.from(
+        { length: n },
+        (_, step) =>
+          Array.from({ length: n }, (_, i) =>
+            intensityScale(effect, ((step + 0.5) * 4) / n, i / n, n),
+          ).filter((scale) => scale === 1).length,
+      );
+    }
+    const lit = (n: number, width?: IntensityEffect['width']) => new Set(litAt(n, width));
+
+    it('lights one position at a time without a width', () => {
+      for (const n of [4, 8, 18]) expect(lit(n)).toEqual(new Set([1]));
+    });
+
+    it('lights the width of the positions, rounded up, at 4, 8 and 18', () => {
+      const expected: [0.25 | 0.5 | typeof THIRD, Record<number, number>][] = [
+        [0.25, { 4: 1, 8: 2, 18: 5 }],
+        [THIRD, { 4: 2, 8: 3, 18: 6 }],
+        [0.5, { 4: 2, 8: 4, 18: 9 }],
+      ];
+      for (const [width, counts] of expected) {
+        for (const n of [4, 8, 18]) {
+          expect(lit(n, width), `${width} of ${n}`).toEqual(new Set([counts[n]]));
+        }
+      }
+    });
+
+    it('moves the lit run one position each step', () => {
+      const effect: IntensityEffect = {
+        shape: 'Chase',
+        depth: 1,
+        length: 4,
+        spread: 'Left→Right',
+        width: 0.5,
+      };
+      const at = (beat: number) => [0, 1, 2, 3].map((i) => intensityScale(effect, beat, i / 4, 4));
+      expect(at(0.5)).toEqual([1, 0, 0, 1]);
+      expect(at(1.5)).toEqual([1, 1, 0, 0]);
+    });
+  });
+
+  describe('Random', () => {
+    const ids = Array.from({ length: 12 }, (_, i) => `f${i}`);
+    const effect = (width?: IntensityEffect['width']): IntensityEffect => ({
+      shape: 'Random',
+      depth: 1,
+      length: 4,
+      spread: 'Left→Right',
+      ...(width === undefined ? {} : { width }),
+    });
+    // Which Fixtures are lit at `beat`, among 4 positions.
+    const litIds = (beat: number, width?: IntensityEffect['width']) =>
+      ids.filter((id) => intensityScale(effect(width), beat, 0, 4, { id, targeted: ids }) === 1);
+
+    it('lights the width of the Fixtures on every step, one without a width', () => {
+      for (const beat of [0.5, 1.5, 2.5, 3.5]) {
+        expect(litIds(beat)).toHaveLength(1);
+        expect(litIds(beat, 0.25)).toHaveLength(3);
+        expect(litIds(beat, 1 / 3)).toHaveLength(4);
+        expect(litIds(beat, 0.5)).toHaveLength(6);
+      }
+    });
+
+    it('is the same pattern each cycle and each run, and differs between steps', () => {
+      expect(litIds(1.5, 0.5)).toEqual(litIds(5.5, 0.5));
+      expect(litIds(1.5, 0.5)).toEqual(litIds(1.5, 0.5));
+      const steps = [0.5, 1.5, 2.5, 3.5].map((beat) => litIds(beat, 0.5).join());
+      expect(new Set(steps).size).toBeGreaterThan(1);
+    });
+
+    it('holds a step for the length divided by the positions', () => {
+      expect(litIds(1.1, 0.5)).toEqual(litIds(1.9, 0.5));
+    });
+
+    it('does not depend on the order the Fixtures are targeted in', () => {
+      const shuffled = [...ids].reverse();
+      for (const id of ids) {
+        expect(intensityScale(effect(0.5), 1.5, 0, 4, { id, targeted: shuffled })).toBe(
+          intensityScale(effect(0.5), 1.5, 0, 4, { id, targeted: ids }),
+        );
+      }
+    });
+  });
+
   it('chases as a Square with one position', () => {
     expectScales(scales({ shape: 'Chase' }, { positions: 1 }), [1, 1, 0, 0]);
   });
@@ -272,7 +432,7 @@ describe('colourEffectMix', () => {
 
 describe('spreadPositions', () => {
   // Fixtures at x -4, -2, 2 and 4.
-  const line = [-4, -2, 2, 4].map((x) => ({ x, y: 4, height: 6 }));
+  const line = [-4, -2, 2, 4].map((x) => ({ id: `x${x}`, x, y: 4, height: 6 }));
 
   it('counts the distinct delays a Spread gives the Fixtures', () => {
     expect(spreadPositions('In sync', line)).toBe(1);
@@ -288,7 +448,9 @@ describe('spreadPositions', () => {
 });
 
 describe('spreadDelay', () => {
-  const at = (x: number): StagePosition => ({ x, y: 4, height: 6 });
+  // The Spreads ordered by x.
+  type XSpread = Exclude<Spread, 'Front→Back' | 'Back→Front' | 'Random'>;
+  const at = (x: number): SpreadFixture => ({ id: `x${x}`, x, y: 4, height: 6 });
   // Across the stage, out of order.
   const line = [at(4), at(-2), at(-4), at(2)];
   const delays = (spread: Spread) =>
@@ -313,11 +475,13 @@ describe('spreadDelay', () => {
   it('gives Fixtures at the same x the same delay, spread over the distinct x', () => {
     // Two at x -3 and two at x 1, at different depths and heights.
     const twins = [at(-3), at(1), { ...at(-3), y: 1 }, { ...at(1), height: 2 }];
-    const expected: Record<Spread, [number, number]> = {
+    const expected: Record<XSpread, [number, number]> = {
       'In sync': [0, 0],
       'Left→Right': [0, 0.5],
       Mirrored: [0.5, 0],
       Alternate: [0, 0.5],
+      'Right→Left': [0.5, 0],
+      'Edges→Centre': [0, 0.5],
     };
     for (const [spread, [left, right]] of Object.entries(expected)) {
       expect(twins.map((position) => spreadDelay(spread as Spread, position, twins))).toEqual([
@@ -327,6 +491,64 @@ describe('spreadDelay', () => {
         right,
       ]);
     }
+  });
+
+  it('runs from the highest x down, Right→Left, the reverse of Left→Right', () => {
+    expect(delays('Right→Left')).toEqual({ '-4': 0.75, '-2': 0.5, 2: 0.25, 4: 0 });
+  });
+
+  it('runs from the edges in, Edges→Centre, the reverse of Mirrored', () => {
+    expect(delays('Edges→Centre')).toEqual({ '-4': 0, '-2': 0.5, 2: 0.5, 4: 0 });
+  });
+
+  describe('by depth', () => {
+    const row = (y: number, x = 0): SpreadFixture => ({ id: `${x},${y}`, x, y, height: 6 });
+    // The front (y below 0) first, out of order, two at the same y.
+    const stage = [row(6), row(-2), row(2, 3), row(2, -3)];
+    const byY = (spread: Spread) => stage.map((p) => spreadDelay(spread, p, stage));
+
+    it('runs from the front back, Front→Back, by stage y', () => {
+      expect(byY('Front→Back')).toEqual([2 / 3, 0, 1 / 3, 1 / 3]);
+    });
+
+    it('runs from the back forward, Back→Front, and ties still run together', () => {
+      expect(byY('Back→Front')).toEqual([0, 2 / 3, 1 / 3, 1 / 3]);
+      expect(spreadPositions('Back→Front', stage)).toBe(3);
+    });
+  });
+
+  describe('Random', () => {
+    const ids = ['a', 'b', 'c', 'd', 'e'];
+    const fixtures = ids.map((id, i) => ({ id, x: i, y: 4, height: 6 }));
+    const run = (list = fixtures) => list.map((f) => spreadDelay('Random', f, list));
+
+    it('is the same on every run, whatever order the Fixtures come in', () => {
+      const first = run();
+      expect(run()).toEqual(first);
+      const reversed = [...fixtures].reverse();
+      expect(run(reversed)).toEqual([...first].reverse());
+    });
+
+    it('gives each Fixture its own position, in a scrambled order', () => {
+      const delays = run();
+      expect(new Set(delays).size).toBe(5);
+      expect([...delays].sort()).toEqual([0, 0.2, 0.4, 0.6, 0.8]);
+      expect(delays).not.toEqual([0, 0.2, 0.4, 0.6, 0.8]);
+      expect(spreadPositions('Random', fixtures)).toBe(5);
+    });
+
+    it("is not ordered by the first parameter of the Fixture's Ballyhoo", () => {
+      // Seeding from the bare id, as Ballyhoo does, gave this order. The
+      // Spread seed is salted, so it gives another.
+      const ballyhooOrder = [0.4, 0.2, 0, 0.6, 0.8];
+      expect(run()).not.toEqual(ballyhooOrder);
+      expect(run()).toEqual([0.4, 0.8, 0, 0.6, 0.2]);
+    });
+
+    it('seeds from the id, not the position', () => {
+      const moved = fixtures.map((f) => ({ ...f, x: -f.x, y: 9 }));
+      expect(run(moved)).toEqual(run());
+    });
   });
 
   it('is 0 for a Fixture the Effect does not target', () => {

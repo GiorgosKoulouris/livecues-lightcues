@@ -152,6 +152,12 @@ function applied(current: Show, edit: ShowEdit): Show {
 
 const edits = () =>
   engine.sent.flatMap((c) => (c.type === 'editShow' ? [c.edit] : ([] as ShowEdit[])));
+// The first Rule of the last Scene put.
+const rule = () => {
+  const put = edits().at(-1);
+  if (put?.type !== 'putScene') throw new Error('No Scene put');
+  return put.scene.rules[0];
+};
 const sentOf = (type: EngineCommand['type']) => engine.sent.filter((c) => c.type === type);
 
 async function renderView() {
@@ -322,11 +328,6 @@ describe('Scene editor', () => {
 
   it("sets a Rule's strobe rate, and leaves it to others when not set", async () => {
     await selectWarm();
-    const rule = () => {
-      const put = edits().at(-1);
-      if (put?.type !== 'putScene') throw new Error('No Scene put');
-      return put.scene.rules[0];
-    };
     const strobe = screen.getAllByRole('combobox', { name: 'Strobe' })[0]!;
     expect(strobe).toHaveValue('');
 
@@ -342,11 +343,6 @@ describe('Scene editor', () => {
 
   it("sets a Rule's movement Effect: shape, size with quick picks, length and Spread", async () => {
     await selectWarm();
-    const rule = () => {
-      const put = edits().at(-1);
-      if (put?.type !== 'putScene') throw new Error('No Scene put');
-      return put.scene.rules[0];
-    };
     const effect = screen.getAllByLabelText('Movement Effect')[0]!;
     expect(effect).toHaveValue('');
     expect(screen.queryByRole('textbox', { name: 'Size (°)' })).toBeNull();
@@ -392,13 +388,73 @@ describe('Scene editor', () => {
     expect(rule()).toEqual({ target: {}, intensity: 0.5 });
   });
 
+  it('offers every Spread, Front→Back, Back→Front, the reverses and Random too', async () => {
+    await selectWarm();
+    await userEvent.selectOptions(screen.getAllByLabelText('Movement Effect')[0]!, 'Circle');
+    const spread = screen.getByLabelText('Spread');
+    const options = within(spread)
+      .getAllByRole('option')
+      .map((option) => option.textContent);
+    expect(options).toEqual([
+      'In sync',
+      'Left→Right',
+      'Right→Left',
+      'Mirrored',
+      'Edges→Centre',
+      'Front→Back',
+      'Back→Front',
+      'Alternate',
+      'Random',
+    ]);
+
+    await userEvent.selectOptions(spread, 'Front→Back');
+    const put = edits().at(-1);
+    if (put?.type !== 'putScene') throw new Error('No Scene put');
+    expect(put.scene.rules[0]?.movementEffect).toMatchObject({ spread: 'Front→Back' });
+  });
+
+  it('shows a Width for a Chase or Random only, and drops it for other shapes', async () => {
+    await selectWarm();
+    const effect = screen.getAllByLabelText('Intensity Effect')[0]!;
+    await userEvent.selectOptions(effect, 'Pulse');
+    expect(screen.queryByLabelText('Width')).toBeNull();
+
+    await userEvent.selectOptions(effect, 'Chase');
+    const width = screen.getByLabelText('Width');
+    expect(width).toHaveValue('');
+    expect(
+      within(width)
+        .getAllByRole('option')
+        .map((o) => o.textContent),
+    ).toEqual([
+      '1 position',
+      '1/4 of the positions',
+      '1/3 of the positions',
+      '1/2 of the positions',
+    ]);
+    await userEvent.selectOptions(width, '1/3 of the positions');
+    expect(rule()?.intensityEffect).toMatchObject({ shape: 'Chase', width: 1 / 3 });
+
+    await userEvent.selectOptions(effect, 'Random');
+    expect(screen.getByLabelText('Width')).toHaveValue(String(1 / 3));
+    expect(
+      within(screen.getByLabelText('Width'))
+        .getAllByRole('option')
+        .map((o) => o.textContent),
+    ).toEqual(['1 Fixture', '1/4 of the Fixtures', '1/3 of the Fixtures', '1/2 of the Fixtures']);
+    expect(rule()?.intensityEffect).toMatchObject({ shape: 'Random', width: 1 / 3 });
+
+    await userEvent.selectOptions(screen.getByLabelText('Width'), '1 Fixture');
+    expect(rule()?.intensityEffect).not.toHaveProperty('width');
+
+    await userEvent.selectOptions(screen.getByLabelText('Width'), '1/2 of the Fixtures');
+    await userEvent.selectOptions(effect, 'Square');
+    expect(screen.queryByLabelText('Width')).toBeNull();
+    expect(rule()?.intensityEffect).not.toHaveProperty('width');
+  });
+
   it("sets a Rule's movement Effect to None, and its length to 1/4 beat", async () => {
     await selectWarm();
-    const rule = () => {
-      const put = edits().at(-1);
-      if (put?.type !== 'putScene') throw new Error('No Scene put');
-      return put.scene.rules[0];
-    };
     const effect = screen.getAllByLabelText('Movement Effect')[0]!;
 
     await userEvent.selectOptions(effect, 'None');
@@ -451,11 +507,6 @@ describe('Scene editor', () => {
 
   it("adds a Pulse to a Rule's intensity Effect, with depth, length and Spread, or None", async () => {
     await selectWarm();
-    const rule = () => {
-      const put = edits().at(-1);
-      if (put?.type !== 'putScene') throw new Error('No Scene put');
-      return put.scene.rules[0];
-    };
     const effect = screen.getAllByLabelText('Intensity Effect')[0]!;
     expect(effect).toHaveValue('');
 
@@ -493,11 +544,6 @@ describe('Scene editor', () => {
 
   it("sets a two-colour Step as a Rule's colour Effect, in place of its colour", async () => {
     await selectWarm();
-    const rule = () => {
-      const put = edits().at(-1);
-      if (put?.type !== 'putScene') throw new Error('No Scene put');
-      return put.scene.rules[0];
-    };
     const switcher = within(screen.getAllByRole('group', { name: 'Colour or Colour Effect' })[0]!);
     expect(switcher.getByRole('button', { name: 'Colour' })).toHaveAttribute(
       'aria-pressed',

@@ -70,6 +70,16 @@ describe('fitSpeedLimit', () => {
     expect(fitSpeedLimit(effect({ shape: 'Ballyhoo' }), at + 1).length).toBe(2);
   });
 
+  it('limits a Fan at half its size (a half-sine), and a Figure-8 at twice its size, its tilt', () => {
+    const fan = bpmAtLimit(10, 1, 0.5);
+    expect(fitSpeedLimit(effect({ shape: 'Fan' }), fan).length).toBe(1);
+    expect(fitSpeedLimit(effect({ shape: 'Fan' }), fan + 1).length).toBe(2);
+    const eight = bpmAtLimit(10, 1, 2);
+    expect(fitSpeedLimit(effect({ shape: 'Figure-8' }), eight).length).toBe(1);
+    expect(fitSpeedLimit(effect({ shape: 'Figure-8' }), eight + 1).length).toBe(2);
+    expect(fitSpeedLimit(effect({ shape: 'Figure-8' }), fan).length).toBe(4);
+  });
+
   it('shrinks the size to exactly the limit when 16 beats is still too fast', () => {
     const big = effect({ size: 180, length: 4 });
     const bpm = 2 * bpmAtLimit(180, 16);

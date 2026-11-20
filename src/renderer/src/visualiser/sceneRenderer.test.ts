@@ -2,7 +2,13 @@
 import { Mesh, MeshBasicMaterial, Raycaster, ShaderMaterial, Vector3, type Scene } from 'three';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { applyLooks, createSceneRenderer, drawModel, fixtureAt } from './sceneRenderer';
-import { BODY_SIZES, buildScene, type FixtureLook, type SceneModel } from './sceneModel';
+import {
+  BODY_SIZES,
+  PRISM_BEAMS,
+  buildScene,
+  type FixtureLook,
+  type SceneModel,
+} from './sceneModel';
 import { emptyPatch } from '../../../shared/venue-patch';
 
 // A stand-in for WebGL, which jsdom lacks; the rest of three.js is real.
@@ -103,7 +109,7 @@ describe('fixtureAt', () => {
 });
 
 describe('applyLooks cone quality', () => {
-  const coneOf = (drawn: ReturnType<typeof drawModel>) => drawn.fixtures.get('a')!.cone;
+  const coneOf = (drawn: ReturnType<typeof drawModel>) => drawn.fixtures.get('a')!.cone.mesh;
 
   it('scatters by the haze density in High', () => {
     const drawn = drawModel(model);
@@ -124,6 +130,48 @@ describe('applyLooks cone quality', () => {
     const opacity = material.opacity;
     applyLooks(drawn, [look], 0, false, { density: 1, quality: 'low' });
     expect(material.opacity).toBe(opacity);
+  });
+});
+
+describe('applyLooks prism', () => {
+  const visible = (drawn: ReturnType<typeof drawModel>) => {
+    const parts = drawn.fixtures.get('a')!;
+    return [parts.cone.mesh.visible, parts.splits.filter((p) => p.mesh.visible).length] as const;
+  };
+
+  it('draws split beams in place of the cone while a prism is in', () => {
+    const drawn = drawModel(model);
+    applyLooks(drawn, [look], 0, false);
+    expect(visible(drawn)).toEqual([true, 0]);
+    applyLooks(drawn, [{ ...look, prism: 'on' }], 0, false);
+    expect(visible(drawn)).toEqual([false, PRISM_BEAMS]);
+    applyLooks(drawn, [look], 0, false);
+    expect(visible(drawn)).toEqual([true, 0]);
+  });
+
+  it('draws no beams for a dark Fixture', () => {
+    const drawn = drawModel(model);
+    applyLooks(drawn, [{ ...look, intensity: 0, prism: 'on' }], 0, false);
+    expect(visible(drawn)).toEqual([false, 0]);
+  });
+
+  it('turns the split beams and asks for more frames only while rotating', () => {
+    const drawn = drawModel(model);
+    const first = (t: number, prism: 'on' | 'fast') => {
+      const animating = applyLooks(drawn, [{ ...look, prism }], t, false);
+      return [animating, drawn.fixtures.get('a')!.splits[0]!.mesh.quaternion.toArray()] as const;
+    };
+    const [stillA, a] = first(0, 'on');
+    const [stillB, b] = first(1, 'on');
+    expect(stillA).toBe(false);
+    expect(stillB).toBe(false);
+    expect(b).toEqual(a);
+    const [spinA, c] = first(0, 'fast');
+    const [spinB, d] = first(0.1, 'fast');
+    expect(spinA).toBe(true);
+    expect(spinB).toBe(true);
+    expect(d).not.toEqual(c);
+    expect(applyLooks(drawn, [{ ...look, prism: 'fast' }], 0.2, true)).toBe(false);
   });
 });
 
@@ -155,7 +203,7 @@ describe('createSceneRenderer', () => {
     });
     fake.render.mockImplementation((scene: Scene) => {
       scene.traverse((child) => {
-        if (child instanceof Mesh && child.material instanceof ShaderMaterial) {
+        if (child instanceof Mesh && child.visible && child.material instanceof ShaderMaterial) {
           rendered.push(child.material.uniforms.uDensity!.value as number);
         }
       });

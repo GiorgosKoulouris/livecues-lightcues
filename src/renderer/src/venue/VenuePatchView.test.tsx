@@ -645,6 +645,98 @@ describe('Approximated strobe', () => {
   });
 });
 
+describe('Gobo slot and unsupported prism and gobo', () => {
+  // A gobo wheel with an open slot and two gobos, and a prism.
+  const spot: FixtureProfile = {
+    ...par,
+    id: 'acme/gobo-spot',
+    model: 'Gobo spot',
+    modes: [
+      {
+        name: '2ch',
+        channels: [
+          {
+            kind: 'control',
+            name: 'Gobo',
+            defaultValue: 0,
+            ranges: [
+              { from: 0, to: 9, capability: { type: 'goboSlot', name: 'Open', open: true } },
+              { from: 10, to: 99, capability: { type: 'goboSlot', name: 'Star' } },
+              { from: 100, to: 255, capability: { type: 'goboSlot', name: 'Dots' } },
+            ],
+          },
+          {
+            kind: 'control',
+            name: 'Prism',
+            defaultValue: 0,
+            ranges: [{ from: 0, to: 255, capability: { type: 'prism', effect: 'in' } }],
+          },
+        ],
+      },
+    ],
+  };
+
+  beforeEach(() => {
+    patch = {
+      ...PATCH,
+      profiles: [par, spot],
+      fixtures: [
+        ...PATCH.fixtures,
+        fixture('Gobo 1', { profileId: spot.id, mode: '2ch', address: 100 }),
+      ],
+    };
+    show = {
+      layers: [{ id: 'l1', name: 'Layer 1' }],
+      scenes: [
+        {
+          id: 's1',
+          name: 'Star',
+          tags: [],
+          layer: 'l1',
+          fadeIn: 0,
+          rules: [{ target: {}, prism: 'On', gobo: 'Gobo' }],
+        },
+      ],
+      triggers: [],
+    };
+  });
+
+  it('picks a gobo slot for a Fixture, or goes back to the first', async () => {
+    await renderView();
+    const user = userEvent.setup();
+    await user.click(option('Gobo 1'));
+    const slot = inspector().getByRole('combobox', { name: 'Gobo slot' });
+    expect(slot).toHaveDisplayValue('First gobo (Star)');
+
+    await user.selectOptions(slot, 'Dots');
+    const [edit] = edits();
+    expect(edit?.type === 'putFixtures' && edit.fixtures[0]?.goboSlot).toBe('Dots');
+
+    await user.selectOptions(slot, 'First gobo (Star)');
+    const last = edits().at(-1);
+    expect(last?.type === 'putFixtures' && last.fixtures[0]).not.toHaveProperty('goboSlot');
+  });
+
+  it('has no gobo slot for a Fixture with no gobo wheel', async () => {
+    await renderView();
+    await userEvent.click(option('Par 1'));
+    expect(inspector().queryByRole('combobox', { name: 'Gobo slot' })).toBeNull();
+  });
+
+  it('names the Scenes that set Prism and Gobo on a Fixture without them', async () => {
+    await renderView();
+    await userEvent.click(option('Par 1'));
+    const note = inspector().getByRole('region', { name: 'Unsupported prism and gobo' });
+    expect(note).toHaveTextContent('it has no prism, so it stays as it is: set by Star.');
+    expect(note).toHaveTextContent(
+      'it has no gobo wheel with a gobo, so it stays as it is: set by Star.',
+    );
+
+    await userEvent.click(option('Gobo 1'));
+    expect(inspector().queryByRole('region', { name: 'Unsupported prism and gobo' })).toBeNull();
+  });
+});
+
 describe('Fixture list', () => {
   it('removes the selected Fixtures on Del, naming them', async () => {
     await renderView();

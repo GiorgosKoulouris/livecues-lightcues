@@ -17,6 +17,11 @@ const AXIS_WEIGHTS: Record<EffectShape, { pan: number; tilt: number }> = {
   'Pan sweep': { pan: 1, tilt: 0 },
   'Tilt sweep': { pan: 0, tilt: 1 },
   Ballyhoo: { pan: 0.6 * 1 + 0.4 * 2, tilt: 0.6 * 1 + 0.4 * 3 },
+  // The outermost Fixture of a Fan reaches the full size, in a half-sine over
+  // each length: half the speed of a full sine, peaking at π.
+  Fan: { pan: 0.5, tilt: 0 },
+  // Two tilt cycles to one pan cycle.
+  'Figure-8': { pan: 1, tilt: 2 },
 };
 
 // Slack for rounding, so an Effect at exactly the limit fits.

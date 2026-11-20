@@ -745,6 +745,32 @@ describe('movement Effects', () => {
     ]);
   });
 
+  it('fans moving Fixtures out by their distance from centre, ignoring a non-mover at the edge', () => {
+    const at = (id: string, x: number) => fixture({ id, profileId: mover.id, x, y: 4, height: 6 });
+    const still = fixture({ id: 'still', x: -20, y: 4, address: 20 });
+    const fanRig = patch([at('left', -4), at('centre', 0), at('right', 2), still], [mover, dimmer]);
+    const s = show(
+      scene('fan', [
+        { target: {}, direction: 'Down', movementEffect: effect({ shape: 'Fan', size: 20 }) },
+      ]),
+    );
+    const active = playOn(fanRig, s, ['fan', 0]);
+    // Pan, in degrees, away from where it starts at beat 0, closed.
+    const opened = (id: string, beat: number) => {
+      const pan = (b: number) => resolveLights(s, fanRig, active, 0, 1, b)[id]!.aim!.pan!;
+      return pan(beat) - pan(0);
+    };
+
+    // Open at the half of the 4-beat length: the outermost (left) the full size.
+    expect(opened('left', 2)).toBeCloseTo(-20);
+    expect(opened('right', 2)).toBeCloseTo(10);
+    expect(opened('centre', 2)).toBeCloseTo(0);
+    // Closed again at the end of the length, with no crossover.
+    for (const id of ['left', 'right', 'centre']) expect(opened(id, 4)).toBeCloseTo(0);
+    expect(opened('left', 3)).toBeLessThan(0);
+    expect(opened('right', 3)).toBeGreaterThan(0);
+  });
+
   it('wanders smoothly with Ballyhoo, within its size, the same each time for a Fixture', () => {
     const ballyhoo = effect({ shape: 'Ballyhoo', size: 20, length: 8 });
     const s = show(scene('wander', [{ target: {}, direction: 'Cross', movementEffect: ballyhoo }]));
@@ -1549,5 +1575,184 @@ describe('strobe', () => {
     expect(lights(narrow, 1, 'Off')).not.toHaveProperty('strobe');
     expect(lights(narrow, 0, 'Fast')).not.toHaveProperty('strobe');
     expect(lights(dimmer, 1, 'Fast')).not.toHaveProperty('strobe');
+  });
+});
+
+describe('gobo and prism', () => {
+  const range = (from: number, to: number, capability: Capability): CapabilityRange => ({
+    from,
+    to,
+    capability,
+  });
+  const control = (name: string, ranges: CapabilityRange[]): Channel => ({
+    kind: 'control',
+    name,
+    defaultValue: 0,
+    ranges,
+  });
+
+  // Gobo: open, then Star and Dots. Prism: out, in, then rotation over the rest.
+  const spot = profile('test/spot', [
+    channel('Dimmer', { type: 'intensity' }),
+    control('Gobo', [
+      range(0, 9, { type: 'goboSlot', name: 'Open', open: true }),
+      range(10, 49, { type: 'goboSlot', name: 'Star' }),
+      range(50, 89, { type: 'goboSlot', name: 'Dots' }),
+    ]),
+    control('Prism', [
+      range(0, 9, { type: 'prism', effect: 'out' }),
+      range(10, 99, { type: 'prism', effect: 'in' }),
+      range(100, 255, { type: 'prismRotation', speed: [0, 1] }),
+    ]),
+  ]);
+  // The prism and its rotation on separate channels.
+  const split = profile('test/split', [
+    control('Prism', [
+      range(0, 9, { type: 'prism', effect: 'out' }),
+      range(10, 255, { type: 'prism', effect: 'in' }),
+    ]),
+    control('Rotation', [
+      range(0, 9, { type: 'prismRotation', speed: [0, 0] }),
+      range(10, 255, { type: 'prismRotation', speed: [0, 1] }),
+    ]),
+  ]);
+
+  // The channels of one Fixture of `p`, the Scenes played in order.
+  function played(
+    p: FixtureProfile,
+    s: Show,
+    steps: [string, number][],
+    options: { goboSlot?: string; beat?: number; grandMaster?: number } = {},
+  ): number[] {
+    const rig = patch([fixture({ profileId: p.id, goboSlot: options.goboSlot })], [p]);
+    const frames = resolveFrames(
+      s,
+      rig,
+      playOn(rig, s, ...steps),
+      10,
+      options.grandMaster ?? 1,
+      options.beat ?? 0,
+      120,
+    );
+    return channels(frames, p.modes[0]!.channels.length);
+  }
+  const only = (rule: Partial<Rule>) => show(scene('s', [{ target: {}, intensity: 1, ...rule }]));
+  const rule = (p: FixtureProfile, r: Partial<Rule>) => played(p, only(r), [['s', 0]]);
+
+  it('sends the first non-open gobo slot, and the open slot for Open', () => {
+    expect(rule(spot, { gobo: 'Gobo' })).toEqual([255, 29, 0]);
+    expect(rule(spot, { gobo: 'Open' })).toEqual([255, 4, 0]);
+    expect(rule(spot, {})).toEqual([255, 0, 0]);
+  });
+
+  it('sends the Fixture gobo slot over the first, when the wheel has it', () => {
+    const s = only({ gobo: 'Gobo' });
+    expect(played(spot, s, [['s', 0]], { goboSlot: 'Dots' })).toEqual([255, 69, 0]);
+    expect(played(spot, s, [['s', 0]], { goboSlot: 'Gone' })).toEqual([255, 29, 0]);
+  });
+
+  it('sends the prism in, out, or turning at a fixed slow or fast point', () => {
+    expect(rule(spot, { prism: 'Off' })[2]).toBe(4);
+    expect(rule(spot, { prism: 'On' })[2]).toBe(54);
+    // A quarter and three quarters of the way across 100–255.
+    expect(rule(spot, { prism: 'Rotate slow' })[2]).toBe(139);
+    expect(rule(spot, { prism: 'Rotate fast' })[2]).toBe(216);
+  });
+
+  it('shows the prism in the preview, only on a Fixture that has one', () => {
+    const lights = (p: FixtureProfile, r: Partial<Rule>) => {
+      const s = only(r);
+      const rig = patch([fixture({ profileId: p.id })], [p]);
+      return resolveLights(s, rig, play(s, ['s', 0]), 0, 1, 0, 60).f1!;
+    };
+    const dimmer = profile('test/plain', [channel('Dimmer', { type: 'intensity' })]);
+
+    expect(lights(spot, { prism: 'On' }).prism).toBe('on');
+    expect(lights(spot, { prism: 'Rotate slow' }).prism).toBe('slow');
+    expect(lights(spot, { prism: 'Rotate fast' }).prism).toBe('fast');
+    expect(lights(split, { prism: 'Rotate fast' }).prism).toBe('fast');
+    expect(lights(spot, { prism: 'Off' })).not.toHaveProperty('prism');
+    expect(lights(spot, {})).not.toHaveProperty('prism');
+    expect(lights(spot, { gobo: 'Gobo' })).not.toHaveProperty('prism');
+    expect(lights(dimmer, { prism: 'On' })).not.toHaveProperty('prism');
+  });
+
+  it('sets the prism and its rotation on separate channels', () => {
+    expect(rule(split, { prism: 'On' })).toEqual([132, 0]);
+    expect(rule(split, { prism: 'Rotate slow' })).toEqual([132, 71]);
+    expect(rule(split, { prism: 'Rotate fast' })).toEqual([132, 194]);
+  });
+
+  it('lets later Rules and higher Layers override, Off and Open stopping it', () => {
+    const s = show(
+      scene('on', [
+        { target: {}, intensity: 1, prism: 'On', gobo: 'Gobo' },
+        { target: {}, colour: { swatch: 'Red' } },
+      ]),
+      scene('stop', [
+        { target: {}, prism: 'On', gobo: 'Gobo' },
+        { target: {}, prism: 'Off', gobo: 'Open' },
+      ]),
+      scene('dim', [{ target: {}, intensity: 0.5 }], { layer: 'l2' }),
+      scene('off', [{ target: {}, prism: 'Off', gobo: 'Open' }], { layer: 'l2' }),
+      scene('fast', [{ target: {}, prism: 'Rotate fast' }], { layer: 'l2' }),
+    );
+
+    expect(played(spot, s, [['on', 0]])).toEqual([255, 29, 54]);
+    expect(played(spot, s, [['stop', 0]])).toEqual([0, 4, 4]);
+    expect(
+      played(spot, s, [
+        ['on', 0],
+        ['dim', 1],
+      ]),
+    ).toEqual([255, 29, 54]);
+    expect(
+      played(spot, s, [
+        ['on', 0],
+        ['off', 1],
+      ]),
+    ).toEqual([255, 4, 4]);
+    expect(
+      played(spot, s, [
+        ['off', 0],
+        ['on', 1],
+      ]),
+    ).toEqual([255, 29, 54]);
+    expect(
+      played(spot, s, [
+        ['on', 0],
+        ['fast', 1],
+      ]),
+    ).toEqual([255, 29, 216]);
+  });
+
+  it('snaps on and off at Scene start, not crossfaded', () => {
+    const s = show(
+      scene('steady', [{ target: {}, intensity: 1 }]),
+      scene('star', [{ target: {}, intensity: 1, prism: 'On', gobo: 'Gobo' }], { fadeIn: 100 }),
+      scene('calm', [{ target: {}, intensity: 1, prism: 'Off', gobo: 'Open' }], { fadeIn: 100 }),
+    );
+    expect(
+      played(spot, s, [
+        ['steady', 0],
+        ['star', 4],
+      ]).slice(1),
+    ).toEqual([29, 54]);
+    expect(
+      played(spot, s, [
+        ['star', 0],
+        ['calm', 4],
+      ]).slice(1),
+    ).toEqual([4, 4]);
+  });
+
+  it('is not affected by Freeze, which holds the beat, or by the beat', () => {
+    const s = only({ prism: 'Rotate slow', gobo: 'Gobo' });
+    const at = (beat: number) => played(spot, s, [['s', 0]], { beat });
+    expect(at(0)).toEqual(at(7.3));
+  });
+
+  it('leaves a Fixture with no gobo or prism as it is', () => {
+    expect(rule(dimmer, { prism: 'On', gobo: 'Gobo' })).toEqual([255]);
   });
 });

@@ -154,6 +154,28 @@ describe('rules', () => {
   });
 });
 
+describe('prism and gobo', () => {
+  it('sets and clears Prism and Gobo', async () => {
+    const { user } = setup([{ target: {} }]);
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Prism' }), 'Rotate slow');
+    expect(latest.rules[0]!.prism).toBe('Rotate slow');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Gobo' }), 'Gobo');
+    expect(latest.rules[0]).toMatchObject({ prism: 'Rotate slow', gobo: 'Gobo' });
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Prism' }), 'Off');
+    expect(latest.rules[0]!.prism).toBe('Off');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Prism' }), 'Not set');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Gobo' }), 'Not set');
+    expect(latest.rules[0]).not.toHaveProperty('prism');
+    expect(latest.rules[0]).not.toHaveProperty('gobo');
+  });
+
+  it('shows what a Rule sets', () => {
+    setup([{ target: {}, prism: 'Rotate fast', gobo: 'Open' }]);
+    expect(screen.getByRole('combobox', { name: 'Prism' })).toHaveValue('Rotate fast');
+    expect(screen.getByRole('combobox', { name: 'Gobo' })).toHaveValue('Open');
+  });
+});
+
 describe('roles', () => {
   it('targets one Role, adds another in order, and cannot drop the last', async () => {
     const { user } = setup([{ target: {} }]);

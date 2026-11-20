@@ -399,10 +399,36 @@ describe('capability fields', () => {
     ['pan', 'Degrees', 'degrees'],
     ['tilt', 'Degrees', 'degrees'],
     ['panTiltSpeed', 'Speed', 'speed'],
+    ['prismRotation', 'Speed', 'speed'],
   ] as const)('edits the span of %s', async (type, label, key) => {
     const user = setup({ profile: control({ type }) });
     await user.type(screen.getByLabelText(`${label} of channel 1 range 1, start`), '1');
     expect(capabilityOf()).toMatchObject({ [key]: [1, 1] });
+  });
+
+  it('edits a prism in or out', async () => {
+    const user = setup({ profile: control({ type: 'prism', effect: 'in' }) });
+    await user.selectOptions(screen.getByLabelText('Prism of channel 1 range 1'), 'out');
+    expect(capabilityOf()).toEqual({ type: 'prism', effect: 'out' });
+  });
+
+  it('edits a gobo slot between open and a named gobo', async () => {
+    const user = setup({ profile: control({ type: 'goboSlot', name: 'Open', open: true }) });
+    expect(screen.queryByLabelText('Gobo name of channel 1 range 1')).toBeNull();
+    await user.selectOptions(screen.getByLabelText('Gobo slot kind of channel 1 range 1'), 'gobo');
+    expect(capabilityOf()).toEqual({ type: 'goboSlot', name: 'Gobo' });
+    const name = screen.getByLabelText('Gobo name of channel 1 range 1');
+    await user.clear(name);
+    await user.type(name, 'Dots{Tab}');
+    expect(capabilityOf()).toEqual({ type: 'goboSlot', name: 'Dots' });
+    await user.selectOptions(screen.getByLabelText('Gobo slot kind of channel 1 range 1'), 'open');
+    expect(capabilityOf()).toEqual({ type: 'goboSlot', name: 'Open', open: true });
+  });
+
+  it('offers the gobo and prism capability types', async () => {
+    const user = setup({ profile: control({ type: 'none' }) });
+    await user.selectOptions(screen.getByLabelText('Capability of channel 1 range 1'), 'prism');
+    expect(capabilityOf()).toEqual({ type: 'prism', effect: 'in' });
   });
 
   it('edits a shutter effect', async () => {

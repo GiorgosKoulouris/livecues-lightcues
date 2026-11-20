@@ -44,8 +44,15 @@ export type Capability =
   | { type: 'wheelSlot'; slot: WheelSlot }
   | { type: 'pan'; degrees?: Span }
   | { type: 'tilt'; degrees?: Span }
-  // `speed` is relative: 0 is the slowest and 1 the fastest. Nothing drives it.
+  // `speed` is relative: 0 is the slowest and 1 the fastest. Nothing drives it,
+  // and it is the same for `prismRotation`.
   | { type: 'panTiltSpeed'; speed?: Span }
+  // A slot of a gobo wheel: open, or a named gobo.
+  | { type: 'goboSlot'; name: string; open?: true }
+  // The prism moved in or out of the beam.
+  | { type: 'prism'; effect: 'in' | 'out' }
+  // Prism rotation speed, as `panTiltSpeed`. Direction is not kept.
+  | { type: 'prismRotation'; speed?: Span }
   | { type: 'shutter'; effect: 'open' | 'closed' }
   | { type: 'strobe'; hz?: Span; assumed?: true }
   | { type: 'strobeSpeed'; hz?: Span; assumed?: true }
@@ -55,6 +62,9 @@ export type Capability =
   | { type: 'fan'; level?: Span }
   // Kept so the channel still occupies its DMX slot; reported on import.
   | { type: 'unsupported'; feature: string };
+
+// The open slot of a gobo wheel. Spread it: a Capability is not shared.
+export const OPEN_GOBO_SLOT = { type: 'goboSlot', name: 'Open', open: true } as const;
 
 // Whether a capability is a Hazer's haze output or fan speed, the two whose
 // `level` is the output fraction across the range.

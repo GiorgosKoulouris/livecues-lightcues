@@ -34,8 +34,17 @@ export type Direction = (typeof DIRECTIONS)[number];
 export const DEFAULT_DIRECTION: Direction = 'Down';
 
 // Movement Effects, run around a moving Fixture's base aim to the Tempo.
-// Ballyhoo is a smooth random wander, the same each time for a Fixture.
-export const EFFECT_SHAPES = ['Circle', 'Pan sweep', 'Tilt sweep', 'Ballyhoo'] as const;
+// Ballyhoo is a smooth random wander, the same each time for a Fixture. Fan
+// opens the beams out from centre stage and closes them again; Figure-8 is one
+// pan cycle and two tilt cycles.
+export const EFFECT_SHAPES = [
+  'Circle',
+  'Pan sweep',
+  'Tilt sweep',
+  'Ballyhoo',
+  'Fan',
+  'Figure-8',
+] as const;
 export type EffectShape = (typeof EFFECT_SHAPES)[number];
 
 // Beats per cycle, for every kind of Effect.
@@ -64,8 +73,20 @@ export const EFFECT_SIZES = { Small: 5, Medium: 12, Large: 25 } as const;
 
 // How an Effect is offset across the Fixtures it targets, by stage position:
 // Left→Right as the audience sees it, from Stage Right; Mirrored from centre
-// out; Alternate every other Fixture across.
-export const SPREADS = ['In sync', 'Left→Right', 'Mirrored', 'Alternate'] as const;
+// out; Front→Back from the front of the stage; Alternate every other Fixture
+// across; Random in a fixed order of each Fixture's own. Right→Left,
+// Edges→Centre and Back→Front are the reverses.
+export const SPREADS = [
+  'In sync',
+  'Left→Right',
+  'Right→Left',
+  'Mirrored',
+  'Edges→Centre',
+  'Front→Back',
+  'Back→Front',
+  'Alternate',
+  'Random',
+] as const;
 export type Spread = (typeof SPREADS)[number];
 
 // An Effect slot set to None stops the Effect of that kind from earlier Rules
@@ -82,10 +103,28 @@ export interface MovementEffect {
 }
 
 // Intensity Effects, which scale a Fixture's intensity to the Tempo. Pulse is
-// a sine, full on the beat; Square is half on, half off; Chase lights one
-// Spread position at a time.
-export const INTENSITY_SHAPES = ['Pulse', 'Ramp up', 'Ramp down', 'Square', 'Chase'] as const;
+// a sine, full on the beat; Square is half on, half off; Chase lights a width
+// of the Spread positions at a time; Random lights a random width's share of
+// the Fixtures on each step.
+export const INTENSITY_SHAPES = [
+  'Pulse',
+  'Ramp up',
+  'Ramp down',
+  'Square',
+  'Chase',
+  'Random',
+] as const;
 export type IntensityShape = (typeof INTENSITY_SHAPES)[number];
+
+// The share a Chase or Random lights, besides the default of one (no width):
+// of the Spread positions for a Chase, of the targeted Fixtures for a Random.
+export const EFFECT_WIDTHS = [1 / 4, 1 / 3, 1 / 2] as const;
+export type EffectWidth = (typeof EFFECT_WIDTHS)[number];
+
+// The shapes that take a width.
+export function takesWidth(shape: IntensityShape): boolean {
+  return shape === 'Chase' || shape === 'Random';
+}
 
 export interface IntensityEffect {
   shape: IntensityShape;
@@ -93,6 +132,8 @@ export interface IntensityEffect {
   depth: number;
   length: EffectLength;
   spread: Spread;
+  // Chase and Random only: absent is one position.
+  width?: EffectWidth;
 }
 
 // Colour Effects, which change a Fixture's colour to the Tempo. Step holds
@@ -118,6 +159,31 @@ export type StrobeRate = (typeof STROBE_RATES)[number];
 
 // The named strobe rates, in Hz.
 export const STROBE_HZ = { Slow: 2, Medium: 6, Fast: 12 } as const;
+
+// What a Fixture's prism does: out of the beam, in it, or in and turning at a
+// slow or fast rate. Off stops the prism from earlier Rules and lower Layers.
+export const PRISM_SETTINGS = ['Off', 'On', 'Rotate slow', 'Rotate fast'] as const;
+export type PrismSetting = (typeof PRISM_SETTINGS)[number];
+
+// What each prism setting means, once for the engine, the preview and the
+// protocol: the prism state it sends (in or out), how it looks in the preview
+// (none when out), and the point of a rotation speed span it sends, 0 the
+// slowest and 1 the fastest. Fixed, so a Show behaves the same on every
+// Fixture (ADR 0020).
+export const PRISM_BEHAVIOUR = {
+  Off: { sends: 'out', preview: undefined, rotation: undefined },
+  On: { sends: 'in', preview: 'on', rotation: undefined },
+  'Rotate slow': { sends: 'in', preview: 'slow', rotation: 0.25 },
+  'Rotate fast': { sends: 'in', preview: 'fast', rotation: 0.75 },
+} as const satisfies Record<
+  PrismSetting,
+  { sends: 'in' | 'out'; preview: string | undefined; rotation: number | undefined }
+>;
+
+// Whether a Fixture's gobo wheel is on its open slot, or on a gobo. Open stops
+// the gobo from earlier Rules and lower Layers.
+export const GOBO_SETTINGS = ['Open', 'Gobo'] as const;
+export type GoboSetting = (typeof GOBO_SETTINGS)[number];
 
 // The Fixtures a Rule applies to: those in one of `zones` with one of
 // `roles`. An absent list means every Zone or every Role.
@@ -146,6 +212,12 @@ export interface Rule {
   colourEffect?: EffectSlot<ColourEffect>;
   // Strobes the Fixtures targeted that have a strobe channel.
   strobe?: StrobeRate;
+  // Puts the prism in or out of the beam of the Fixtures targeted that have
+  // one. Like strobe, a rate and not locked to the beat (ADR 0020).
+  prism?: PrismSetting;
+  // Puts the gobo wheel of the Fixtures targeted that have one on a gobo or
+  // open.
+  gobo?: GoboSetting;
 }
 
 // A slot that holds at most one active Scene.
@@ -559,7 +631,7 @@ function hasScene(show: Show, id: string): boolean {
 }
 
 function ruleProblems(rule: Rule): string[] {
-  const { target, intensity, colour, direction, strobe } = rule;
+  const { target, intensity, colour, direction, strobe, prism, gobo } = rule;
   const { movementEffect, intensityEffect, colourEffect } = rule;
   const problems: string[] = [];
   const { zones, roles } = target;
@@ -580,6 +652,12 @@ function ruleProblems(rule: Rule): string[] {
   if (direction !== undefined) problems.push(...directionProblems(direction));
   if (strobe !== undefined && !STROBE_RATES.includes(strobe)) {
     problems.push('strobe must be Off, Slow, Medium, Fast, or 1, 1/2 or 1/4 beat');
+  }
+  if (prism !== undefined && !PRISM_SETTINGS.includes(prism)) {
+    problems.push('prism must be Off, On, Rotate slow or Rotate fast');
+  }
+  if (gobo !== undefined && !GOBO_SETTINGS.includes(gobo)) {
+    problems.push('gobo must be Open or Gobo');
   }
   problems.push(...slotProblems('movement', movementEffect, effectProblems));
   problems.push(...slotProblems('intensity', intensityEffect, intensityEffectProblems));
@@ -616,12 +694,25 @@ function effectProblems({ shape, size, length, spread }: MovementEffect): string
   return [...problems, ...timingProblems(length, spread)];
 }
 
-function intensityEffectProblems({ shape, depth, length, spread }: IntensityEffect): string[] {
+function intensityEffectProblems({
+  shape,
+  depth,
+  length,
+  spread,
+  width,
+}: IntensityEffect): string[] {
   const problems: string[] = [];
   if (!INTENSITY_SHAPES.includes(shape)) {
     problems.push(`"${shape}" is not an intensity Effect shape`);
   }
   if (!inRange(depth, 0, 1)) problems.push('Effect depth must be from 0 to 1');
+  if (width !== undefined) {
+    if (!takesWidth(shape)) {
+      problems.push('only a Chase or Random takes a width');
+    } else if (!EFFECT_WIDTHS.includes(width)) {
+      problems.push('Effect width must be 1/4, 1/3 or 1/2');
+    }
+  }
   return [...problems, ...timingProblems(length, spread)];
 }
 

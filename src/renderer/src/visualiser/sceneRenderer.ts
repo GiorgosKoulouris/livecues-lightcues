@@ -33,8 +33,11 @@ import {
   CAMERA_FOV,
   createHazeDensity,
   KEY_FULL,
+  PRISM_BEAMS,
   roomLight,
+  splitBeams,
   strobeVisible,
+  type Cone,
   type Body,
   type Box,
   type CameraPose,
@@ -156,13 +159,13 @@ function build(
     frame = requestAnimationFrame((now) => {
       frame = 0;
       const seconds = now / 1000;
-      const strobing = applyLooks(drawn, looks, seconds, reducedMotion() === true, {
+      const animating = applyLooks(drawn, looks, seconds, reducedMotion() === true, {
         density: density.at(seconds, haze, assumed),
         quality,
       });
       renderer.render(scene, camera);
-      // A strobe, or a density still moving, needs a frame after this one.
-      if (strobing || density.settling(haze, assumed)) invalidate();
+      // A strobe, a turning prism or a density still moving needs a frame after this one.
+      if (animating || density.settling(haze, assumed)) invalidate();
     });
   };
 
@@ -287,11 +290,17 @@ interface FixtureParts {
   yoke?: Group;
   head?: Group;
   lens: MeshBasicMaterial;
-  cone: Mesh;
+  cone: ConeParts;
   pool: Mesh;
+  // The split beams drawn in place of the cone while a prism is in.
+  splits: ConeParts[];
+}
+
+interface ConeParts {
+  mesh: Mesh;
   // The cone's two looks, swapped by quality.
-  coneLow: MeshBasicMaterial;
-  coneHigh: ShaderMaterial;
+  low: MeshBasicMaterial;
+  high: ShaderMaterial;
 }
 
 const EMPTY_MODEL: SceneModel = {
@@ -365,6 +374,17 @@ const coneHaze = () =>
     side: DoubleSide,
   });
 
+// A hidden beam cone with both its looks.
+function coneParts(): ConeParts {
+  const low = glowMaterial(CONE_OPACITY);
+  const high = coneHaze();
+  const mesh = new Mesh(CONE, high);
+  mesh.userData.materials = [low, high];
+  mesh.visible = false;
+  mesh.renderOrder = 1;
+  return { mesh, low, high };
+}
+
 export function drawModel(model: SceneModel): Drawn {
   const group = new Group();
   group.add(boxMesh(model.deck, DECK));
@@ -392,17 +412,13 @@ export function drawModel(model: SceneModel): Drawn {
     drawnBody.traverse((child) => {
       if (child instanceof Mesh) solids.push(child);
     });
-    const coneLow = glowMaterial(CONE_OPACITY);
-    const coneHigh = coneHaze();
-    const cone = new Mesh(CONE, coneHigh);
-    cone.userData.materials = [coneLow, coneHigh];
+    const cone = coneParts();
+    const splits = Array.from({ length: PRISM_BEAMS }, coneParts);
     const pool = new Mesh(POOL, glowMaterial(POOL_OPACITY));
-    cone.visible = false;
     pool.visible = false;
-    cone.renderOrder = 1;
     pool.renderOrder = 1;
-    group.add(cone, pool);
-    fixtures.set(body.id, { yoke, head, lens, cone, pool, coneLow, coneHigh });
+    group.add(cone.mesh, pool, ...splits.map((split) => split.mesh));
+    fixtures.set(body.id, { yoke, head, lens, cone, pool, splits });
   }
   return { group, fixtures, solids };
 }
@@ -418,8 +434,36 @@ export function fixtureAt({ solids }: Drawn, raycaster: Raycaster): string | und
 const UP = new Vector3(0, 1, 0);
 const FACING = new Vector3(0, 0, 1);
 
+// Places and lights one beam cone.
+function drawCone(
+  parts: ConeParts,
+  cone: Cone,
+  colour: Color,
+  intensity: number,
+  density: number,
+  quality: Quality,
+): void {
+  const radius = cone.length * Math.tan(rad(cone.halfAngle));
+  parts.mesh.position.set(cone.origin.x, cone.origin.y, cone.origin.z);
+  parts.mesh.quaternion.setFromUnitVectors(
+    UP,
+    new Vector3(cone.direction.x, cone.direction.y, cone.direction.z),
+  );
+  parts.mesh.scale.set(radius, cone.length, radius);
+  if (quality === 'high') {
+    parts.mesh.material = parts.high;
+    parts.high.uniforms.uColor!.value.copy(colour);
+    parts.high.uniforms.uOpacity!.value = intensity;
+    parts.high.uniforms.uDensity!.value = density;
+  } else {
+    parts.mesh.material = parts.low;
+    parts.low.color.copy(colour);
+    parts.low.opacity = CONE_OPACITY * intensity;
+  }
+}
+
 // Applies the looks to the drawn Fixtures at `seconds`. Returns whether any
-// strobes, so the caller keeps drawing frames.
+// strobes or has a turning prism, so the caller keeps drawing frames.
 export function applyLooks(
   { fixtures }: Drawn,
   looks: FixtureLook[],
@@ -427,38 +471,30 @@ export function applyLooks(
   reducedMotion: boolean,
   { density, quality }: { density: number; quality: Quality } = { density: 1, quality: 'low' },
 ): boolean {
-  let strobing = false;
+  let animating = false;
   for (const look of looks) {
     const parts = fixtures.get(look.id);
     if (!parts) continue;
     if (parts.yoke) parts.yoke.rotation.z = rad(look.yoke);
     if (parts.head) parts.head.rotation.x = rad(look.head);
     const shown = strobeVisible(look.strobe, seconds, reducedMotion);
-    if (look.strobe && !reducedMotion) strobing = true;
+    if (look.strobe && !reducedMotion) animating = true;
     const intensity = shown ? look.intensity : 0;
     const { red, green, blue } = look.colour;
     parts.lens.color.setRGB(red * intensity, green * intensity, blue * intensity);
     const { cone, pool } = look;
     const colour = new Color(red, green, blue);
-    parts.cone.visible = Boolean(cone) && intensity > 0;
-    if (cone && parts.cone.visible) {
-      const radius = cone.length * Math.tan(rad(cone.halfAngle));
-      parts.cone.position.set(cone.origin.x, cone.origin.y, cone.origin.z);
-      parts.cone.quaternion.setFromUnitVectors(
-        UP,
-        new Vector3(cone.direction.x, cone.direction.y, cone.direction.z),
-      );
-      parts.cone.scale.set(radius, cone.length, radius);
-      if (quality === 'high') {
-        parts.cone.material = parts.coneHigh;
-        parts.coneHigh.uniforms.uColor!.value.copy(colour);
-        parts.coneHigh.uniforms.uOpacity!.value = intensity;
-        parts.coneHigh.uniforms.uDensity!.value = density;
-      } else {
-        parts.cone.material = parts.coneLow;
-        parts.coneLow.color.copy(colour);
-        parts.coneLow.opacity = CONE_OPACITY * intensity;
-      }
+    const beam = intensity > 0 ? cone : undefined;
+    // A prism in the beam draws it split, and not whole.
+    const split = beam && look.prism ? splitBeams(beam, look.prism, seconds, reducedMotion) : [];
+    if (beam && look.prism && look.prism !== 'on' && !reducedMotion) animating = true;
+    const draws: [ConeParts, Cone | undefined][] = [
+      [parts.cone, split.length === 0 ? beam : undefined],
+      ...parts.splits.map((p, i): [ConeParts, Cone | undefined] => [p, split[i]]),
+    ];
+    for (const [drawnCone, drawnBeam] of draws) {
+      drawnCone.mesh.visible = drawnBeam !== undefined;
+      if (drawnBeam) drawCone(drawnCone, drawnBeam, colour, intensity, density, quality);
     }
     parts.pool.visible = Boolean(pool) && intensity > 0;
     if (pool && parts.pool.visible) {
@@ -479,7 +515,7 @@ export function applyLooks(
       material.opacity = POOL_OPACITY * intensity;
     }
   }
-  return strobing;
+  return animating;
 }
 
 // A body at its position: the base turned by its yaw, built in its own frame

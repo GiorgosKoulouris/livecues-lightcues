@@ -589,6 +589,42 @@ describe('Mounting', () => {
     },
   );
 
+  it('accepts a gobo slot the mode has, and rejects one it lacks', () => {
+    const spot: FixtureProfile = {
+      ...head,
+      modes: [
+        {
+          name: 'mode',
+          channels: [
+            {
+              kind: 'control',
+              name: 'Gobo',
+              defaultValue: 0,
+              ranges: [
+                { from: 0, to: 9, capability: { type: 'goboSlot', name: 'Open', open: true } },
+                { from: 10, to: 255, capability: { type: 'goboSlot', name: 'Star' } },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const at = (goboSlot: string) =>
+      putFixture(
+        emptyPatch(stage),
+        { ...mover({}), profileId: spot.id, mode: 'mode', goboSlot },
+        spot,
+      );
+
+    expect('patch' in at('Star')).toBe(true);
+    expect(at('Open')).toEqual({
+      errors: ['"Head 1": gobo slot "Open" is not a gobo slot of mode "mode"'],
+    });
+    expect(at('Dots')).toEqual({
+      errors: ['"Head 1": gobo slot "Dots" is not a gobo slot of mode "mode"'],
+    });
+  });
+
   it('rejects an unknown mount or a non-boolean invert', () => {
     const odd = { ...DEFAULT_MOUNTING, mount: 'Sideways' } as unknown as PatchedFixture['mounting'];
     expect(putFixture(emptyPatch(stage), mover({ mounting: odd }), head)).toEqual({

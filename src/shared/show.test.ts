@@ -63,6 +63,14 @@ describe('validateShow', () => {
       { target: {}, intensityEffect: { shape: 'Chase', depth: 0, length: 16, spread: 'Mirrored' } },
       {
         target: {},
+        intensityEffect: { shape: 'Random', depth: 1, length: 1, spread: 'In sync', width: 0.5 },
+      },
+      {
+        target: {},
+        intensityEffect: { shape: 'Chase', depth: 1, length: 1, spread: 'In sync', width: 1 / 3 },
+      },
+      {
+        target: {},
         colourEffect: {
           shape: 'Step',
           colours: [{ swatch: 'Red' }, { hue: 240, saturation: 1 }],
@@ -83,9 +91,25 @@ describe('validateShow', () => {
       { target: {}, strobe: 'Off' },
       { target: {}, strobe: 'Fast' },
       { target: {}, strobe: 0.25 },
+      { target: {}, prism: 'Off', gobo: 'Open' },
+      { target: {}, prism: 'On', gobo: 'Gobo' },
+      { target: {}, prism: 'Rotate slow' },
+      { target: {}, prism: 'Rotate fast' },
     ];
 
     expect(validateShow(show(scene({ rules })))).toEqual([]);
+  });
+
+  it('rejects a prism or gobo setting it does not know', () => {
+    const rules = [
+      { target: {}, prism: 'Spin' },
+      { target: {}, gobo: 'Star' },
+    ] as unknown as Rule[];
+
+    expect(validateShow(show(scene({ name: 'Verse', rules })))).toEqual([
+      'Scene "Verse" Rule 1: prism must be Off, On, Rotate slow or Rotate fast',
+      'Scene "Verse" Rule 2: gobo must be Open or Gobo',
+    ]);
   });
 
   it('rejects Rules with out-of-range settings or unknown targets', () => {
@@ -101,14 +125,14 @@ describe('validateShow', () => {
         colour: { swatch: 'Teal' },
         direction: 'Sideways',
       },
-      { target: {}, movementEffect: { shape: 'Figure 8', size: 0, length: 3, spread: 'Random' } },
+      { target: {}, movementEffect: { shape: 'Figure 8', size: 0, length: 3, spread: 'Zigzag' } },
       { target: {}, movementEffect: { shape: 'Circle', size: 181, length: 1, spread: 'In sync' } },
       { target: {}, strobe: 'Strobe' },
       { target: {}, strobe: 2 },
       { target: {}, movementEffect: 'Off', intensityEffect: 'Pulse', colourEffect: null },
       {
         target: {},
-        intensityEffect: { shape: 'Flicker', depth: 1.5, length: 3, spread: 'Random' },
+        intensityEffect: { shape: 'Flicker', depth: 1.5, length: 3, spread: 'Zigzag' },
       },
       {
         target: {},
@@ -116,7 +140,7 @@ describe('validateShow', () => {
       },
       {
         target: {},
-        colourEffect: { shape: 'Strobe', colours: [], length: 3, spread: 'Random' },
+        colourEffect: { shape: 'Strobe', colours: [], length: 3, spread: 'Zigzag' },
       },
       {
         target: {},
@@ -151,6 +175,14 @@ describe('validateShow', () => {
         colourEffect: { shape: 'Rainbow', length: 1, spread: 'In sync' },
       },
       { target: {}, colour: { swatch: 'Red' }, colourEffect: 'None' },
+      {
+        target: {},
+        intensityEffect: { shape: 'Pulse', depth: 1, length: 1, spread: 'In sync', width: 0.5 },
+      },
+      {
+        target: {},
+        intensityEffect: { shape: 'Chase', depth: 1, length: 1, spread: 'In sync', width: 0.4 },
+      },
     ] as unknown as Rule[];
 
     expect(validateShow(show(scene({ name: 'Verse', rules })))).toEqual([
@@ -167,7 +199,7 @@ describe('validateShow', () => {
       'Scene "Verse" Rule 5: "Figure 8" is not a movement Effect shape',
       'Scene "Verse" Rule 5: Effect size must be over 0 and at most 180 degrees',
       'Scene "Verse" Rule 5: Effect length must be 1/4, 1/2, 1, 2, 4, 8 or 16 beats',
-      'Scene "Verse" Rule 5: "Random" is not a Spread',
+      'Scene "Verse" Rule 5: "Zigzag" is not a Spread',
       'Scene "Verse" Rule 6: Effect size must be over 0 and at most 180 degrees',
       'Scene "Verse" Rule 7: strobe must be Off, Slow, Medium, Fast, or 1, 1/2 or 1/4 beat',
       'Scene "Verse" Rule 8: strobe must be Off, Slow, Medium, Fast, or 1, 1/2 or 1/4 beat',
@@ -177,11 +209,11 @@ describe('validateShow', () => {
       'Scene "Verse" Rule 10: "Flicker" is not an intensity Effect shape',
       'Scene "Verse" Rule 10: Effect depth must be from 0 to 1',
       'Scene "Verse" Rule 10: Effect length must be 1/4, 1/2, 1, 2, 4, 8 or 16 beats',
-      'Scene "Verse" Rule 10: "Random" is not a Spread',
+      'Scene "Verse" Rule 10: "Zigzag" is not a Spread',
       'Scene "Verse" Rule 11: Effect depth must be from 0 to 1',
       'Scene "Verse" Rule 12: "Strobe" is not a colour Effect shape',
       'Scene "Verse" Rule 12: Effect length must be 1/4, 1/2, 1, 2, 4, 8 or 16 beats',
-      'Scene "Verse" Rule 12: "Random" is not a Spread',
+      'Scene "Verse" Rule 12: "Zigzag" is not a Spread',
       'Scene "Verse" Rule 13: a colour Effect must have 2 to 4 colours',
       'Scene "Verse" Rule 14: a colour Effect must have 2 to 4 colours',
       'Scene "Verse" Rule 14: colour 2: "Teal" is not a swatch',
@@ -190,6 +222,8 @@ describe('validateShow', () => {
       'Scene "Verse" Rule 16: Rainbow takes no colours',
       'Scene "Verse" Rule 17: a Rule sets a colour or a colour Effect, not both',
       'Scene "Verse" Rule 18: a Rule sets a colour or a colour Effect, not both',
+      'Scene "Verse" Rule 19: only a Chase or Random takes a width',
+      'Scene "Verse" Rule 20: Effect width must be 1/4, 1/3 or 1/2',
     ]);
   });
 

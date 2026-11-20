@@ -4,6 +4,7 @@
 // Stage coordinates are metres. x runs from the centre line, positive toward
 // Stage Left (the audience's right). y runs from the downstage edge, positive
 // upstage; y < 0 is in front of the stage. height is above the stage floor.
+import { goboSlotNames } from './gobo-prism';
 import { colourProblems, inRange, type Colour } from './colour';
 import {
   ROLES,
@@ -123,6 +124,9 @@ export interface PatchedFixture extends AddressedFixture, StagePosition {
   zone?: Zone;
   // Absent means DEFAULT_MOUNTING.
   mounting?: Mounting;
+  // The name of the gobo slot a Gobo Rule sends, in place of the first slot of
+  // its gobo wheel that is not open.
+  goboSlot?: string;
 }
 
 // A named set of House Lights, such as Bar or Ceiling.
@@ -567,8 +571,16 @@ function validateUniverses(universes: Universe[]): string[] {
 
 // Why a Fixture cannot be placed in its Universe, if it cannot.
 function fixtureProblem(patch: VenuePatch, fixture: PatchedFixture): string | undefined {
-  const { x, y, height, role, zone, mounting } = fixture;
+  const { x, y, height, role, zone, mounting, goboSlot } = fixture;
   if (![x, y, height].every(Number.isFinite)) return 'x, y and height must be numbers';
+  if (goboSlot !== undefined) {
+    const channels = patch.profiles
+      .find((p) => p.id === fixture.profileId)
+      ?.modes.find((m) => m.name === fixture.mode)?.channels;
+    if (channels && !goboSlotNames(channels).includes(goboSlot)) {
+      return `gobo slot "${goboSlot}" is not a gobo slot of mode "${fixture.mode}"`;
+    }
+  }
   if (mounting !== undefined) {
     const problem = mountingProblem(mounting);
     if (problem) return problem;

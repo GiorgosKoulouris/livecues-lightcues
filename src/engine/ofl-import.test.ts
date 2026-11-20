@@ -5,6 +5,74 @@ import { importOflFixture } from './ofl-import';
 const meta = { authors: ['test'], createDate: '2026-01-01', lastModifyDate: '2026-01-01' };
 
 describe('importOflFixture', () => {
+  it('imports the gobo wheel, prism and prism rotation of the Smart Beam', () => {
+    const { profile, unsupported } = importOflFixture(
+      {
+        name: 'Smart Beam',
+        categories: ['Moving Head'],
+        meta,
+        availableChannels: {
+          'Gobo Wheel': {
+            capabilities: [
+              { dmxRange: [0, 6], type: 'WheelSlot', wheel: 'Gobo Wheel', slotNumber: 1 },
+              { dmxRange: [7, 13], type: 'WheelSlot', wheel: 'Gobo Wheel', slotNumber: 2 },
+              { dmxRange: [14, 255], type: 'WheelSlot', wheel: 'Gobo Wheel', slotNumber: 3 },
+            ],
+          },
+          'Prism 1': {
+            capabilities: [
+              { dmxRange: [0, 5], type: 'NoFunction', comment: 'No prism' },
+              { dmxRange: [6, 127], type: 'Prism', comment: 'Prism 16' },
+              { dmxRange: [128, 128], type: 'PrismRotation', speed: 'fast CW' },
+              {
+                dmxRange: [129, 189],
+                type: 'PrismRotation',
+                speedStart: 'fast CW',
+                speedEnd: 'slow CW',
+              },
+              { dmxRange: [190, 193], type: 'PrismRotation', speed: 'stop' },
+              {
+                dmxRange: [194, 254],
+                type: 'PrismRotation',
+                speedStart: 'slow CCW',
+                speedEnd: 'fast CCW',
+              },
+              { dmxRange: [255, 255], type: 'PrismRotation', speed: '-50%' },
+            ],
+          },
+        },
+        wheels: {
+          'Gobo Wheel': {
+            slots: [{ type: 'Open' }, { type: 'Gobo', name: 'gobo 1' }, { type: 'Gobo' }],
+          },
+        },
+        modes: [{ name: 'Std', channels: ['Gobo Wheel', 'Prism 1'] }],
+      } as never,
+      'FOS',
+    );
+
+    const [gobo, prism] = profile.modes[0]!.channels;
+    expect(gobo).toMatchObject({
+      ranges: [
+        { from: 0, to: 6, capability: { type: 'goboSlot', name: 'Open', open: true } },
+        { from: 7, to: 13, capability: { type: 'goboSlot', name: 'gobo 1' } },
+        { from: 14, to: 255, capability: { type: 'goboSlot', name: 'Gobo 3' } },
+      ],
+    });
+    expect(prism).toMatchObject({
+      ranges: [
+        { from: 0, to: 5, capability: { type: 'prism', effect: 'out' } },
+        { from: 6, to: 127, capability: { type: 'prism', effect: 'in' } },
+        { from: 128, to: 128, capability: { type: 'prismRotation', speed: [1, 1] } },
+        { from: 129, to: 189, capability: { type: 'prismRotation', speed: [1, 0] } },
+        { from: 190, to: 193, capability: { type: 'prismRotation', speed: [0, 0] } },
+        { from: 194, to: 254, capability: { type: 'prismRotation', speed: [0, 1] } },
+        { from: 255, to: 255, capability: { type: 'prismRotation', speed: [0.5, 0.5] } },
+      ],
+    });
+    expect(unsupported).toEqual([]);
+  });
+
   describe('beam angle', () => {
     const withLens = (physical: unknown) =>
       importOflFixture(
@@ -323,7 +391,6 @@ describe('importOflFixture', () => {
     });
     expect(unsupported).toEqual([
       { channel: 'Gobo Wheel', feature: 'WheelSlot between slots', held: 0 },
-      { channel: 'Gobo Wheel', feature: 'WheelSlot Gobo', held: 0 },
       { channel: 'Zoom', feature: 'Zoom', held: 0 },
       { channel: 'Strobe', feature: 'ShutterStrobe Pulse', held: 0 },
       { channel: 'Mode', feature: 'Switching channels', held: 0 },
@@ -786,11 +853,11 @@ describe('importOflFixture', () => {
             defaultValue: 200,
             capability: { type: 'Focus' },
           },
-          Prism: { capability: { type: 'Prism' } },
+          Iris: { capability: { type: 'Iris' } },
         },
         modes: [
           { name: 'Standard', channels: ['Motor', 'Zoom', 'Zoom fine', 'Focus', 'Focus fine'] },
-          { name: 'Extra', channels: ['Motor', 'Prism', 'Gobo'] },
+          { name: 'Extra', channels: ['Motor', 'Iris', 'Gobo'] },
         ],
       },
       'Generic',
@@ -800,7 +867,7 @@ describe('importOflFixture', () => {
       { channel: 'Motor', feature: 'Rotation', held: 64 },
       { channel: 'Zoom', feature: 'Zoom', held: 128 },
       { channel: 'Focus', feature: 'Focus', held: 200 },
-      { channel: 'Prism', feature: 'Prism', held: 0 },
+      { channel: 'Iris', feature: 'Iris', held: 0 },
       { channel: 'Gobo', feature: 'Unknown channel', held: 0 },
     ]);
   });

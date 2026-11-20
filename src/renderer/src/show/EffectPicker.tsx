@@ -7,7 +7,11 @@ import {
   EFFECT_LENGTHS,
   EFFECT_SHAPES,
   EFFECT_SIZES,
+  EFFECT_WIDTHS,
   INTENSITY_SHAPES,
+  takesWidth,
+  type EffectWidth,
+  type IntensityShape,
   isEffectSize,
   MAX_EFFECT_COLOURS,
   MAX_EFFECT_SIZE,
@@ -125,7 +129,13 @@ export function IntensityEffectPicker({
         label="Intensity Effect"
         shapes={INTENSITY_SHAPES}
         slot={slot}
-        onChange={(choice) => onChange(slotFor(choice, NEW_INTENSITY_EFFECT, effect))}
+        onChange={(choice) => {
+          const next = slotFor(choice, NEW_INTENSITY_EFFECT, effect);
+          // Only a Chase or Random keeps its width.
+          onChange(
+            next && next !== NO_EFFECT && !takesWidth(next.shape) ? withoutWidth(next) : next,
+          );
+        }}
       />
       {effect && (
         <Settings<IntensityEffect> label="Intensity Effect" effect={effect} onChange={onChange}>
@@ -138,6 +148,23 @@ export function IntensityEffectPicker({
             parse={parseDepth}
             onCommit={(depth) => onChange({ ...effect, depth: depth / 100 })}
           />
+          {takesWidth(effect.shape) && (
+            <Select<string>
+              label="Width"
+              value={effect.width === undefined ? '' : String(effect.width)}
+              options={[
+                { value: '', label: effect.shape === 'Random' ? '1 Fixture' : '1 position' },
+                ...EFFECT_WIDTHS.map((width) => ({
+                  value: String(width),
+                  label: widthLabel(width, effect.shape),
+                })),
+              ]}
+              onChange={(text) => {
+                const width = EFFECT_WIDTHS.find((w) => String(w) === text);
+                onChange(width === undefined ? withoutWidth(effect) : { ...effect, width });
+              }}
+            />
+          )}
         </Settings>
       )}
     </div>
@@ -301,6 +328,17 @@ function slotFor<S extends string, E extends { shape: S }>(
   if (choice === '') return undefined;
   if (choice === NO_EFFECT) return NO_EFFECT;
   return { ...fresh, ...effect, shape: choice } as E;
+}
+
+// A Chase's width is a share of the Spread positions, a Random's of the Fixtures.
+function widthLabel(width: EffectWidth, shape: IntensityShape): string {
+  return `1/${Math.round(1 / width)} of the ${shape === 'Random' ? 'Fixtures' : 'positions'}`;
+}
+
+function withoutWidth(effect: IntensityEffect): IntensityEffect {
+  const rest = { ...effect };
+  delete rest.width;
+  return rest;
 }
 
 function parseSize(text: string) {

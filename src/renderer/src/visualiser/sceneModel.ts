@@ -5,7 +5,7 @@
 // downstage edge, z up from the stage floor. Angles are degrees.
 import { audienceY, beamStrike, physicalAngles, type AimAngles } from '../../../shared/aim';
 import { beamAngleOf } from '../../../shared/fixture-profile';
-import type { FixtureLight, HouseAmbient } from '../../../shared/protocol';
+import type { FixtureLight, HouseAmbient, PreviewPrism } from '../../../shared/protocol';
 import {
   DEFAULT_MOUNTING,
   fixtureMounting,
@@ -251,6 +251,54 @@ export function strobeVisible(
   return cycles - Math.floor(cycles) < 0.5;
 }
 
+// A prism splits a beam into this many, each this many degrees off the aim,
+// evenly spaced around it.
+export const PRISM_BEAMS = 3;
+export const PRISM_SPREAD = 8;
+// How fast a rotating prism turns the split beams about the aim, in degrees
+// per second. Fixed, so slow and fast look the same on every Fixture.
+export const PRISM_TURN = { slow: 40, fast: 160 } as const;
+
+// The beams a prism splits `cone` into, at `seconds`. On holds them still;
+// slow and fast turn them about the aim at a fixed rate, except under reduced
+// motion. Each has the cone's lens, length and angle.
+export function splitBeams(
+  cone: Cone,
+  prism: PreviewPrism,
+  seconds: number,
+  reducedMotion = false,
+): Cone[] {
+  const turn = prism === 'on' || reducedMotion ? 0 : PRISM_TURN[prism] * seconds;
+  const { x, y, z } = cone.direction;
+  // Two unit vectors across the aim, to swing a beam off it.
+  const helper = Math.abs(z) < 0.9 ? { x: 0, y: 0, z: 1 } : { x: 1, y: 0, z: 0 };
+  const u = unit(cross(cone.direction, helper));
+  const v = cross(cone.direction, u);
+  const off = rad(PRISM_SPREAD);
+  return Array.from({ length: PRISM_BEAMS }, (_, index) => {
+    const around = rad(turn + (index * 360) / PRISM_BEAMS);
+    const [c, s] = [Math.cos(around), Math.sin(around)];
+    const across = { x: u.x * c + v.x * s, y: u.y * c + v.y * s, z: u.z * c + v.z * s };
+    const direction = {
+      x: x * Math.cos(off) + across.x * Math.sin(off),
+      y: y * Math.cos(off) + across.y * Math.sin(off),
+      z: z * Math.cos(off) + across.z * Math.sin(off),
+    };
+    return { ...cone, direction };
+  });
+}
+
+const cross = (a: Point, b: Point): Point => ({
+  x: a.y * b.z - a.z * b.y,
+  y: a.z * b.x - a.x * b.z,
+  z: a.x * b.y - a.y * b.x,
+});
+
+function unit(p: Point): Point {
+  const length = Math.hypot(p.x, p.y, p.z);
+  return { x: p.x / length, y: p.y / length, z: p.z / length };
+}
+
 // How far a lens sits out along the Fixture's axis from its position, for a
 // moving head's pivot and the head's reach past it, in metres.
 const HEAD_PIVOT = 0.3;
@@ -286,6 +334,8 @@ export interface FixtureLook {
   intensity: number;
   // The strobe rate in Hz, while it strobes.
   strobe?: number;
+  // The prism, while it is in the beam. The renderer draws `cone` split by it.
+  prism?: PreviewPrism;
   cone?: Cone;
   pool?: Pool;
 }
@@ -318,6 +368,7 @@ function fixtureLook(
     colour: { red: light.red, green: light.green, blue: light.blue },
     intensity: light.intensity,
     ...(light.strobe ? { strobe: light.strobe } : {}),
+    ...(light.prism ? { prism: light.prism } : {}),
   };
   if (light.intensity <= 0) return look;
 

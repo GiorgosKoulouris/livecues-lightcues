@@ -1,5 +1,6 @@
 import {
   isBeamAngle,
+  OPEN_GOBO_SLOT,
   type Capability,
   CapabilityRange,
   Channel,
@@ -319,6 +320,12 @@ function importChannel(
     to: toCoarse(cap.dmxRange![1]),
     capability: importCapability(cap, context),
   }));
+  // A prism channel's NoFunction ranges are the prism out.
+  if (ranges.some(({ capability }) => capability.type === 'prism')) {
+    for (const range of ranges) {
+      if (range.capability.type === 'none') range.capability = { type: 'prism', effect: 'out' };
+    }
+  }
   for (const { capability } of ranges) {
     if (capability.type === 'unsupported') context.report(capability.feature);
   }
@@ -383,6 +390,20 @@ function importCapability(cap: OflCapability, context: CapabilityContext): Capab
     if (!ms || ms[0] === ms[1]) return undefined;
     return ms[0] < ms[1] ? [1, 0] : [0, 1];
   };
+  // Direction is dropped: "fast CCW" and "-100%" are as fast as "fast" and "100%".
+  const prismSpeed = (): Span | undefined => {
+    const bare = (value: string | undefined) =>
+      value?.replace(/\s+(CW|CCW)$/i, '').replace(/^-(?=\d)/, '');
+    return span(
+      pair(
+        bare(cap.speedStart ?? cap.speed),
+        bare(cap.speedEnd ?? cap.speed),
+        relative,
+        RELATIVE_SPEEDS,
+      ),
+      'speed not relative',
+    );
+  };
   const degrees = () =>
     span(
       pair(cap.angleStart ?? cap.angle, cap.angleEnd ?? cap.angle, unit('deg')),
@@ -419,6 +440,10 @@ function importCapability(cap: OflCapability, context: CapabilityContext): Capab
       return { type: 'panTiltSpeed', speed: relativeSpeed() };
     case 'WheelSlot':
       return importWheelSlot(cap, context);
+    case 'Prism':
+      return { type: 'prism', effect: 'in' };
+    case 'PrismRotation':
+      return { type: 'prismRotation', speed: prismSpeed() };
     case 'FogOutput':
       return {
         type: 'haze',
@@ -440,9 +465,20 @@ function importWheelSlot(cap: OflCapability, context: CapabilityContext): Capabi
     return unsupported('WheelSlot between slots');
   }
   // OFL slot numbers are 1-based.
-  const slot = context.wheel(cap.wheel)?.slots[cap.slotNumber - 1];
-  if (!slot) return unsupported('WheelSlot with missing wheel slot');
-  if (slot.type === 'Open') return { type: 'wheelSlot', slot: { name: 'Open', colour: '#ffffff' } };
+  const slots = context.wheel(cap.wheel)?.slots;
+  const slot = slots?.[cap.slotNumber - 1];
+  if (!slots || !slot) return unsupported('WheelSlot with missing wheel slot');
+  // A wheel of gobos or prisms: its open slot is no colour.
+  const isGoboWheel = slots.some((s) => s.type === 'Gobo');
+  const isPrismWheel = slots.some((s) => s.type === 'Prism');
+  if (slot.type === 'Open') {
+    if (isGoboWheel) return { ...OPEN_GOBO_SLOT };
+    if (isPrismWheel) return { type: 'prism', effect: 'out' };
+    return { type: 'wheelSlot', slot: { name: 'Open', colour: '#ffffff' } };
+  }
+  if (slot.type === 'Gobo')
+    return { type: 'goboSlot', name: slot.name || `Gobo ${cap.slotNumber}` };
+  if (slot.type === 'Prism') return { type: 'prism', effect: 'in' };
   if (slot.type !== 'Color') return unsupported(`WheelSlot ${slot.type}`);
   if (slot.colors?.length !== 1) return unsupported('WheelSlot Color without a single colour');
   const colour = slot.colors[0]!;

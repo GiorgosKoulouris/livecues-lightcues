@@ -4,6 +4,7 @@ import { isDeepStrictEqual } from 'node:util';
 import {
   DMX_MAX_VALUE,
   isBeamAngle,
+  OPEN_GOBO_SLOT,
   type Capability,
   type CapabilityRange,
   type Channel,
@@ -565,6 +566,14 @@ function importRanges(
   wheels: Wheels,
 ): CapabilityRange[] {
   const starts: { start: number; capability: Capability }[] = [];
+  // Prism rotation speeds scale to the fastest rate of the whole channel.
+  const rotationTop = Math.max(
+    0,
+    ...functions
+      .filter((f) => PRISM_ROTATION.test(f.Attribute ?? ''))
+      .flatMap((f) => [f.PhysicalFrom, f.PhysicalTo])
+      .map((value) => Math.abs(parseFloat(value ?? ''))),
+  );
   for (const channelFunction of functions) {
     const start = dmxValue(channelFunction.DMXFrom ?? '0/1', width);
     const setCapability = channelSetImporter(channelFunction, wheels);
@@ -576,7 +585,7 @@ function importRanges(
       : [];
     // A function whose sets leave its start uncovered keeps that part.
     if (!setStarts.some((s) => s.start <= start)) {
-      starts.push({ start, capability: importCapability(channelFunction) });
+      starts.push({ start, capability: importCapability(channelFunction, rotationTop) });
     }
     starts.push(...setStarts);
   }
@@ -610,20 +619,39 @@ function channelSetImporter(
     const slots = wheels.get(channelFunction.Wheel ?? '');
     return (channelSet) => wheelSlot(attribute, channelSet, slots);
   }
+  if (GOBO_WHEEL.test(attribute)) {
+    const slots = wheels.get(channelFunction.Wheel ?? '');
+    return (channelSet) => goboSlot(attribute, channelSet, slots);
+  }
+  if (PRISM.test(attribute)) {
+    const slots = wheels.get(channelFunction.Wheel ?? '');
+    return (channelSet) => prism(channelFunction, channelSet, slots);
+  }
   return undefined;
 }
 
-function importCapability(channelFunction: GdtfChannelFunction): Capability {
+// `rotationTop` is the fastest rotation rate on the whole channel, the scale
+// of a prism rotation speed.
+function importCapability(channelFunction: GdtfChannelFunction, rotationTop: number): Capability {
   const attribute = channelFunction.Attribute ?? '';
   const physical = (): Span | undefined => {
     const from = parseFloat(channelFunction.PhysicalFrom ?? '');
     const to = parseFloat(channelFunction.PhysicalTo ?? '');
     return Number.isNaN(from) || Number.isNaN(to) ? undefined : [from, to];
   };
+  // Physical values are signed rotation rates: direction goes, and the rest
+  // scales to 0–1 against the channel's fastest rate, so a slow range stays slow.
+  const rotationSpeed = (): Span | undefined => {
+    const rates = physical()?.map(Math.abs);
+    if (!rates) return undefined;
+    return rotationTop === 0 ? [0, 0] : [rates[0]! / rotationTop, rates[1]! / rotationTop];
+  };
   const emitter = EMITTERS[attribute];
   if (emitter) return { type: 'emitter', emitter };
   if (SHUTTER.test(attribute)) return shutter(channelFunction);
   if (STROBE.test(attribute)) return { type: 'strobe', hz: physical() };
+  if (PRISM.test(attribute)) return prism(channelFunction);
+  if (PRISM_ROTATION.test(attribute)) return { type: 'prismRotation', speed: rotationSpeed() };
   if (HAZE.test(attribute)) return { type: 'haze' };
   if (FAN.test(attribute)) return { type: 'fan' };
   switch (attribute) {
@@ -645,6 +673,12 @@ const HAZE = /^(Fog|Haze)\d*$/;
 const FAN = /^Fans?\d*$/;
 
 const SHUTTER = /^Shutter\d+$/;
+// Gobo1, Gobo2, ...; not Gobo1Pos (indexing and rotation are ignored).
+const GOBO_WHEEL = /^Gobo\d+$/;
+// Prism1, Prism2, ...; not Prism1Pos or Prism1SelectSpin.
+const PRISM = /^Prism\d+$/;
+// Prism1PosRotate and the like.
+const PRISM_ROTATION = /^Prism\d+(Pos)?Rotate$/;
 // Color1, Color2, ...; not Color1WheelSpin and the like.
 const COLOUR_WHEEL = /^Color\d+$/;
 // Shutter1Strobe, Shutter1StrobePulse, Shutter1StrobeRandom and the like.
@@ -685,6 +719,33 @@ function wheelSlot(
   }
   const colour = cieToHex(slot.Color);
   return { type: 'wheelSlot', slot: { name: slot.Name || colour, colour } };
+}
+
+// A gobo wheel slot: open, or the gobo's name. Split slots are unsupported.
+function goboSlot(
+  attribute: string,
+  channelSet: GdtfChannelSet,
+  slots: GdtfWheelSlot[] | undefined,
+): Capability {
+  const index = Number(channelSet.WheelSlotIndex ?? 0);
+  if (!(index >= 1)) return unsupported(`${attribute} between slots`);
+  const slot = slots?.[index - 1];
+  if (!slot) return unsupported(`${attribute} missing wheel slot`);
+  if (/^open$/i.test(slot.Name ?? '')) return { ...OPEN_GOBO_SLOT };
+  return { type: 'goboSlot', name: slot.Name || `Gobo ${index}` };
+}
+
+// Prism in or out. A selected wheel slot decides it (open is out); else the
+// channel set or function name does (a whole word open, out, off or none is
+// out), and any other name is in.
+function prism(
+  channelFunction: GdtfChannelFunction,
+  channelSet?: GdtfChannelSet,
+  slots?: GdtfWheelSlot[],
+): Capability {
+  const index = Number(channelSet?.WheelSlotIndex ?? 0);
+  const name = index >= 1 ? slots?.[index - 1]?.Name : (channelSet?.Name ?? channelFunction.Name);
+  return { type: 'prism', effect: /\b(open|out|off|none)\b/i.test(name ?? '') ? 'out' : 'in' };
 }
 
 // Additive and RGB colour attributes. RY (red-yellow) is amber and GY

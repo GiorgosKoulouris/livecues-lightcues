@@ -24,6 +24,7 @@ const mover: FixtureProfile = {
         channel('Pan', { type: 'pan', degrees: [-270, 270] }),
         channel('Tilt', { type: 'tilt', degrees: [-135, 135] }),
         channel('Strobe', { type: 'strobe', hz: [1, 25] }),
+        channel('Prism', { type: 'prismRotation', speed: [0, 1] }),
       ],
     },
   ],
@@ -115,6 +116,7 @@ const show: Show = {
       movementEffect: fast({ spread: 'Left→Right' }),
     }),
     scene('strobe', { intensity: 1, strobe: 0.25 }),
+    scene('prism', { intensity: 1, prism: 'Rotate fast' }),
     scene('ramp', {
       intensity: 1,
       intensityEffect: { shape: 'Ramp up', depth: 1, length: 4, spread: 'In sync' },
@@ -324,6 +326,18 @@ describe('playback', () => {
       at(1.4);
       tempo.tap();
       expect(strobe()).toEqual([96, 10]);
+    });
+
+    it('does not hold prism rotation, which is a rate', () => {
+      const { p, at } = playback();
+      p.handle({ type: 'goScene', sceneId: 'prism' });
+      p.handle({ type: 'setFreeze', on: true });
+
+      // Three quarters of the way across 0–255, at any beat.
+      at(1);
+      expect(p.frames().get(1)![4]).toBe(191);
+      at(2.3);
+      expect(p.frames().get(1)![4]).toBe(191);
     });
 
     it('is reported with the playback, off at first', () => {

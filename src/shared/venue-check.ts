@@ -15,6 +15,7 @@ import {
   type Show,
   type StrobeRate,
 } from './show';
+import { hasGobo, hasPrism } from './gobo-prism';
 import { strobeDrives } from './strobe';
 import {
   fixtureMode,
@@ -115,6 +116,45 @@ function sceneStrobe(
 ): StrobeRate | undefined {
   return scene.rules.findLast((r) => r.strobe !== undefined && ruleTargets(patch, fixture, r))
     ?.strobe;
+}
+
+// A Rule setting a Fixture can lack the hardware for: a prism or a gobo.
+export type GoboPrismKind = 'prism' | 'gobo';
+
+// The Scenes that set Prism or Gobo on a Fixture with no prism or gobo wheel,
+// so it stays as it is; by id in Show order.
+export interface UnsupportedGoboPrism {
+  fixtureId: string;
+  kind: GoboPrismKind;
+  scenes: string[];
+}
+
+// The Scenes that set Prism or Gobo on one Fixture without the hardware, in
+// Prism, Gobo order; surfaced as a note on the Fixture, not as a Venue-wide
+// list. A Scene sets Prism or Gobo on it when the last of its Rules that
+// targets it with that setting sets one other than Off or Open.
+export function fixtureUnsupportedGoboPrisms(
+  show: Show,
+  patch: VenuePatch,
+  fixture: PatchedFixture,
+): UnsupportedGoboPrism[] {
+  const { channels } = fixtureMode(patch, fixture);
+  const lacking: [GoboPrismKind, boolean][] = [
+    ['prism', !hasPrism(channels)],
+    ['gobo', !hasGobo(channels)],
+  ];
+  return lacking.flatMap(([kind, lacks]) => {
+    if (!lacks) return [];
+    const scenes = show.scenes.filter((scene) => {
+      const setting = scene.rules.findLast(
+        (r) => r[kind] !== undefined && ruleTargets(patch, fixture, r),
+      )?.[kind];
+      return setting !== undefined && setting !== 'Off' && setting !== 'Open';
+    });
+    return scenes.length > 0
+      ? [{ fixtureId: fixture.id, kind, scenes: scenes.map((s) => s.id) }]
+      : [];
+  });
 }
 
 // The Show's House Presets this Venue Patch has no house look for, in Show

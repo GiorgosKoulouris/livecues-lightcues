@@ -12,10 +12,11 @@ import {
 // Version 2 adds each Fixture's optional Mounting. Version 3 adds the
 // optional House: House Groups, House Lights, the Startup look and the house
 // looks. Version 4 adds the optional Hazers, whose max output and fan level
-// are 1 when absent. Older files still load, without them.
+// are 1 when absent. Version 5 adds each Fixture's optional gobo slot. Older
+// files still load, without them.
 
-const VERSION = 4;
-const READABLE_VERSIONS = [1, 2, 3, 4];
+const VERSION = 5;
+const READABLE_VERSIONS = [1, 2, 3, 4, 5];
 
 interface VenueFile extends VenuePatch {
   version: number;
