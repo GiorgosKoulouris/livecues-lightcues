@@ -50,6 +50,8 @@ npm test
 | `npm run icon` | Regenerate `build/icon.ico` from `build/icon.svg`. |
 | `npm run examples` | Regenerate the example Venue Patch and Show in [examples/](../examples/). |
 | `npm run show:palette` | Write the Palette Show and its cue sheet to `temp/venue/`. Pass a folder to write elsewhere: `npm run show:palette -- <folder>`. See [Palette Show](#palette-show). |
+| `npm run show:energy` | Write the Energy Show and its cue sheet to `temp/venue/`. Pass a folder to write elsewhere: `npm run show:energy -- <folder>`. See [Energy Show](#energy-show). |
+| `npm run lights:song` | Reaper Lights: `inspect <project.rpp> <region>` prints a song's span, tempo and markers; `analyse <project.rpp> <region>` prints RMS and onsets per bar from the WAV stems; `render <project.rpp> <plan>` writes the timeline page; `write <project.rpp> <plan> [--force]` saves a Plan's MIDI into `<name>.lights.rpp`. See [Reaper Lights](#reaper-lights). |
 | `npm test` | Run the test suite (Vitest). |
 | `npm run test:watch` | Run Vitest in watch mode. |
 | `npm run coverage` | Run the tests with coverage. Prints a summary and writes an HTML report and `coverage-summary.json` to `coverage/`. CI runs it too: see [CI](#ci). Not part of `check`. |
@@ -74,6 +76,42 @@ To change it:
 4. Open `Palette.lcshow` in the app with the venue's Venue Patch and read the Venue Check.
 
 Don't edit the generated files. They are overwritten on the next run.
+
+## Energy Show
+
+A venue-independent Show of about 156 Scenes, grouped in four tiers (Chill, Groove, Drive, Peak). Where Palette is shy, Energy stacks: five Layers, one MIDI channel each, so a Look, a Movement, a Pulse and a Colour FX run together. It is built from [scripts/make-shows/energy.ts](../scripts/make-shows/energy.ts) with the app's own models, and uses Spreads, Chase width, Random, Fan, Figure-8, Prism and Gobo.
+
+| Ch | Layer | Holds |
+|---|---|---|
+| 1 | Look | Colour and intensity. Utilities (Base, Intro/Outro, Breakdown, Dark) on notes 12–23 |
+| 2 | Movement | Aim, movement Effect, and Move+FX combos |
+| 3 | Pulse | Intensity Effects by target: beams, Quads, floor, Dekkers, front, back |
+| 4 | Colour FX | Colour Effects by target |
+| 5 | Hit | Flash only, grouped by kind. The Blackout hit is on the Look Layer |
+| 6 | — | House and Haze Presets |
+
+Tiers sit on two octaves each, on channels 1–4: Chill C1–B2 (24–47), Groove C3–B4 (48–71), Drive C5–B6 (72–95), Peak C7–B8 (96–119). Notes 0–11 release the channel's Layer.
+
+To change it:
+
+1. Edit the lists in `energy.ts`: Looks, Movement, Pulse, Colour FX, Hits, Fallback Panel, House Presets and Haze Presets.
+2. Run `npm run show:energy`. It writes `Energy.lcshow` and `Energy cue sheet.md`, which holds the note map per channel, a tier guide, how the Layers combine and the Fallback Panel. The default folder is `temp/venue/`, which is git-ignored.
+3. Run `npm test` to check that the Show is valid and every note is unique within its channel. If `temp/venue/The venue.lcvenue` exists, the test also reads the Venue Check against it.
+4. Open `Energy.lcshow` in the app with the venue's Venue Patch and read the Venue Check. In the venue it lists only assumed pan and tilt ranges on the Quads and an assumed strobe Hz span.
+
+Don't edit the generated files. They are overwritten on the next run.
+
+## Reaper Lights
+
+Turns one song (a Region) of a Reaper project into MIDI that fires the Energy Show. Code is in [scripts/reaper-lights/](../scripts/reaper-lights/). The spec and issues are under `.scratch/reaper-lights/`.
+
+- `inspect` prints the Region's span, length in bars, tempo and signature changes, and its markers at song bars.
+- The `light-song` skill ([.claude/skills/light-song/](../.claude/skills/light-song/SKILL.md)) runs the session: inspect, an optional analyse, a brief round, a draft Plan, render and review, then write. It asks the questions and picks Scenes; the script does the rest. `.claude/` is git-ignored and the skill stays untracked.
+- `render` compiles a Plan and writes `<Song>.lights.html` next to it: one self-contained page with section bands, a bar ruler and a lane per Layer showing Scene names, Flash ticks and the Scenes' colours from the Show. Local only; re-run it after each plan edit.
+- `analyse` reads the WAV items inside the Region on stem tracks: tracks named Drums, KickBand or Snare (case-insensitive, name contains it), and any track with an item whose file name contains the Region's name (the full mix) and prints one line per bar: section marker, RMS in dBFS per track, and onsets as song `bar.beat` rounded to a 16th note. Item position, offset and length are honoured; source files resolve against the `.rpp` folder. Other tracks are ignored. MP3 and other formats, items with no source file, and files that are missing, are skipped with a warning. Onsets are energy-flux peaks: dense full mixes yield few, a drum stem many. A helper only: placements are proposed to the user, not written.
+- `write` compiles a Plan (`<Song>.lights.yaml`, with the Show at `temp/venue/Energy.lcshow` unless it names one) and saves one MIDI item, `lights:<region>`, on lane 1 of the `MidiToLights` track. It never edits the original `.rpp`: it writes `<name>.lights.rpp` next to it. An existing `.lights.rpp` is the base, so other Regions' items stay; delete it to start again from the original. The file is written to a temp file and renamed, then a per-Region hash goes beside the Plan.
+- If the item's MIDI was edited in Reaper (it matches neither the stored hash nor what the Plan would write), `write` stops. Fold the edits into the Plan, or pass `--force`.
+- Errors in a Plan name the line. Run `npm test` for the tests. The fixture `scripts/reaper-lights/fixtures/lantern.rpp` is force-added to git (`fixtures/` is git-ignored).
 
 ## CI
 

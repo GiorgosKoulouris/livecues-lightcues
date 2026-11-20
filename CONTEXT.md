@@ -187,3 +187,26 @@ _Avoid_: Offline, preview mode
 
 **Venue Check**:
 A report, produced when a Show is combined with a Venue Patch, listing Scenes whose targets are missing or only approximated in that rig, House Presets that Venue Patch has no house look for (not set up in this venue), and Haze Presets when it has no Hazer. Strobe is approximated on a Fixture with no strobe channel, which stays steady, and on one whose strobe rate has no Hz span, taken as 1–20 Hz, or a span made from words such as slow and fast. Prism and Gobo Rules on Fixtures with no prism, or no gobo wheel with a slot other than open, stay as they are; like Strobe, they are noted on that Fixture in the Venue editor, not listed Venue-wide.
+
+### Reaper Lights
+
+**Plan**:
+A YAML file per song (`<Song>.lights.yaml`) that names the Scenes a song plays and when: a palette per tier, section cues, timed events and patterns. `lights:song write` compiles it to MIDI on the Show's note map. It holds Scene names, never notes. Not a Show.
+_Avoid_: Cue list, script
+
+**Region**:
+A named span of the Reaper project that is one song. Its start is bar 1 beat 1 of the song, and the MIDI item written for it is named `lights:<region>`. Matched by name, ignoring case.
+_Avoid_: Song marker, section
+
+**Marker vocabulary**:
+The section labels a Plan's markers are matched against, ignoring case and trailing numbers: intro, verse, pre, build, chorus, drop, break, bridge, solo, outro, roll, endroll, hit, blackout, stop. Each has a default treatment that the brief and the Plan override. An unknown label is allowed; Claude asks what it means.
+_Avoid_: Section names
+
+**End cue**:
+The Go Scene fired in the last 1/16 of a Region so its note stays inside the item. Intro/Outro: Fade on the Look Layer unless the Plan sets `end`.
+
+**Reset**:
+The notes at a Region's start that set every Layer so a song works from cold and in any order: the Base Look on Look, the Down Scene on Movement, a Release on Pulse and Colour FX, nothing on Hit. A Layer with no Scene to rest on gets a Release. A Plan's `start` replaces it per Layer.
+
+**Flash length**:
+How long a Flash note is held in a Plan: `length` (beats or bars) or `until` a time, 1 beat if neither. Two Flash notes on the same note may not overlap. A Go or Release note is 1/16 of the signature's beat long and has no length.

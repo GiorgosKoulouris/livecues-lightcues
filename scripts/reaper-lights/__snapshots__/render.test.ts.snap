@@ -1,0 +1,47 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`renderTimeline > matches the snapshot 1`] = `
+"<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Test lights</title>
+<style>
+:root{color-scheme:dark;--bg:#14161a;--fg:#e6e8ec;--muted:#98a0ad;--line:#2b2f37;--lane:#1c1f25;--b0:#232833;--b1:#2c3240;--label:150px}
+@media (prefers-color-scheme:light){:root{color-scheme:light;--bg:#f6f7f9;--fg:#1b1e24;--muted:#5d6572;--line:#d3d7de;--lane:#ffffff;--b0:#e4e8ef;--b1:#d6dce7}}
+body{margin:0;padding:16px;background:var(--bg);color:var(--fg);font:14px/1.4 system-ui,sans-serif}
+h1{font-size:18px;margin:0 0 4px}
+p{margin:0 0 12px;color:var(--muted)}
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--lane)}
+.row{display:flex;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.label{position:sticky;left:0;z-index:2;flex:none;width:var(--label);box-sizing:border-box;padding:6px 10px;background:var(--lane);border-right:1px solid var(--line);color:var(--muted);font-weight:600}
+.track{position:relative;flex:none;height:34px;width:var(--width)}
+.ruler .track{height:22px}
+.sections .track{height:28px}
+.band,.bar,.scene,.tick{position:absolute;top:0;bottom:0;box-sizing:border-box;overflow:hidden;white-space:nowrap}
+.band span{display:block;padding:4px 6px;font-weight:600}
+.b0{background:var(--b0)}
+.b1{background:var(--b1)}
+.band{border-left:2px solid var(--muted)}
+.bar{border-left:1px solid var(--line);color:var(--muted);font-size:11px}
+.bar span{padding:3px 4px;display:block}
+.scene{top:4px;bottom:4px;border-radius:3px;border-left:2px solid var(--bg)}
+.scene span{display:inline-block;margin:2px 4px;padding:0 5px;border-radius:2px;background:rgba(0,0,0,.65);color:#fff;font-size:12px}
+.tick{top:4px;bottom:4px;border-radius:2px;outline:1px solid rgba(0,0,0,.55)}
+.tick.rel{background:var(--muted);top:12px;bottom:12px}
+</style>
+</head>
+<body>
+<h1>Test</h1>
+<p>12 bars, 7 MIDI events</p>
+<div class="scroll" style="--width:576px">
+<div class="row sections"><div class="label">Sections</div><div class="track"><div class="band b0" style="left:0px;width:192px"><span>Verse1</span></div><div class="band b1" style="left:192px;width:192px"><span>Chorus1</span></div><div class="band b0" style="left:384px;width:192px"><span>outro</span></div></div></div>
+<div class="row ruler"><div class="label">Bar</div><div class="track"><div class="bar" style="left:0px;width:48px"><span>1</span></div><div class="bar" style="left:48px;width:48px"><span>2</span></div><div class="bar" style="left:96px;width:48px"><span>3</span></div><div class="bar" style="left:144px;width:48px"><span>4</span></div><div class="bar" style="left:192px;width:48px"><span>5</span></div><div class="bar" style="left:240px;width:48px"><span>6</span></div><div class="bar" style="left:288px;width:48px"><span>7</span></div><div class="bar" style="left:336px;width:48px"><span>8</span></div><div class="bar" style="left:384px;width:48px"><span>9</span></div><div class="bar" style="left:432px;width:48px"><span>10</span></div><div class="bar" style="left:480px;width:48px"><span>11</span></div><div class="bar" style="left:528px;width:48px"><span>12</span></div></div></div>
+<div class="row lane" data-lane="look"><div class="label">look</div><div class="track"><div class="scene" style="left:0px;width:192px;background:#ffd9a0" title="Base: warm &lt;white&gt; at 1.1"><span>Base: warm &lt;white&gt;</span></div><div class="scene" style="left:192px;width:381px;background:#e53935" title="Drive: Red at 5.1"><span>Drive: Red</span></div><div class="scene" style="left:573px;width:3px;background:#5b6270" title="Intro/Outro: Fade at 12.4.75"><span>Intro/Outro: Fade</span></div></div></div><div class="row lane" data-lane="movement"><div class="label">movement</div><div class="track"><div class="scene" style="left:0px;width:576px;background:#5b6270" title="Chill: Down at 1.1"><span>Chill: Down</span></div></div></div><div class="row lane" data-lane="Colour FX"><div class="label">Colour FX</div><div class="track"><div class="tick rel" style="left:0px;width:3px" title="Release"></div><div class="scene" style="left:192px;width:384px;background:linear-gradient(90deg, #1e66f5, hsl(120 100% 50%))" title="Chill: Rainbow at 5.1"><span>Chill: Rainbow</span></div></div></div><div class="row lane" data-lane="hit"><div class="label">hit</div><div class="track"><div class="tick" style="left:312px;width:12px;background:#ffffff" title="Hit: Beam punch at 7.3"></div></div></div>
+</div>
+</body>
+</html>
+"
+`;

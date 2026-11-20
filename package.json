@@ -30,7 +30,9 @@
     "security:test-rules": "semgrep --test --metrics=off security/semgrep",
     "icon": "node scripts/make-icon.mjs",
     "examples": "node scripts/make-examples.mjs",
-    "show:palette": "node scripts/make-palette.mjs"
+    "show:palette": "node scripts/make-palette.mjs",
+    "show:energy": "node scripts/make-energy.mjs",
+    "lights:song": "node scripts/lights-song.mjs"
   },
   "engines": {
     "node": ">=22.12.0"
@@ -70,7 +72,8 @@
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.72.2",
     "vite": "^8.3.7",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.3",
+    "yaml": "^2.9.1"
   },
   "dependencies": {
     "@julusian/midi": "^3.8.1",
