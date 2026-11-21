@@ -8,6 +8,7 @@
 // does. An item that cannot be placed is "not scored".
 import { loadShowFile } from '../../src/engine/show-file';
 import { strobeHz } from '../../src/shared/strobe';
+import type { Colour } from '../../src/shared/colour';
 import {
   isSlotRef,
   NO_EFFECT,
@@ -266,22 +267,7 @@ const ITEMS: { item: number; title: string; check: Check }[] = [
   {
     item: 2,
     title: 'Hue pairs are complementary or analogous, not near-miss',
-    check: (cx) => {
-      const pairs = looks(cx).filter((s) => {
-        const { degrees, slots } = hueClusters(lookState(s));
-        return degrees.length === 2 && slots.length === 0;
-      });
-      return sceneCheck(
-        pairs,
-        (s) => {
-          const [a, b] = hueClusters(lookState(s)).degrees as [number, number];
-          const gap = hueGap(a, b);
-          const [lo, hi] = NEAR_MISS_DEG;
-          return gap >= lo && gap <= hi ? `hues ${Math.round(gap)} degrees apart` : undefined;
-        },
-        'no Look has two plain hues',
-      );
-    },
+    check: checkPairs,
   },
   {
     item: 3,
@@ -376,6 +362,60 @@ const ITEMS: { item: number; title: string; check: Check }[] = [
   },
   { item: 17, title: 'Few Looks per tier', check: checkLookCount },
 ];
+
+const nearMiss = (gap: number): boolean => gap >= NEAR_MISS_DEG[0] && gap <= NEAR_MISS_DEG[1];
+
+/** The hue of a Colour Set's colour, or undefined when it is pale. */
+function setHue(colour: Colour): number | undefined {
+  const tone = toneOf(colour);
+  return tone.kind === 'hue' ? tone.hue : undefined;
+}
+
+// Plain-hue Looks with two hues, each Colour Set's Primary and Secondary, and
+// each Look that lights both slots, under every set.
+function checkPairs(cx: Context): Omit<ItemResult, 'item' | 'title'> {
+  const offenders: string[] = [];
+  let checks = 0;
+  const all = looks(cx);
+  for (const s of all) {
+    const { degrees, slots } = hueClusters(lookState(s));
+    if (degrees.length !== 2 || slots.length !== 0) continue;
+    checks++;
+    const gap = hueGap(degrees[0]!, degrees[1]!);
+    if (nearMiss(gap)) offenders.push(`${s.name}: hues ${Math.round(gap)} degrees apart`);
+  }
+  const sets = (cx.show.colourSets ?? []).flatMap((set) => {
+    const [a, b] = [setHue(set.colours.Primary), setHue(set.colours.Secondary)];
+    return a === undefined || b === undefined ? [] : [{ name: set.name, gap: hueGap(a, b) }];
+  });
+  for (const set of sets) {
+    checks++;
+    if (nearMiss(set.gap)) {
+      offenders.push(
+        `Colour Set ${set.name}: Primary and Secondary ${Math.round(set.gap)} degrees apart`,
+      );
+    }
+  }
+  const slotted = all.filter((s) => {
+    const { degrees, slots } = hueClusters(lookState(s));
+    return (
+      degrees.length === 0 && slots.includes('slot:Primary') && slots.includes('slot:Secondary')
+    );
+  });
+  for (const s of slotted) {
+    for (const set of sets) {
+      checks++;
+      if (nearMiss(set.gap)) {
+        offenders.push(`${s.name}: under ${set.name}, hues ${Math.round(set.gap)} degrees apart`);
+      }
+    }
+  }
+  return result(
+    grade(offenders.length, checks),
+    offenders,
+    checks === 0 ? 'no Look or Colour Set has two plain hues' : undefined,
+  );
+}
 
 const pct = (n: number): string => `${Math.round(n * 100)}%`;
 const round = (n: number): number => Math.round(n * 100) / 100;

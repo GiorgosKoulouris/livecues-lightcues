@@ -22,7 +22,9 @@ const FLOOR: RuleTarget = {
 };
 const BEAMS: RuleTarget = { roles: ['Spot/Beam'] };
 
-const sw = (swatch: 'Red' | 'Green' | 'Cyan' | 'Blue' | 'Warm White' | 'White'): Colour => ({
+const sw = (
+  swatch: 'Red' | 'Green' | 'Cyan' | 'Blue' | 'Amber' | 'Warm White' | 'White',
+): Colour => ({
   swatch,
 });
 const set = (target: RuleTarget, intensity: number, colour: Colour): Rule => ({
@@ -112,6 +114,38 @@ describe('item 2: hue pairs', () => {
     const miss = scene('miss', [set(BACK, 1, sw('Red')), set(FLOOR, 1, sw('Green'))]);
     expect(score(show([miss]), 2)).toBe(0);
     expect(offenders(show([miss]), 2)[0]).toMatch(/^miss:/);
+  });
+});
+
+describe('item 2: slot colours and Colour Sets', () => {
+  const slotLook = scene('slotted', [
+    set(BACK, 1, { slot: 'Primary' } as never),
+    set(FLOOR, 1, { slot: 'Secondary' } as never),
+  ]);
+  const colourSet = (name: string, primary: Colour, secondary: Colour) => ({
+    id: name,
+    name,
+    fade: 1,
+    colours: { Primary: primary, Secondary: secondary, Accent: sw('White') },
+  });
+
+  it('passes a complementary Colour Set, and a Look that uses its slots', () => {
+    const s = show([slotLook], { colourSets: [colourSet('Good', sw('Amber'), sw('Blue'))] });
+    expect(score(s, 2)).toBe(2);
+  });
+
+  it('fails a near-miss Colour Set and the slot Look under it', () => {
+    const s = show([slotLook], { colourSets: [colourSet('Miss', sw('Red'), sw('Green'))] });
+    expect(score(s, 2)).toBe(0);
+    expect(offenders(s, 2)).toEqual([
+      expect.stringMatching(/^Colour Set Miss: Primary and Secondary 120 degrees/),
+      expect.stringMatching(/^slotted: under Miss/),
+    ]);
+  });
+
+  it('is not scored when sets are pale and no Look has plain hues', () => {
+    const s = show([slotLook], { colourSets: [colourSet('Pale', sw('White'), sw('Blue'))] });
+    expect(score(s, 2)).toBeNull();
   });
 });
 
