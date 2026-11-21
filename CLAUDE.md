@@ -25,6 +25,14 @@ Uses the five default triage roles (needs-triage, needs-info, ready-for-agent, r
 
 Single-context: one `CONTEXT.md` plus `docs/adr/` at the repo root. See `docs/agents/domain.md`.
 
+### Edits
+
+Show and Venue Patch edits go through `applyShowEdit` and `applyVenueEdit`. See `docs/agents/edits.md`.
+
+### Review
+
+Reviewers apply `CODING_STANDARDS.md`.
+
 ### Releasing
 
 A release is a `vX.Y.Z` tag on `main` that equals `v` + the `package.json` version. Bump the version on `dev`, promote and ship, then tag by hand. See `docs/agents/releasing.md`.
