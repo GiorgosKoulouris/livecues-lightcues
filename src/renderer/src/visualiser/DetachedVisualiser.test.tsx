@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { emptyShow } from '../../../shared/show';
 import { emptyPatch } from '../../../shared/venue-patch';
 import { installFakeEngine, type FakeEngine } from '../test-engine';
 import { installFakeVisualiserWindow, type FakeVisualiserWindow } from '../test-visualiser-window';
@@ -149,5 +150,56 @@ describe('DetachedVisualiser', () => {
     open();
     await userEvent.click(await screen.findByRole('button', { name: 'Reattach' }));
     expect(windowBridge.reattach).toHaveBeenCalledOnce();
+  });
+
+  describe('Fallback Panel keys', () => {
+    const openShow = () => {
+      engine.emit({
+        type: 'show',
+        show: emptyShow(),
+        path: undefined,
+        folder: undefined,
+        unsaved: false,
+        canUndo: false,
+        canRedo: false,
+      });
+      engine.emit({
+        type: 'playback',
+        active: {},
+        mode: 'monitor',
+        grandMaster: 0.5,
+        blackout: false,
+        freeze: false,
+      });
+    };
+    const renderDetached = async () => {
+      render(
+        <UiProvider>
+          <DetachedVisualiser />
+        </UiProvider>,
+      );
+      openShow();
+      await screen.findByRole('button', { name: 'Reattach' }).catch(() => undefined);
+      engine.sent.length = 0;
+    };
+
+    it('runs Blackout, Base Look, Tap Tempo, Freeze and Grand Master from the keys', async () => {
+      await renderDetached();
+      await userEvent.keyboard('b0ft-=');
+      expect(engine.sent.map((c) => c.type)).toEqual([
+        'setBlackout',
+        'goBaseLook',
+        'setFreeze',
+        'tapTempo',
+        'setGrandMaster',
+        'setGrandMaster',
+      ]);
+    });
+
+    it('does nothing for file, undo and View shortcuts', async () => {
+      await renderDetached();
+      await userEvent.keyboard('{Control>}s{/Control}{Control>}z{/Control}{Control>}2{/Control}');
+      expect(engine.sent).toEqual([]);
+    });
   });
 });
