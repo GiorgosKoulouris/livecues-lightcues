@@ -74,6 +74,10 @@ _Avoid_: Haze Scene, haze cue, fog preset
 A View that shows the rig in 3D: the stage, a back wall and an audience floor derived from the stage bounds, a bar of truss under each row of Overhead Fixtures, and a generic body for each Fixture (moving head, par, bar or blinder, by its Profile and Role, with Mounting applied). Read-only: hovering a Fixture shows its name, and the mouse orbits, zooms and pans the camera, with FOH, Top and Side presets. A Fixture with its prism in is drawn as several split beams around its aim, turning at a fixed visual speed for Rotate slow and a faster one for Rotate fast; the Gobo is not drawn. The free camera is kept while the app runs, never saved. The House Lights tint and set the Visualiser's ambient light (only; its key light stays full). Not the Preview, the 2D top-down and front views in Show and Perform.
 _Avoid_: 3D preview, simulator
 
+**Detached Visualiser**:
+The Visualiser shown in its own window, so it can be watched while working in another View. It stays read-only, with the same toolbar, camera and haze slider, which move with it. Only one Visualiser renders at a time: while detached, the Visualiser View in the main window shows a placeholder with a Reattach button. Closing its window reattaches it, and closing the main window closes it too. It is not saved: each launch starts attached. It shows when the mode is Blind and when the engine is down. The Fallback Panel keys work while it has focus. It is not rendered while its window is minimized or hidden. Outside the Detached Visualiser, a Visualiser that is not shown is not rendered.
+_Avoid_: Visualiser window, popout, second screen
+
 **Beam angle**:
 The full angle, in degrees, of the cone of light a Fixture throws. An optional field of its Fixture Profile, more than 0 and at most 180, imported from an OFL lens range (its midpoint) or a GDTF Beam geometry, and editable in the Profile Editor. A Profile without one uses its Role's default: Wash 25°, Spot/Beam 8°, Blinder 60°, Strobe 90°, Pixel/Bar 30°, Effect 15°. Only the Visualiser draws it; the Preview ignores it. A zoom channel does not change it.
 _Avoid_: zoom, spread
