@@ -101,7 +101,9 @@ const tintText = (c: Tint): string =>
     ? c
     : 'swatch' in c
       ? c.swatch
-      : (TINT_NAMES.get(`${c.hue}/${c.saturation}`) ?? `${c.hue}°`);
+      : 'kelvin' in c
+        ? `${c.kelvin} K`
+        : (TINT_NAMES.get(`${c.hue}/${c.saturation}`) ?? `${c.hue}°`);
 const set = (t: RuleTarget, intensity: number, colour?: Tint): Rule =>
   colour ? { target: t, intensity, colour: tint(colour) } : { target: t, intensity };
 

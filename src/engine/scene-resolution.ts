@@ -3,6 +3,7 @@
 // hardware.
 import { aimAt, aimDmx, turnAim, type AimAngles, type Turn } from '../shared/aim';
 import { dmxByte, fixed, toDmx, type Point } from '../shared/dmx-point';
+import { kelvinFraction, kelvinSupport } from '../shared/kelvin';
 import {
   isHazeOrFan,
   type CapabilityRange,
@@ -20,6 +21,7 @@ import {
   type Scene,
   type Show,
   type GoboSetting,
+  KELVIN_RANGE,
   PRISM_BEHAVIOUR,
   type PrismSetting,
   type Swatch,
@@ -321,11 +323,20 @@ function levelOutput(channels: Channel[], intensity: number, colour: ColourLevel
   );
   const hasDimmer = capabilities.some((c) => c.type === 'intensity');
   const emitters = new Set(capabilities.flatMap((c) => (c.type === 'emitter' ? [c.emitter] : [])));
+  const cct =
+    colour.kelvin !== undefined &&
+    kelvinSupport(channels) === 'cct' &&
+    emitters.has('warmWhite') &&
+    emitters.has('coldWhite');
   return {
     intensity,
     colour,
     emitters,
-    mix: mixesColour(emitters) ? emitterMix(colour, emitters) : fullMix(emitters),
+    mix: mixesColour(emitters)
+      ? emitterMix(colour, emitters)
+      : cct
+        ? cctMix(colour.kelvin!)
+        : fullMix(emitters),
     emitterScale: hasDimmer ? 1 : intensity,
   };
 }
@@ -449,6 +460,7 @@ function shownColour(channels: Channel[], { colour, emitters }: FixtureOutput): 
   );
   if (slots.length > 0) return slotLevels(nearestSlot(slots, colour));
   if (mixesColour(emitters)) return colour;
+  if (colour.kelvin !== undefined && kelvinSupport(channels) === 'cct') return colour;
   if (emitters.size === 0) return WHITE;
   const levels = [...emitters].map((e) => EMITTER_LEVELS[e]);
   const average = (pick: (l: ColourLevels) => number) =>
@@ -698,21 +710,27 @@ export function lerp(a: number, b: number, p: number): number {
 }
 
 export function blend(a: ColourLevels, b: ColourLevels, p: number): ColourLevels {
-  return {
+  const levels = {
     red: lerp(a.red, b.red, p),
     green: lerp(a.green, b.green, p),
     blue: lerp(a.blue, b.blue, p),
     uv: lerp(a.uv, b.uv, p),
   };
+  // Between two kelvin whites the temperature fades; otherwise it is a mix.
+  return a.kelvin !== undefined && b.kelvin !== undefined
+    ? { ...levels, kelvin: lerp(a.kelvin, b.kelvin, p) }
+    : levels;
 }
 
 // A colour as red, green, blue and ultraviolet levels, each 0–1. Red, green
-// and blue stand in for ultraviolet on Fixtures without a UV emitter.
+// and blue stand in for ultraviolet on Fixtures without a UV emitter. A white
+// in kelvin also keeps its temperature, for Fixtures that can make it exactly.
 export interface ColourLevels {
   red: number;
   green: number;
   blue: number;
   uv: number;
+  kelvin?: number;
 }
 
 const rgbLevels = (red: number, green: number, blue: number): ColourLevels => ({
@@ -741,7 +759,29 @@ const SWATCH_LEVELS: Record<Swatch, ColourLevels> = {
 };
 
 export function colourLevels(colour: Colour): ColourLevels {
+  if ('kelvin' in colour) return { ...kelvinRgb(colour.kelvin), kelvin: colour.kelvin };
   return 'swatch' in colour ? SWATCH_LEVELS[colour.swatch] : hsv(colour.hue, colour.saturation);
+}
+
+// A white of `kelvin` as red, green and blue at full value (Tanner Helland's
+// blackbody approximation).
+function kelvinRgb(kelvin: number): ColourLevels {
+  const t = kelvin / 100;
+  const byte = (v: number) => Math.min(255, Math.max(0, v)) / 255;
+  const red = t <= 66 ? 255 : 329.698727446 * (t - 60) ** -0.1332047592;
+  const green =
+    t <= 66
+      ? 99.4708025861 * Math.log(t) - 161.1195681661
+      : 288.1221695283 * (t - 60) ** -0.0755148492;
+  const blue = t >= 66 ? 255 : t <= 19 ? 0 : 138.5177312231 * Math.log(t - 10) - 305.0447927307;
+  return rgbLevels(byte(red), byte(green), byte(blue));
+}
+
+// The emitter levels of a kelvin white on a Fixture with warm and cold white
+// emitters: they crossfade, the warmer or the cooler one at full.
+function cctMix(kelvin: number): EmitterMix {
+  const cool = kelvinFraction(kelvin);
+  return { warmWhite: Math.min(1, 2 * (1 - cool)), coldWhite: Math.min(1, 2 * cool) };
 }
 
 // Hue and saturation at full value.
@@ -893,12 +933,29 @@ function channelPoint(
   if (open) return fixed(middle(open));
   const dimmer = ranges.filter((r) => r.capability.type === 'intensity');
   if (dimmer.length > 0) return levelPoint(dimmer, intensity);
+  if (ranges.some((r) => r.capability.type === 'colourTemperature')) {
+    return colour.kelvin === undefined ? undefined : kelvinPoint(ranges, colour.kelvin);
+  }
   const emitter = ranges.find((r) => r.capability.type === 'emitter')?.capability;
   if (emitter?.type !== 'emitter') return undefined;
   const same = ranges.filter(
     (r) => r.capability.type === 'emitter' && r.capability.emitter === emitter.emitter,
   );
   return levelPoint(same, (mix[emitter.emitter] ?? 0) * emitterScale);
+}
+
+// The point that sets `kelvin` on colour temperature `ranges`: the first range
+// whose span holds it, or else the nearest. A reversed span is walked
+// backwards.
+function kelvinPoint(ranges: CapabilityRange[], kelvin: number): Point {
+  const span = ({ capability }: CapabilityRange): [number, number] =>
+    (capability.type === 'colourTemperature' && capability.kelvin) || [...KELVIN_RANGE];
+  const off = (range: CapabilityRange) => {
+    const [a, b] = span(range);
+    return Math.max(Math.min(a, b) - kelvin, kelvin - Math.max(a, b), 0);
+  };
+  const range = ranges.reduce((best, r) => (off(r) < off(best) ? r : best));
+  return { from: range.from, to: range.to, t: kelvinFraction(kelvin, span(range)) };
 }
 
 // The point that sets `level` (0–1) on intensity, emitter, haze or fan
@@ -954,8 +1011,13 @@ function middle({ from, to }: CapabilityRange): number {
   return Math.floor((from + to) / 2);
 }
 
-// The wheel slot range whose colour is closest to `colour`.
+// The wheel slot range whose colour is closest to `colour`. A kelvin white
+// only considers white and CTO/CTB slots, when the wheel has any.
 function nearestSlot(slots: CapabilityRange[], colour: ColourLevels): CapabilityRange {
+  if (colour.kelvin !== undefined) {
+    const whites = slots.filter(isWhiteSlot);
+    if (whites.length > 0) slots = whites;
+  }
   const distance = (range: CapabilityRange) => {
     const slot = slotLevels(range);
     return (
@@ -965,6 +1027,16 @@ function nearestSlot(slots: CapabilityRange[], colour: ColourLevels): Capability
     );
   };
   return slots.reduce((best, range) => (distance(range) < distance(best) ? range : best));
+}
+
+// Whether a wheel slot is a white: open, named white or CTO/CTB/CTC, or a
+// pale colour (saturation at most 0.5).
+function isWhiteSlot(range: CapabilityRange): boolean {
+  if (range.capability.type !== 'wheelSlot') return true;
+  if (/\b(white|open|cto|ctb|ctc|ct\d*)\b|\d{4}\s*k/i.test(range.capability.slot.name)) return true;
+  const { red, green, blue } = slotLevels(range);
+  const max = Math.max(red, green, blue);
+  return max === 0 || (max - Math.min(red, green, blue)) / max <= 0.5;
 }
 
 // A wheel slot range's colour; white for any other range.

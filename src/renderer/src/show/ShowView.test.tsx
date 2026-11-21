@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EngineCommand, EngineEvent } from '../../../shared/protocol';
@@ -500,6 +500,15 @@ describe('Scene editor', () => {
     expect(screen.queryByRole('group', { name: 'Intensity Effect settings' })).toBeNull();
     await userEvent.selectOptions(effect, 'Not set');
     expect(rule()).toEqual({ target: {}, intensity: 0.5 });
+  });
+
+  it("offers a colour temperature beside the swatches as a Rule's colour", async () => {
+    await selectWarm();
+    await userEvent.selectOptions(screen.getAllByLabelText('Colour')[0]!, 'Colour temperature');
+    expect(rule()).toMatchObject({ colour: { kelvin: 3200 } });
+
+    fireEvent.change(screen.getByLabelText('Kelvin'), { target: { value: '5600' } });
+    expect(rule()).toMatchObject({ colour: { kelvin: 5600 } });
   });
 
   it("sets a two-colour Step as a Rule's colour Effect, in place of its colour", async () => {

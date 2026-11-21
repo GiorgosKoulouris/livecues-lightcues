@@ -1,10 +1,10 @@
-import { SWATCHES, type Colour, type Swatch } from '../../../shared/show';
+import { KELVIN_RANGE, SWATCHES, type Colour, type Swatch } from '../../../shared/show';
 import { Select } from '../ui/Select';
 import styles from './ColourPicker.module.css';
 
-type Kind = 'none' | 'swatch' | 'hue';
+type Kind = 'none' | 'swatch' | 'kelvin' | 'hue';
 
-// Picks a swatch or a hue and saturation, or no colour, shown as `unset`.
+// Picks a swatch, a white in kelvin or a hue and saturation, or no colour, shown as `unset`.
 // With `unset` null, a colour must be picked.
 export function ColourPicker({
   label = 'Colour',
@@ -17,7 +17,14 @@ export function ColourPicker({
   colour?: Colour;
   onChange(colour: Colour | undefined): void;
 }) {
-  const kind: Kind = colour === undefined ? 'none' : 'swatch' in colour ? 'swatch' : 'hue';
+  const kind: Kind =
+    colour === undefined
+      ? 'none'
+      : 'swatch' in colour
+        ? 'swatch'
+        : 'kelvin' in colour
+          ? 'kelvin'
+          : 'hue';
   return (
     <div className={styles.picker}>
       <Select<Kind>
@@ -26,11 +33,13 @@ export function ColourPicker({
         options={[
           ...(unset === null ? [] : [{ value: 'none' as const, label: unset }]),
           { value: 'swatch', label: 'Swatch' },
+          { value: 'kelvin', label: 'Colour temperature' },
           { value: 'hue', label: 'Hue and saturation' },
         ]}
         onChange={(value) => {
           if (value === 'none') onChange(undefined);
           else if (value === 'swatch') onChange({ swatch: 'White' });
+          else if (value === 'kelvin') onChange({ kelvin: 3200 });
           else onChange({ hue: 0, saturation: 1 });
         }}
       />
@@ -41,6 +50,22 @@ export function ColourPicker({
           options={SWATCHES.map((swatch) => ({ value: swatch, label: swatch }))}
           onChange={(swatch) => onChange({ swatch })}
         />
+      )}
+      {colour && 'kelvin' in colour && (
+        <div className={styles.hue}>
+          <label className={styles.slider}>
+            <span className={styles.label}>Kelvin</span>
+            <input
+              type="range"
+              min={KELVIN_RANGE[0]}
+              max={KELVIN_RANGE[1]}
+              step={100}
+              value={colour.kelvin}
+              onChange={(e) => onChange({ kelvin: Number(e.target.value) })}
+            />
+          </label>
+          <span className={styles.label}>{colour.kelvin} K</span>
+        </div>
       )}
       {colour && 'hue' in colour && (
         <div className={styles.hue}>

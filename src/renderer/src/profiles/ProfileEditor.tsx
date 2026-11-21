@@ -458,6 +458,7 @@ const CAPABILITY_TYPES: Capability['type'][] = [
   'intensity',
   'emitter',
   'wheelSlot',
+  'colourTemperature',
   'pan',
   'tilt',
   'panTiltSpeed',
@@ -649,6 +650,15 @@ function CapabilityFields({ name, capability, onChange }: CapabilityProps) {
             { value: 'closed', label: 'closed' },
           ]}
           onChange={(effect) => onChange({ ...capability, effect })}
+        />
+      );
+    case 'colourTemperature':
+      return (
+        <SpanInput
+          label={`Kelvin of ${name}`}
+          unit="K"
+          span={capability.kelvin}
+          onChange={(kelvin) => onChange({ ...capability, kelvin })}
         />
       );
     case 'haze':

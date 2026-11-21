@@ -184,6 +184,9 @@ Takes every Fixture's intensity to 0 until turned off, in Blind too. The active 
 **Default Direction**:
 The Direction a Show gives moving Fixtures where no Rule sets one, and the base of a movement Effect with none. Down unless changed.
 
+**Colour**:
+What a Rule, a colour Effect, a house look or the Default Colour sets. One of three kinds: a Swatch (a named colour), a hue and saturation, or a white in kelvin (2700–6500 K). The engine translates it per Fixture. A kelvin white is mixed on RGB, RGBW and RGBA Fixtures, set on a colour temperature channel, or made from warm and cold white emitters. A Fixture with only a colour wheel takes the nearest white or CTO/CTB slot, and the Venue Check notes it as approximated.
+
 **Default Colour**:
 The colour a Show gives Fixtures where no Rule sets one. White unless changed.
 

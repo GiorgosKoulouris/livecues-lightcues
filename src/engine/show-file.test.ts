@@ -139,8 +139,8 @@ describe('.lcshow file', () => {
   it('rejects a file of an unknown version', () => {
     const saved = JSON.parse(saveShowFile(show));
 
-    expect(() => loadShowFile(JSON.stringify({ ...saved, version: 10 }))).toThrow(
-      'Unsupported Show version: 10',
+    expect(() => loadShowFile(JSON.stringify({ ...saved, version: 11 }))).toThrow(
+      'Unsupported Show version: 11',
     );
     expect(() => loadShowFile(JSON.stringify({ ...show }))).toThrow(
       'Unsupported Show version: undefined',
@@ -270,6 +270,43 @@ describe('.lcshow file', () => {
     expect(() => loadShowFile(JSON.stringify({ version: 6, ...geared }))).toThrow(
       'unknown field "scenes[0].rules[0].prism"',
     );
+  });
+
+  it('keeps kelvin Colours from version 10 on, and rejects out-of-range kelvin', () => {
+    const [first, ...others] = show.scenes;
+    const warm: Show = {
+      ...show,
+      defaultColour: { kelvin: 2700 },
+      scenes: [
+        {
+          ...first!,
+          rules: [
+            { target: {}, intensity: 1, colour: { kelvin: 3200 } },
+            {
+              target: {},
+              colourEffect: {
+                shape: 'Fade',
+                colours: [{ kelvin: 3200 }, { kelvin: 5600 }],
+                length: 4,
+                spread: 'In sync',
+              },
+            },
+          ],
+        },
+        ...others,
+      ],
+    };
+    const saved = saveShowFile(warm);
+    expect(JSON.parse(saved).version).toBe(10);
+    expect(loadShowFile(saved)).toEqual(warm);
+    expect(() => loadShowFile(JSON.stringify({ version: 9, ...warm }))).toThrow(
+      'unknown field "defaultColour.kelvin"',
+    );
+    for (const kelvin of [2600, 6600, Number.NaN]) {
+      expect(() => saveShowFile({ ...show, defaultColour: { kelvin } })).toThrow(
+        'kelvin must be from 2700 to 6500',
+      );
+    }
   });
 
   it('allows an intensity Effect width from version 7 on', () => {

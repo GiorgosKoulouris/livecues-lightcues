@@ -16,7 +16,7 @@ import {
   type Zone,
 } from './venue-patch';
 
-export { SWATCHES, type Colour, type Swatch } from './colour';
+export { KELVIN_RANGE, SWATCHES, type Colour, type Swatch } from './colour';
 
 // Named aims for moving Fixtures, computed per Fixture from its stage
 // position and Mounting (ADR 0007).

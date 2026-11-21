@@ -42,6 +42,9 @@ export type Capability =
   | { type: 'intensity'; level?: Span; assumed?: true }
   | { type: 'emitter'; emitter: Emitter; level?: Span; assumed?: true }
   | { type: 'wheelSlot'; slot: WheelSlot }
+  // A colour temperature channel. `kelvin` is the temperature across the
+  // range; 2700→6500 when absent.
+  | { type: 'colourTemperature'; kelvin?: Span }
   | { type: 'pan'; degrees?: Span }
   | { type: 'tilt'; degrees?: Span }
   // `speed` is relative: 0 is the slowest and 1 the fastest. Nothing drives it,

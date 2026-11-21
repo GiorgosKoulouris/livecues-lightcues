@@ -83,7 +83,7 @@ function validateCapability(capability: Capability): string[] {
     return [`wheel slot "${capability.slot.name}" colour must be #rrggbb`];
   }
   // A span that is given but not two finite numbers makes the DMX value NaN.
-  for (const field of ['degrees', 'level', 'hz', 'speed'] as const) {
+  for (const field of ['degrees', 'level', 'hz', 'speed', 'kelvin'] as const) {
     const span = (capability as Partial<Record<typeof field, unknown>>)[field];
     if (span != null && !isSpan(span)) {
       return [`${capability.type} ${field} must be two finite numbers`];

@@ -12,10 +12,12 @@ import { validateShow, type Colour, type Rule, type Show } from '../shared/show'
 // `panelScenes`: versions 1–7 still load, the field ignored and dropped, and a
 // version-8 file that has it is rejected as an unknown field. Version 9 added a
 // Scene's `fadeUnit` (seconds or beats): a Show saves as version 9 only when a
-// Scene sets one, and older files load as seconds.
+// Scene sets one, and older files load as seconds. Version 10 added the kelvin
+// Colour: a Show saves as version 10 only when it uses one, and an older file
+// that has one is rejected as an unknown field.
 
-const VERSION = 9;
-const VERSIONS = [1, 2, 3, 4, 5, 6, 7, 8, VERSION];
+const VERSION = 10;
+const VERSIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, VERSION];
 
 interface ShowFile extends Show {
   version: number;
@@ -25,7 +27,9 @@ interface ShowFile extends Show {
 export function saveShowFile(show: Show): string {
   throwIfInvalid(validateShow(show));
   const usesFadeUnit = show.scenes.some((scene) => scene.fadeUnit !== undefined);
-  const file: ShowFile = { version: usesFadeUnit ? VERSION : VERSION - 1, ...show };
+  const usesKelvin = JSON.stringify(show).includes('"kelvin":');
+  const version = usesKelvin ? 10 : usesFadeUnit ? 9 : 8;
+  const file: ShowFile = { version, ...show };
   return JSON.stringify(file);
 }
 
@@ -103,7 +107,15 @@ function unknownFields(file: ShowFile): string[] {
     }
   };
   const allowColour = (colour: Colour, path: string) =>
-    allow(colour, 'swatch' in colour ? ['swatch'] : ['hue', 'saturation'], path);
+    allow(
+      colour,
+      'swatch' in colour
+        ? ['swatch']
+        : 'kelvin' in colour && file.version >= 10
+          ? ['kelvin']
+          : ['hue', 'saturation'],
+      path,
+    );
   // The top-level fields each version added.
   const added = [
     ['version', 'layers', 'scenes', 'triggers', 'baseLook'],
@@ -115,6 +127,7 @@ function unknownFields(file: ShowFile): string[] {
     [], // 7: none at the top level; Effect fields are allowed below.
     [], // 8: none; it dropped panelScenes.
     [], // 9: none at the top level; a Scene's fadeUnit is allowed below.
+    [], // 10: none at the top level; kelvin Colours are allowed below.
   ];
   const top = added.slice(0, file.version).flat();
   // Versions 1–7 may carry the retired panelScenes, which is dropped on load.

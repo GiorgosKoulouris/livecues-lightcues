@@ -8,6 +8,7 @@ import { applyVenueEdit } from '../../../shared/venue-edit';
 import { ASSUMED_STROBE_HZ } from '../../../shared/strobe';
 import {
   fixtureApproximatedAims,
+  fixtureApproximatedKelvin,
   fixtureApproximatedStrobe,
   fixtureUnsupportedGoboPrisms,
   type GoboPrismKind,
@@ -150,6 +151,7 @@ export function FixtureInspector({
           fixture={single}
           approximated={show ? fixtureApproximatedAims(show, patch, single) : []}
           strobe={show && strobeNote(show, patch, single)}
+          kelvin={show && kelvinNote(show, patch, single)}
           unsupported={show ? unsupportedNotes(show, patch, single) : []}
           modeError={errors.mode}
           onPut={(fixture, field) => put([fixture], field)}
@@ -251,6 +253,18 @@ function strobeNote(
   return { scenes: approximated.scenes.map(name), approximation: approximated.approximation };
 }
 
+// Where a Fixture with only a colour wheel gets a kelvin white, by Scene name,
+// or the Default Colour; undefined when it is not approximated.
+function kelvinNote(show: Show, patch: VenuePatch, fixture: PatchedFixture): string[] | undefined {
+  const approximated = fixtureApproximatedKelvin(show, patch, fixture);
+  if (!approximated) return undefined;
+  const name = (id: string) => show.scenes.find((s) => s.id === id)?.name ?? id;
+  return [
+    ...(approximated.defaultColour ? ['the Default Colour'] : []),
+    ...approximated.scenes.map(name),
+  ];
+}
+
 // Name, mode, address, position and, for a moving Fixture, Mounting and its
 // approximated aims, and an approximated strobe: the fields only one Fixture
 // is edited in.
@@ -259,6 +273,7 @@ function SingleFields({
   fixture,
   approximated,
   strobe,
+  kelvin,
   unsupported,
   modeError,
   onPut,
@@ -267,6 +282,7 @@ function SingleFields({
   fixture: PatchedFixture;
   approximated: ApproximatedAim[];
   strobe: StrobeNote | undefined;
+  kelvin: string[] | undefined;
   unsupported: UnsupportedNote[];
   modeError: string | undefined;
   onPut(fixture: PatchedFixture, field?: CheckedField): void;
@@ -355,6 +371,15 @@ function SingleFields({
               </li>
             ))}
           </ul>
+        </section>
+      )}
+      {kelvin && (
+        <section aria-label="Approximated colour temperature" className={styles.approximated}>
+          <h4 className={styles.legend}>Approximated colour temperature</h4>
+          <p>
+            Set to a kelvin white by {kelvin.join(', ')}: it has only a colour wheel, so the nearest
+            white or CTO/CTB slot is used.
+          </p>
         </section>
       )}
       {strobe && (

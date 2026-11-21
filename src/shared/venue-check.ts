@@ -2,6 +2,8 @@
 // makings of the Venue Check. Pure, and shared so the editors can show it
 // where the operator fixes it.
 import { aimAt, type Approximation } from './aim';
+import type { Colour } from './colour';
+import { kelvinSupport } from './kelvin';
 import {
   DEFAULT_DIRECTION,
   DIRECTIONS,
@@ -105,6 +107,46 @@ export function fixtureApproximatedStrobe(
   if (drives.length === 0) return approximated('noStrobeChannel');
   if (drives.some((d) => d.kind === 'rate' && d.assumed)) return approximated('assumedHzSpan');
   return undefined;
+}
+
+// A Fixture that can only approximate the Show's kelvin whites: it has only a
+// colour wheel, so the nearest white or CTO/CTB slot is used. `scenes` are the
+// Scenes (by id, in Show order) whose Rules give it a kelvin colour;
+// `defaultColour` is set when the Show's Default Colour is one.
+export interface ApproximatedKelvin {
+  fixtureId: string;
+  scenes: string[];
+  defaultColour: boolean;
+}
+
+// Every Fixture whose kelvin whites the Show only approximates, in patch order.
+export function approximatedKelvins(show: Show, patch: VenuePatch): ApproximatedKelvin[] {
+  return patch.fixtures.flatMap((fixture) => fixtureApproximatedKelvin(show, patch, fixture) ?? []);
+}
+
+// One Fixture's kelvin approximation, if it has a wheel and no way to mix or
+// set a temperature, and the Show uses a kelvin white on it.
+export function fixtureApproximatedKelvin(
+  show: Show,
+  patch: VenuePatch,
+  fixture: PatchedFixture,
+): ApproximatedKelvin | undefined {
+  if (kelvinSupport(fixtureMode(patch, fixture).channels) !== 'wheel') return undefined;
+  const isKelvin = (colour: Colour | undefined) => colour !== undefined && 'kelvin' in colour;
+  const scenes = show.scenes.filter((scene) =>
+    scene.rules.some(
+      (rule) =>
+        ruleTargets(patch, fixture, rule) &&
+        (isKelvin(rule.colour) ||
+          (typeof rule.colourEffect === 'object' &&
+            rule.colourEffect !== null &&
+            'colours' in rule.colourEffect &&
+            rule.colourEffect.colours.some(isKelvin))),
+    ),
+  );
+  const defaultColour = isKelvin(show.defaultColour);
+  if (scenes.length === 0 && !defaultColour) return undefined;
+  return { fixtureId: fixture.id, scenes: scenes.map((s) => s.id), defaultColour };
 }
 
 // A Rule setting a Fixture can lack the hardware for: a prism or a gobo.

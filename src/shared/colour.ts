@@ -19,10 +19,18 @@ export const SWATCHES = [
 ] as const;
 export type Swatch = (typeof SWATCHES)[number];
 
-// hue in degrees, 0 to under 360; saturation 0–1.
-export type Colour = { hue: number; saturation: number } | { swatch: Swatch };
+// A white's colour temperature in kelvin, from 2700 (warm) to 6500 (cool).
+export const KELVIN_RANGE = [2700, 6500] as const;
+
+// hue in degrees, 0 to under 360; saturation 0–1; kelvin 2700–6500.
+export type Colour = { hue: number; saturation: number } | { swatch: Swatch } | { kelvin: number };
 
 export function colourProblems(colour: Colour): string[] {
+  if ('kelvin' in colour) {
+    return inRange(colour.kelvin, KELVIN_RANGE[0], KELVIN_RANGE[1])
+      ? []
+      : [`kelvin must be from ${KELVIN_RANGE[0]} to ${KELVIN_RANGE[1]}`];
+  }
   if ('swatch' in colour) {
     return SWATCHES.includes(colour.swatch) ? [] : [`"${colour.swatch}" is not a swatch`];
   }

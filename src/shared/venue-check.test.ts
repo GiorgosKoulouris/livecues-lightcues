@@ -10,6 +10,7 @@ import {
 } from './venue-patch';
 import {
   approximatedAims,
+  approximatedKelvins,
   approximatedStrobes,
   fixtureUnsupportedGoboPrisms,
   hazePresetsWithoutHazers,
@@ -86,6 +87,30 @@ const wordy = profile('test/wordy', [
   control('Strobe', { type: 'strobe', hz: [1, 20], assumed: true }),
 ]);
 
+// A colour wheel only, an RGB mixer and a colour temperature channel.
+const wheel = profile('test/wheel', [
+  dimmer,
+  {
+    kind: 'control',
+    name: 'Colour',
+    defaultValue: 0,
+    ranges: [
+      {
+        from: 0,
+        to: 255,
+        capability: { type: 'wheelSlot', slot: { name: 'Open', colour: '#ffffff' } },
+      },
+    ],
+  },
+]);
+const rgb = profile('test/rgb', [
+  dimmer,
+  control('R', { type: 'emitter', emitter: 'red' }),
+  control('G', { type: 'emitter', emitter: 'green' }),
+  control('B', { type: 'emitter', emitter: 'blue' }),
+]);
+const cct = profile('test/cct', [dimmer, control('CCT', { type: 'colourTemperature' })]);
+
 function fixture(id: string, profileId: string, overrides: Partial<PatchedFixture> = {}) {
   return {
     id,
@@ -119,6 +144,9 @@ function patch(...fixtures: PatchedFixture[]): VenuePatch {
       wordy,
       spot,
       openOnly,
+      wheel,
+      rgb,
+      cct,
     ],
   };
 }
@@ -263,6 +291,53 @@ describe('approximatedStrobes', () => {
     expect(approximatedStrobes(s, rig)).toEqual([
       { fixtureId: 'par', scenes: ['stopped'], approximation: 'noStrobeChannel' },
     ]);
+  });
+});
+
+describe('approximatedKelvins', () => {
+  const rig = patch(
+    fixture('wheel', wheel.id),
+    fixture('rgb', rgb.id),
+    fixture('cct', cct.id),
+    fixture('par', par.id),
+  );
+
+  it('lists the Fixtures with only a colour wheel that a Scene gives a kelvin white', () => {
+    const s = show([{ target: {}, colour: { kelvin: 3200 } }]);
+
+    expect(approximatedKelvins(s, rig)).toEqual([
+      { fixtureId: 'wheel', scenes: ['s1'], defaultColour: false },
+    ]);
+  });
+
+  it('counts a kelvin in a colour Effect and in the Default Colour', () => {
+    const effect = show([
+      {
+        target: {},
+        colourEffect: {
+          shape: 'Fade',
+          colours: [{ swatch: 'Red' }, { kelvin: 5600 }],
+          length: 4,
+          spread: 'In sync',
+        },
+      },
+    ]);
+    expect(approximatedKelvins(effect, rig)).toEqual([
+      { fixtureId: 'wheel', scenes: ['s1'], defaultColour: false },
+    ]);
+
+    const fallback = show([{ target: {}, intensity: 1 }], { defaultColour: { kelvin: 2700 } });
+    expect(approximatedKelvins(fallback, rig)).toEqual([
+      { fixtureId: 'wheel', scenes: [], defaultColour: true },
+    ]);
+  });
+
+  it('lists nothing without a kelvin white, or for a Rule that misses the Fixture', () => {
+    expect(approximatedKelvins(show([{ target: {}, colour: { swatch: 'White' } }]), rig)).toEqual(
+      [],
+    );
+    const wash = show([{ target: { roles: ['Blinder'] }, colour: { kelvin: 3200 } }]);
+    expect(approximatedKelvins(wash, rig)).toEqual([]);
   });
 });
 
