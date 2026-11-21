@@ -15,8 +15,8 @@ import { useMidiLearn } from './useMidiInput';
 const ITEM_VARIANT = { 2: 'wide', colours: 'colours' } as const;
 
 // A Show's list of one kind of Preset, in order: each has a name, its own
-// fields, and an optional MIDI note, typed in or learned. House Presets and
-// Haze Presets share it.
+// fields, and an optional MIDI note, typed in or learned. House Presets, Haze
+// Presets and Colour Sets share it.
 export function PresetPanel<P extends { id: string; name: string; note?: MidiNote }>({
   show,
   presets,

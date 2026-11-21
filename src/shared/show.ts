@@ -278,7 +278,7 @@ export interface Trigger extends MidiNote {
   mode: TriggerMode;
 }
 
-// A named slot the House Lights go to, with the house look each Venue Patch
+// A named entry the House Lights go to, with the house look each Venue Patch
 // gives it (ADR 0013). Its note only does Go.
 export interface HousePreset {
   // Unique in the Show; Venue Patches key their house looks by it.
@@ -289,7 +289,7 @@ export interface HousePreset {
   note?: MidiNote;
 }
 
-// A named slot every Hazer goes to (ADR 0018). Its note only does Go.
+// A named entry every Hazer goes to (ADR 0018). Its note only does Go.
 export interface HazePreset {
   // Unique in the Show.
   id: string;
@@ -301,7 +301,7 @@ export interface HazePreset {
   note?: MidiNote;
 }
 
-// A named slot of three Colours the Show's Rules can name by slot. Its note
+// A named set of three Colours, one per slot, that Rules can name by slot. Its note
 // only does Go, and one Colour Set holds at a time. When it changes, every slot
 // colour crossfades to the new one over its fade. Not a palette: that is the
 // Plan's per-tier Scene map.
@@ -375,7 +375,7 @@ export function findTrigger(show: Show, note: MidiNote): Trigger | undefined {
   return show.triggers.find((t) => sameNote(t, note));
 }
 
-// The two kinds of Preset list in a Show, by the Show's field. Their edits
+// The three kinds of Preset list in a Show (House, Haze, Colour Sets), by the Show's field. Their edits
 // share one shape (preset-list.ts).
 type PresetKey = 'housePresets' | 'hazePresets' | 'colourSets';
 type PresetOf<K extends PresetKey> = NonNullable<Show[K]>[number];

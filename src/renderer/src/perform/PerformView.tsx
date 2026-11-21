@@ -40,12 +40,12 @@ interface PerformViewProps {
   colourSet: HeldColourSet | undefined;
 }
 
-// The gig view: Blackout, the Base Look, the Grand Master, Tap Tempo and Freeze along the top,
-// the House section while the Venue Patch has House Lights, the Haze section
-// while it has Hazers, the Colour Sets while the Show has any, every Scene as a button grouped by Layer, each Layer
-// with a small Clear, and the Preview with
-// Monitor/Blind. Nothing is edited here. It replaces the Fallback Panel in the
-// top bar, whose keys still work.
+// The gig view: Blackout, the Base Look, the Grand Master, Tap Tempo and
+// Freeze along the top, the House section while the Venue Patch has House
+// Lights, the Haze section while it has Hazers, the Colour Sets while the Show
+// has any, every Scene as a button grouped by Layer, each Layer with a small
+// Clear, and the Preview with Monitor/Blind. Nothing is edited here. It
+// replaces the Fallback Panel in the top bar, whose keys still work.
 export function PerformView({
   active,
   show,

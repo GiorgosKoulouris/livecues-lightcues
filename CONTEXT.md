@@ -49,7 +49,7 @@ A named set of House Lights in the Venue Patch, such as Bar or Ceiling. Each Hou
 _Avoid_: Area, Zone
 
 **House Preset**:
-A named slot in the Show, with a fade and an optional MIDI note, that sets the House Lights to that slot's house look. Fired by its note (Go only) or its button in Perform. One holds at a time.
+A named entry in the Show, with a fade and an optional MIDI note, that sets the House Lights to that entry's house look. Fired by its note (Go only) or its button in Perform. One holds at a time.
 _Avoid_: House Scene, house cue
 
 **House look**:
@@ -65,13 +65,13 @@ A haze machine on a Universe the app drives. Patched in the Venue Patch with a P
 _Avoid_: Fogger, smoke machine, atmosphere
 
 **Haze Preset**:
-A named slot in the Show with a haze level (0–100%), a fade and an optional MIDI note, that takes every Hazer to that level. Fired by its note (Go only) or its button in Perform. One holds at a time. Haze Off, built into every Show, takes the Hazers to 0 at once.
+A named entry in the Show with a haze level (0–100%), a fade and an optional MIDI note, that takes every Hazer to that level. Fired by its note (Go only) or its button in Perform. One holds at a time. Haze Off, built into every Show, takes the Hazers to 0 at once.
 _Avoid_: Haze Scene, haze cue, fog preset
 
 ### Colour
 
 **Colour Set**:
-A named slot in the Show with three Colours (Primary, Secondary, Accent), a fade and an optional MIDI note. Fired by its note (Go only). One holds at a time; the first holds at launch and when a Show is opened, and with no Colour Sets the slots show the Default Colour. When the held Colour Set changes, every slot colour crossfades over the new one's fade and Scenes stay active. Removing the held one hands over to the first. After an engine recovery the held Colour Set comes back at once, with no fade. A Colour Set is not the Plan's per-tier Scene map: the word palette belongs to the Plan.
+A named set of three Colours in the Show, one per Slot (Primary, Secondary, Accent), with a fade and an optional MIDI note. Fired by its note (Go only) or its button in Perform. One holds at a time; the first holds at launch and when a Show is opened, and with no Colour Sets the slots show the Default Colour. When the held Colour Set changes, every slot colour crossfades over the new one's fade and Scenes stay active. Removing the held one hands over to the first. After an engine recovery the held Colour Set comes back at once, with no fade. A Colour Set is not the Plan's per-tier Scene map: the word palette belongs to the Plan.
 _Avoid_: Palette, colour scheme
 
 **Slot**:
