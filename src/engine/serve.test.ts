@@ -11,7 +11,7 @@ import { serve } from './serve';
 type Listener = (e: { data: unknown; ports?: PortLike[] }) => void;
 
 const connect: EngineConnect = { type: 'connect', client: 'main' };
-const connectVisualiser: EngineConnect = { type: 'connect', client: 'visualiser' };
+const connectVisualiser: EngineConnect = { type: 'connect', client: 'detachedVisualiser' };
 
 // What the engine sent the parent, apart from its snapshots.
 const acks = (sent: unknown[]) => sent.filter((m) => (m as { type?: unknown }).type !== 'snapshot');

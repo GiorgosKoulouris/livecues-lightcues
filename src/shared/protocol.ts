@@ -318,7 +318,7 @@ export interface DocumentState {
 }
 
 // Sent by the main process to the engine with a fresh UI MessagePort attached.
-export type UiClient = 'main' | 'visualiser';
+export type UiClient = 'main' | 'detachedVisualiser';
 export type EngineConnect = { type: 'connect'; client: UiClient };
 
 // Sent by the main process to the engine after the user picked `path` in a

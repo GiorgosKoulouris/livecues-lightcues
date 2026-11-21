@@ -19,32 +19,32 @@ describe('createWindowRegistry', () => {
   it('connects one window with its client name', () => {
     const { windows, calls } = registry();
     windows.add('a', 'main');
-    windows.add('b', 'visualiser');
+    windows.add('b', 'detachedVisualiser');
 
     windows.connect('b', 'engine-1');
 
     expect(calls).toEqual([
-      { kind: 'port', window: 'b', client: 'visualiser', engine: 'engine-1' },
+      { kind: 'port', window: 'b', client: 'detachedVisualiser', engine: 'engine-1' },
     ]);
   });
 
   it('connects every open window to a restarted engine', () => {
     const { windows, calls } = registry();
     windows.add('a', 'main');
-    windows.add('b', 'visualiser');
+    windows.add('b', 'detachedVisualiser');
 
     windows.connectAll('engine-2');
 
     expect(calls).toEqual([
       { kind: 'port', window: 'a', client: 'main', engine: 'engine-2' },
-      { kind: 'port', window: 'b', client: 'visualiser', engine: 'engine-2' },
+      { kind: 'port', window: 'b', client: 'detachedVisualiser', engine: 'engine-2' },
     ]);
   });
 
   it('sends a notice to every open window', () => {
     const { windows, calls } = registry();
     windows.add('a', 'main');
-    windows.add('b', 'visualiser');
+    windows.add('b', 'detachedVisualiser');
 
     windows.sendAll('restarted', 'restored');
 
@@ -57,7 +57,7 @@ describe('createWindowRegistry', () => {
   it('gives a closed window no more ports or notices', () => {
     const { windows, calls } = registry();
     windows.add('a', 'main');
-    windows.add('b', 'visualiser');
+    windows.add('b', 'detachedVisualiser');
 
     windows.remove('b');
     windows.connectAll('engine-2');

@@ -32,7 +32,8 @@ export interface ParentPortLike {
 function isConnect(data: unknown): data is EngineConnect {
   const connect = data as EngineConnect | undefined;
   return (
-    connect?.type === 'connect' && (connect.client === 'main' || connect.client === 'visualiser')
+    connect?.type === 'connect' &&
+    (connect.client === 'main' || connect.client === 'detachedVisualiser')
   );
 }
 
