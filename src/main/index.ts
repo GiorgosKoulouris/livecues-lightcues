@@ -140,7 +140,7 @@ type Supervisor = ReturnType<typeof superviseEngine<UtilityProcess>>;
 // passes through the main process.
 function connectWindow(window: BrowserWindow, engine: UtilityProcess): void {
   const { port1, port2 } = new MessageChannelMain();
-  const connect: EngineConnect = { type: 'connect' };
+  const connect: EngineConnect = { type: 'connect', client: 'main' };
   engine.postMessage(connect, [port1]);
   window.webContents.postMessage(ENGINE_PORT_CHANNEL, null, [port2]);
 }

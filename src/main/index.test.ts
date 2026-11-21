@@ -294,7 +294,9 @@ describe('engine connection', () => {
   it('gives the window a port on every load', async () => {
     await boot();
     win().webContents.emit('did-finish-load');
-    expect(engine().postMessage).toHaveBeenCalledWith({ type: 'connect' }, [{ id: 1 }]);
+    expect(engine().postMessage).toHaveBeenCalledWith({ type: 'connect', client: 'main' }, [
+      { id: 1 },
+    ]);
     expect(win().webContents.postMessage).toHaveBeenCalledWith(ENGINE_PORT_CHANNEL, null, [
       { id: 2 },
     ]);

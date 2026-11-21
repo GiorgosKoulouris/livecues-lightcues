@@ -318,7 +318,8 @@ export interface DocumentState {
 }
 
 // Sent by the main process to the engine with a fresh UI MessagePort attached.
-export type EngineConnect = { type: 'connect' };
+export type UiClient = 'main' | 'visualiser';
+export type EngineConnect = { type: 'connect'; client: UiClient };
 
 // Sent by the main process to the engine after the user picked `path` in a
 // file dialog. Engine commands read and write only granted paths.

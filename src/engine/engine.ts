@@ -2,6 +2,7 @@ import { basename } from 'node:path';
 import {
   DOCUMENTS,
   type EngineCommand,
+  type UiClient,
   type EngineEvent,
   type EngineSnapshot,
   type FixtureImportResult,
@@ -89,7 +90,11 @@ export interface EngineOptions {
 }
 
 export interface Engine {
-  handle(command: EngineCommand): void;
+  // `client` is the UI the command came from: the preview counts viewers per
+  // client, and the Channel Monitor belongs to the client that started it.
+  handle(command: EngineCommand, client?: UiClient): void;
+  // The client's port is gone: it leaves the preview and its monitor stops.
+  clientGone(client: UiClient): void;
   // Lets commands read and write `path`, which the user picked in a dialog.
   grantPath(path: string): void;
   // The whole snapshot. Parts that change later go to `report`.
@@ -206,6 +211,20 @@ export function createEngine({
     house: house.ambient,
   });
   const monitor = createChannelMonitor({ emit, frame: (u) => outputs?.sentFrame(u) });
+  // The preview runs while any client views it. The Channel Monitor has one
+  // owner, the client that started it last.
+  const previewViewers = new Set<UiClient>();
+  let monitorOwner: UiClient | undefined;
+
+  function leavePreview(client: UiClient): void {
+    previewViewers.delete(client);
+    if (previewViewers.size === 0) preview.stop();
+  }
+
+  function stopMonitor(): void {
+    monitorOwner = undefined;
+    monitor.stop();
+  }
 
   const midiInput =
     midiPorts &&
@@ -403,7 +422,11 @@ export function createEngine({
     snapshot: () => reporter?.full() ?? snapshot(),
     restore,
     lastFrame: (universe) => outputs?.lastFrame(universe),
-    handle(command) {
+    clientGone(client) {
+      leavePreview(client);
+      if (monitorOwner === client) stopMonitor();
+    },
+    handle(command, client = 'main') {
       switch (command.type) {
         case 'ping':
           emit({ type: 'pong', id: command.id, uptimeMs: now() - startedAt });
@@ -506,16 +529,19 @@ export function createEngine({
           reopenErrors = [];
           break;
         case 'startPreview':
+          // The first viewer starts the feed; a later one is sent the look.
+          previewViewers.add(client);
           preview.start();
           break;
         case 'stopPreview':
-          preview.stop();
+          leavePreview(client);
           break;
         case 'monitorUniverse':
+          monitorOwner = client;
           monitor.start(command.universe);
           break;
         case 'stopMonitor':
-          monitor.stop();
+          if (monitorOwner === client) stopMonitor();
           break;
         case 'previewHouseLook':
           house.preview(command.look);

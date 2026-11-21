@@ -10,7 +10,8 @@ import { serve } from './serve';
 
 type Listener = (e: { data: unknown; ports?: PortLike[] }) => void;
 
-const connect: EngineConnect = { type: 'connect' };
+const connect: EngineConnect = { type: 'connect', client: 'main' };
+const connectVisualiser: EngineConnect = { type: 'connect', client: 'visualiser' };
 
 // What the engine sent the parent, apart from its snapshots.
 const acks = (sent: unknown[]) => sent.filter((m) => (m as { type?: unknown }).type !== 'snapshot');
@@ -127,6 +128,110 @@ describe('serve', () => {
     expect(oldUi.isClosed()).toBe(true);
     expect(oldUi.sent).toEqual([]);
     expect(newUi.sent).toEqual([{ type: 'pong', id: 2, uptimeMs: 0 }]);
+  });
+
+  describe('several clients', () => {
+    const types = (port: FakePort) => port.sent.map((m) => (m as { type: string }).type);
+
+    function twoClients() {
+      vi.useFakeTimers();
+      const parent = fakePort();
+      const main = fakePort();
+      const visualiser = fakePort();
+      serve(parent.port as ParentPortLike, virtualOnly);
+      parent.deliver(connect, [main.port]);
+      parent.deliver(connectVisualiser, [visualiser.port]);
+      return { parent, main, visualiser, idleTimers: vi.getTimerCount() };
+    }
+
+    it('sends broadcast events to both clients', () => {
+      const { main, visualiser } = twoClients();
+      main.deliver({ type: 'startPreview' });
+      expect(types(main)).toContain('preview');
+      expect(types(visualiser)).toContain('preview');
+    });
+
+    it('replaces only the port of the client that reconnects', () => {
+      const { parent, main, visualiser } = twoClients();
+      const newMain = fakePort();
+      parent.deliver(connect, [newMain.port]);
+      expect(main.isClosed()).toBe(true);
+      expect(visualiser.isClosed()).toBe(false);
+      newMain.deliver({ type: 'startPreview' });
+      expect(types(newMain)).toContain('preview');
+      expect(types(visualiser)).toContain('preview');
+      expect(types(main)).toEqual([]);
+    });
+
+    it('sends a reply with a requestId only to the client that asked', () => {
+      const { visualiser, main } = twoClients();
+      visualiser.deliver({ type: 'newShow', requestId: 7 });
+      visualiser.deliver({ type: 'saveShow', requestId: 8 });
+      expect(types(visualiser)).toContain('showDone');
+      expect(types(main)).not.toContain('showDone');
+    });
+
+    it('answers a ping only to the client that sent it', () => {
+      const { main, visualiser } = twoClients();
+      main.deliver({ type: 'ping', id: 1 });
+      expect(types(main)).toEqual(['pong']);
+      expect(types(visualiser)).toEqual([]);
+    });
+
+    const previews = (port: FakePort) => types(port).filter((t) => t === 'preview').length;
+
+    it('keeps the preview running while one viewer is left and stops it after the last', async () => {
+      const { main, visualiser, idleTimers } = twoClients();
+      main.deliver({ type: 'startPreview' });
+      visualiser.deliver({ type: 'startPreview' });
+      main.deliver({ type: 'stopPreview' });
+      const before = previews(visualiser);
+      await vi.advanceTimersByTimeAsync(100);
+      expect(vi.getTimerCount()).toBeGreaterThan(idleTimers);
+      visualiser.deliver({ type: 'stopPreview' });
+      expect(vi.getTimerCount()).toBe(idleTimers);
+      expect(previews(visualiser)).toBe(before);
+    });
+
+    it('stops the preview for a client whose port closes', () => {
+      const { main, visualiser, idleTimers } = twoClients();
+      main.deliver({ type: 'startPreview' });
+      visualiser.deliver({ type: 'startPreview' });
+      main.closeRemote();
+      expect(vi.getTimerCount()).toBeGreaterThan(idleTimers);
+      visualiser.closeRemote();
+      expect(vi.getTimerCount()).toBe(idleTimers);
+    });
+
+    it('sends a new preview viewer the current look at once', () => {
+      const { main, visualiser } = twoClients();
+      main.deliver({ type: 'startPreview' });
+      const before = previews(visualiser);
+      visualiser.deliver({ type: 'startPreview' });
+      expect(previews(visualiser)).toBe(before + 1);
+    });
+
+    it('keeps the channel monitor when another client goes', async () => {
+      vi.useFakeTimers();
+      const frames = await framesAfter((ui, parent) => {
+        const other = fakePort();
+        parent.deliver(connectVisualiser, [other.port]);
+        other.closeRemote();
+        return ui;
+      });
+      expect(frames).toHaveLength(1);
+    });
+
+    it('stops the channel monitor when its own client goes', async () => {
+      vi.useFakeTimers();
+      const frames = await framesAfter((ui, parent) => {
+        const other = fakePort();
+        parent.deliver(connectVisualiser, [other.port]);
+        ui.closeRemote();
+        return ui;
+      });
+      expect(frames).toEqual([]);
+    });
   });
 
   it('ignores parent messages that are not a connect', () => {
