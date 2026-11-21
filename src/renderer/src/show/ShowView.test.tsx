@@ -1,17 +1,10 @@
 import { act, cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { EngineCommand, EngineEvent, ShowEdit } from '../../../shared/protocol';
-import {
-  moveHazePreset,
-  moveHousePreset,
-  putHazePreset,
-  putHousePreset,
-  removeHazePreset,
-  removeHousePreset,
-  type Scene,
-  type Show,
-} from '../../../shared/show';
+import type { EngineCommand, EngineEvent } from '../../../shared/protocol';
+import type { ShowEdit } from '../../../shared/show-edit';
+import { applyShowEdit } from '../../../shared/show-edit';
+import type { Scene, Show } from '../../../shared/show';
 import { emptyPatch } from '../../../shared/venue-patch';
 import { installFakeEngine, type FakeEngine } from '../test-engine';
 import { stubListLayout } from '../test-layout';
@@ -93,11 +86,16 @@ function answer(command: EngineCommand): EngineEvent[] {
     case 'listMidiInputs':
       return [{ type: 'midiInput', status: { state: 'none', ports: ['nanoKEY'] } }];
     case 'editShow': {
-      const errors = rejectWith;
+      let errors = rejectWith;
       rejectWith = [];
       if (errors.length === 0) {
-        show = applied(show, command.edit);
-        unsaved = true;
+        const result = applyShowEdit(show, command.edit);
+        if ('errors' in result) {
+          errors = result.errors;
+        } else {
+          show = result.show;
+          unsaved = true;
+        }
       }
       const done: EngineEvent = { type: 'showDone', requestId: command.requestId, errors };
       return errors.length > 0 ? [done] : [showEvent(), done];
@@ -109,41 +107,6 @@ function answer(command: EngineCommand): EngineEvent[] {
     }
     default:
       return [];
-  }
-}
-
-// Enough of the engine's edits for these tests.
-function applied(current: Show, edit: ShowEdit): Show {
-  switch (edit.type) {
-    case 'putScene':
-      return {
-        ...current,
-        scenes: current.scenes.some((s) => s.id === edit.scene.id)
-          ? current.scenes.map((s) => (s.id === edit.scene.id ? edit.scene : s))
-          : [...current.scenes, edit.scene],
-      };
-    case 'removeScene':
-      return { ...current, scenes: current.scenes.filter((s) => s.id !== edit.id) };
-    case 'setBaseLook':
-      return { ...current, baseLook: edit.sceneId };
-    case 'putHousePreset': {
-      const put = putHousePreset(current, edit.preset);
-      return 'show' in put ? put.show : current;
-    }
-    case 'moveHousePreset':
-      return moveHousePreset(current, edit.id, edit.to);
-    case 'removeHousePreset':
-      return removeHousePreset(current, edit.id);
-    case 'putHazePreset': {
-      const put = putHazePreset(current, edit.preset);
-      return 'show' in put ? put.show : current;
-    }
-    case 'moveHazePreset':
-      return moveHazePreset(current, edit.id, edit.to);
-    case 'removeHazePreset':
-      return removeHazePreset(current, edit.id);
-    default:
-      return current;
   }
 }
 

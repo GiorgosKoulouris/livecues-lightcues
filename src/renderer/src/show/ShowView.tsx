@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import type { ShowEdit } from '../../../shared/protocol';
+import type { ShowEdit } from '../../../shared/show-edit';
 import type { Scene, Show } from '../../../shared/show';
 import { useTempo } from '../panel/useTempo';
 import { FileButtons } from '../shell/FileButtons';

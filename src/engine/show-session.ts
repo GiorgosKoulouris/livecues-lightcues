@@ -1,31 +1,15 @@
-import type { DocumentSnapshot, EngineCommand, EngineEvent, ShowEdit } from '../shared/protocol';
+import type { DocumentSnapshot, EngineCommand, EngineEvent } from '../shared/protocol';
+import type { ShowEdit } from '../shared/show-edit';
+import { applyShowEdit } from '../shared/show-edit';
 import {
   emptyShow,
   findHazePreset,
   findHousePreset,
   findTrigger,
-  moveHazePreset,
-  moveHousePreset,
-  putHazePreset,
-  putHousePreset,
-  putLayer,
-  putScene,
-  putTrigger,
-  removeHazePreset,
-  removeHousePreset,
-  removeLayer,
-  removeScene,
-  removeTrigger,
-  setBaseLook,
-  setDefaultColour,
-  setDefaultDirection,
-  showHazePresets,
-  showHousePresets,
   type Rule,
   type Show,
   type ShowResult,
 } from '../shared/show';
-import { editProblem } from '../shared/preset-list';
 import { createHistory } from './history';
 import { NOT_CHOSEN } from './path-grants';
 import type { RecentFile } from './recent-files';
@@ -121,62 +105,7 @@ export function createShowSession({
   }
 
   function edit(change: ShowEdit): ShowResult {
-    const show = history.current();
-    switch (change.type) {
-      case 'putScene':
-        return putScene(show, change.scene);
-      case 'removeScene':
-        if (!show.scenes.some((s) => s.id === change.id)) {
-          return { errors: [`Scene id "${change.id}" is not in the Show`] };
-        }
-        return { show: removeScene(show, change.id) };
-      case 'putLayer':
-        return putLayer(show, change.layer);
-      case 'removeLayer':
-        if (!show.layers.some((l) => l.id === change.id)) {
-          return { errors: [`Layer id "${change.id}" is not in the Show`] };
-        }
-        return { show: removeLayer(show, change.id) };
-      case 'setBaseLook':
-        return setBaseLook(show, change.sceneId);
-      case 'setDefaultColour':
-        return setDefaultColour(show, change.colour);
-      case 'setDefaultDirection':
-        return setDefaultDirection(show, change.direction);
-      case 'putTrigger':
-        return putTrigger(show, change.trigger);
-      case 'removeTrigger': {
-        const { channel, note } = change.note;
-        if (!findTrigger(show, change.note)) {
-          return { errors: [`No Trigger is mapped to channel ${channel}, note ${note}`] };
-        }
-        return { show: removeTrigger(show, change.note) };
-      }
-      case 'putHousePreset':
-        return putHousePreset(show, change.preset);
-      case 'moveHousePreset': {
-        const problem = editProblem('House Preset', showHousePresets(show), change.id, change.to);
-        return problem
-          ? { errors: [problem] }
-          : { show: moveHousePreset(show, change.id, change.to) };
-      }
-      case 'removeHousePreset': {
-        const problem = editProblem('House Preset', showHousePresets(show), change.id);
-        return problem ? { errors: [problem] } : { show: removeHousePreset(show, change.id) };
-      }
-      case 'putHazePreset':
-        return putHazePreset(show, change.preset);
-      case 'moveHazePreset': {
-        const problem = editProblem('Haze Preset', showHazePresets(show), change.id, change.to);
-        return problem
-          ? { errors: [problem] }
-          : { show: moveHazePreset(show, change.id, change.to) };
-      }
-      case 'removeHazePreset': {
-        const problem = editProblem('Haze Preset', showHazePresets(show), change.id);
-        return problem ? { errors: [problem] } : { show: removeHazePreset(show, change.id) };
-      }
-    }
+    return applyShowEdit(history.current(), change);
   }
 
   // Undo or redo, when there is a step to take.

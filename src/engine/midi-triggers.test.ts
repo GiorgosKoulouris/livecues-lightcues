@@ -1,11 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type {
-  ActiveByLayer,
-  EngineEvent,
-  MidiInputStatus,
-  ShowEdit,
-  TempoSource,
-} from '../shared/protocol';
+import type { ActiveByLayer, EngineEvent, MidiInputStatus, TempoSource } from '../shared/protocol';
+import type { ShowEdit } from '../shared/show-edit';
 import type { Scene, Trigger } from '../shared/show';
 import { createEngine } from './engine';
 import type { MidiPorts } from './midi-input';

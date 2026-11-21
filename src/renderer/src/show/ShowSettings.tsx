@@ -1,5 +1,5 @@
 import { Settings2 } from 'lucide-react';
-import type { ShowEdit } from '../../../shared/protocol';
+import type { ShowEdit } from '../../../shared/show-edit';
 import { DEFAULT_DIRECTION, DIRECTIONS, type Show } from '../../../shared/show';
 import { Button } from '../ui/Button';
 import { Popover } from '../ui/Popover';

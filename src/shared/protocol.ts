@@ -2,17 +2,12 @@
 // The UI sends EngineCommands; the engine sends EngineEvents.
 import type { AimAngles } from './aim';
 import type { FixtureProfile, UnsupportedFeature } from './fixture-profile';
+import type { ShowEdit } from './show-edit';
 import type {
-  Colour,
   Direction,
   EffectLength,
-  HazePreset,
-  HousePreset,
-  Layer,
   MidiNote,
-  Scene,
   Show,
-  Trigger,
   PRISM_BEHAVIOUR,
   PrismSetting,
 } from './show';
@@ -184,32 +179,6 @@ export type ActiveByLayer = Record<string, string>;
 // The longest length in beats the Speed limit runs an active Scene's movement
 // Effects at, by Layer id, for the Layers it slows.
 export type LimitedByLayer = Record<string, EffectLength>;
-
-// A change to the current Show.
-export type ShowEdit =
-  | { type: 'putScene'; scene: Scene }
-  | { type: 'removeScene'; id: string }
-  | { type: 'putLayer'; layer: Layer }
-  // Removes the Layer's Scenes too.
-  | { type: 'removeLayer'; id: string }
-  | { type: 'setBaseLook'; sceneId?: string }
-  // Without a colour, the default is White.
-  | { type: 'setDefaultColour'; colour?: Colour }
-  // Without a Direction, the default is Down.
-  | { type: 'setDefaultDirection'; direction?: Direction }
-  // Replaces the Trigger on the same channel and note.
-  | { type: 'putTrigger'; trigger: Trigger }
-  | { type: 'removeTrigger'; note: MidiNote }
-  // Adds at the end, or replaces the House Preset with the same id in place.
-  | { type: 'putHousePreset'; preset: HousePreset }
-  // Moves the House Preset to index `to`.
-  | { type: 'moveHousePreset'; id: string; to: number }
-  | { type: 'removeHousePreset'; id: string }
-  // Adds at the end, or replaces the Haze Preset with the same id in place.
-  | { type: 'putHazePreset'; preset: HazePreset }
-  // Moves the Haze Preset to index `to`.
-  | { type: 'moveHazePreset'; id: string; to: number }
-  | { type: 'removeHazePreset'; id: string };
 
 // A change to the current Venue Patch. `putFixture` and `putFixtures` embed a
 // Fixture's Profile from the Profile Library when the patch does not have it

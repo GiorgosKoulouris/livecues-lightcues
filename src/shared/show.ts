@@ -5,14 +5,7 @@
 // the same Show runs against any Venue Patch (ADR 0001).
 import { colourProblems, inRange, type Colour } from './colour';
 import { ROLES, type Role } from './fixture-profile';
-import {
-  findListedOn,
-  listProblems,
-  moveListed,
-  presetProblems,
-  putListed,
-  removeListed,
-} from './preset-list';
+import { findListedOn, listProblems, presetProblems } from './preset-list';
 import {
   fixtureRole,
   fixtureZone,
@@ -323,34 +316,6 @@ export function emptyShow(): Show {
   return { layers: [{ id: 'layer-1', name: 'Layer 1' }], scenes: [], triggers: [] };
 }
 
-// Adds a Scene, or replaces the one with the same id.
-export function putScene(show: Show, scene: Scene): ShowResult {
-  return validated({ ...show, scenes: put(show.scenes, scene, (s) => s.id === scene.id) });
-}
-
-// Removes a Scene with the Triggers that fire it. If it was the Base Look, the Show is left without one.
-export function removeScene(show: Show, id: string): Show {
-  const { baseLook, ...rest } = show;
-  return {
-    ...rest,
-    scenes: show.scenes.filter((s) => s.id !== id),
-    triggers: show.triggers.filter((t) => t.scene !== id),
-    ...(baseLook !== undefined && baseLook !== id ? { baseLook } : {}),
-  };
-}
-
-// Adds a Layer at the end, or replaces the one with the same id in place.
-export function putLayer(show: Show, layer: Layer): ShowResult {
-  return validated({ ...show, layers: put(show.layers, layer, (l) => l.id === layer.id) });
-}
-
-// Removes a Layer together with its Scenes.
-export function removeLayer(show: Show, id: string): Show {
-  const layers = show.layers.filter((l) => l.id !== id);
-  const onLayer = show.scenes.filter((s) => s.layer === id);
-  return onLayer.reduce((rest, scene) => removeScene(rest, scene.id), { ...show, layers });
-}
-
 export function sameNote(a: MidiNote, b: MidiNote): boolean {
   return a.channel === b.channel && a.note === b.note;
 }
@@ -360,15 +325,6 @@ export function findTrigger(show: Show, note: MidiNote): Trigger | undefined {
   return show.triggers.find((t) => sameNote(t, note));
 }
 
-// Maps a channel and note, replacing the Trigger already on them.
-export function putTrigger(show: Show, trigger: Trigger): ShowResult {
-  return validated({ ...show, triggers: put(show.triggers, trigger, (t) => sameNote(t, trigger)) });
-}
-
-export function removeTrigger(show: Show, note: MidiNote): Show {
-  return { ...show, triggers: show.triggers.filter((t) => !sameNote(t, note)) };
-}
-
 // The two kinds of Preset list in a Show, by the Show's field. Their edits
 // share one shape (preset-list.ts).
 type PresetKey = 'housePresets' | 'hazePresets';
@@ -376,13 +332,6 @@ type PresetOf<K extends PresetKey> = NonNullable<Show[K]>[number];
 
 function presetsOf<K extends PresetKey>(show: Show, key: K): PresetOf<K>[] {
   return (show[key] ?? []) as PresetOf<K>[];
-}
-
-// The Show with the list replaced; without any left, the Show has no list.
-function withPresets<K extends PresetKey>(show: Show, key: K, list: PresetOf<K>[]): Show {
-  const next = { ...show };
-  delete next[key];
-  return list.length > 0 ? { ...next, [key]: list } : next;
 }
 
 export function showHousePresets(show: Show): HousePreset[] {
@@ -398,24 +347,6 @@ export function findHousePresetOn(show: Show, note: MidiNote): HousePreset | und
   return findListedOn(showHousePresets(show), note);
 }
 
-// Adds a House Preset at the end, or replaces the one with the same id in
-// place.
-export function putHousePreset(show: Show, preset: HousePreset): ShowResult {
-  return validated({ ...show, housePresets: putListed(showHousePresets(show), preset) });
-}
-
-// Moves a House Preset to index `to`.
-export function moveHousePreset(show: Show, id: string, to: number): Show {
-  const list = showHousePresets(show);
-  const moved = moveListed(list, id, to);
-  return moved === list ? show : { ...show, housePresets: moved };
-}
-
-// Removes a House Preset; without any left, the Show has no list.
-export function removeHousePreset(show: Show, id: string): Show {
-  return withPresets(show, 'housePresets', removeListed(showHousePresets(show), id));
-}
-
 export function showHazePresets(show: Show): HazePreset[] {
   return presetsOf(show, 'hazePresets');
 }
@@ -427,57 +358,6 @@ export function findHazePreset(show: Show, id: string): HazePreset | undefined {
 // The Haze Preset a channel and note fire, if any.
 export function findHazePresetOn(show: Show, note: MidiNote): HazePreset | undefined {
   return findListedOn(showHazePresets(show), note);
-}
-
-// Adds a Haze Preset at the end, or replaces the one with the same id in
-// place.
-export function putHazePreset(show: Show, preset: HazePreset): ShowResult {
-  return validated({ ...show, hazePresets: putListed(showHazePresets(show), preset) });
-}
-
-// Moves a Haze Preset to index `to`.
-export function moveHazePreset(show: Show, id: string, to: number): Show {
-  const list = showHazePresets(show);
-  const moved = moveListed(list, id, to);
-  return moved === list ? show : { ...show, hazePresets: moved };
-}
-
-// Removes a Haze Preset; without any left, the Show has no list.
-export function removeHazePreset(show: Show, id: string): Show {
-  return withPresets(show, 'hazePresets', removeListed(showHazePresets(show), id));
-}
-
-// Designates a Scene as the Base Look; undefined leaves the Show without one.
-export function setBaseLook(show: Show, sceneId: string | undefined): ShowResult {
-  const next = { ...show, baseLook: sceneId };
-  if (sceneId === undefined) delete next.baseLook;
-  return validated(next);
-}
-
-// Sets the colour Fixtures show where no Rule sets one; undefined leaves it
-// White.
-export function setDefaultColour(show: Show, colour: Colour | undefined): ShowResult {
-  const next = { ...show, defaultColour: colour };
-  if (colour === undefined) delete next.defaultColour;
-  return validated(next);
-}
-
-// Sets the Direction moving Fixtures aim at where no Rule sets one;
-// undefined leaves it Down.
-export function setDefaultDirection(show: Show, direction: Direction | undefined): ShowResult {
-  const next = { ...show, defaultDirection: direction };
-  if (direction === undefined) delete next.defaultDirection;
-  return validated(next);
-}
-
-// `items` with `item` in place of the one matching `same`, or appended.
-function put<T>(items: T[], item: T, same: (other: T) => boolean): T[] {
-  return items.some(same) ? items.map((other) => (same(other) ? item : other)) : [...items, item];
-}
-
-function validated(show: Show): ShowResult {
-  const errors = validateShow(show);
-  return errors.length > 0 ? { errors } : { show };
 }
 
 // Checks a whole Show. Returns readable errors; an empty list means it is

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { EngineEvent, ShowEdit } from '../../../shared/protocol';
+import type { EngineEvent } from '../../../shared/protocol';
+import type { ShowEdit } from '../../../shared/show-edit';
 import { request } from '../engine-request';
 
 export type ShowState = Omit<Extract<EngineEvent, { type: 'show' }>, 'type'>;
