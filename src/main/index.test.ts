@@ -191,7 +191,7 @@ async function boot() {
 
 // A whole snapshot, so a restarted engine has something to restore.
 function snapshot(eng: EventEmitter) {
-  for (const part of ['show', 'venue', 'playback', 'house', 'midiInput']) {
+  for (const part of ['show', 'venue', 'playback', 'house', 'haze', 'midiInput']) {
     eng.emit('message', {
       type: 'snapshot',
       [part]: { path: `C:\\x.${part}`, document: {} },

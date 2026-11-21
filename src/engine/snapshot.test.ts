@@ -92,7 +92,7 @@ beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
 describe('engine snapshot', () => {
-  it('starts whole: documents, playback, Tempo, house state and MIDI Input', () => {
+  it('starts whole: documents, playback, Tempo, house state, haze and MIDI Input', () => {
     const { full } = snapshotEngine();
 
     expect(full).toEqual({
@@ -108,6 +108,7 @@ describe('engine snapshot', () => {
         tempoSource: 'default',
       },
       house: { look: {}, fired: { type: 'startup' } },
+      haze: { type: 'off' },
       midiInput: {},
     });
   });
@@ -386,6 +387,100 @@ describe('engine restore', () => {
       'Could not restore the live look; going to the Base Look.',
       expect.any(TypeError),
     );
+  });
+
+  describe('haze', () => {
+    // The Hazers' level (0–1) now, from a preview.
+    function hazeLevel({
+      engine,
+      events,
+    }: Pick<ReturnType<typeof snapshotEngine>, 'engine' | 'events'>) {
+      events.length = 0;
+      engine.handle({ type: 'startPreview' });
+      engine.handle({ type: 'stopPreview' });
+      const preview = events.find((e) => e.type === 'preview');
+      return preview?.type === 'preview' ? preview.haze : NaN;
+    }
+
+    // A Haze Preset Light at 60%, for the haze level, which needs no Hazer.
+    function hazeRig({ editShow }: ReturnType<typeof snapshotEngine>) {
+      editShow({
+        type: 'putHazePreset',
+        preset: { id: 'light', name: 'Light', level: 0.6, fade: 5 },
+      });
+    }
+
+    function hazeSnapshot(fire?: 'light' | 'off'): EngineSnapshot {
+      const s = snapshotEngine();
+      hazeRig(s);
+      if (fire === 'light') s.engine.handle({ type: 'fireHazePreset', id: 'light' });
+      if (fire === 'off') s.engine.handle({ type: 'hazeOff' });
+      return s.engine.snapshot();
+    }
+
+    it('brings back a held Haze Preset at its level', () => {
+      const before = hazeSnapshot('light');
+      const after = snapshotEngine();
+
+      after.engine.restore(before);
+
+      expect(before.haze).toEqual({ type: 'preset', id: 'light' });
+      expect(after.engine.snapshot().haze).toEqual(before.haze);
+      expect(hazeLevel(after)).toBeCloseTo(0.6);
+    });
+
+    it('keeps Haze Off at 0', () => {
+      const before = hazeSnapshot('off');
+      const after = snapshotEngine();
+
+      after.engine.restore(before);
+
+      expect(after.engine.snapshot().haze).toEqual({ type: 'off' });
+      expect(hazeLevel(after)).toBe(0);
+    });
+
+    it('goes to none, output 0, when the Show lost the Haze Preset', () => {
+      const before = hazeSnapshot('light');
+      const document = { ...before.show.document, hazePresets: [] };
+      const after = snapshotEngine();
+
+      after.engine.restore({ ...before, show: { ...before.show, document } });
+
+      expect(after.engine.snapshot().haze).toEqual({ type: 'none' });
+      expect(hazeLevel(after)).toBe(0);
+    });
+
+    it('brings it back on the Base Look path too', () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      const before = hazeSnapshot('light');
+      const after = snapshotEngine();
+      const broken = { ...before, playback: { ...before.playback, active: 'broken' as never } };
+
+      expect(after.engine.restore(broken)).toBe('baseLook');
+
+      expect(after.engine.snapshot().haze).toEqual({ type: 'preset', id: 'light' });
+      expect(hazeLevel(after)).toBeCloseTo(0.6);
+    });
+
+    it('still resets when a Show is opened', () => {
+      const s = snapshotEngine();
+      hazeRig(s);
+      s.engine.handle({ type: 'fireHazePreset', id: 'light' });
+      s.engine.handle({ type: 'newShow' });
+
+      expect(s.engine.snapshot().haze).toEqual({ type: 'off' });
+      expect(hazeLevel(s)).toBe(0);
+    });
+
+    it('sends the haze part when it changes', () => {
+      const s = snapshotEngine();
+      hazeRig(s);
+      s.take();
+
+      s.engine.handle({ type: 'fireHazePreset', id: 'light' });
+
+      expect(s.take()).toEqual([{ haze: { type: 'preset', id: 'light' } }]);
+    });
   });
 
   it('starts empty when the documents fail too', () => {

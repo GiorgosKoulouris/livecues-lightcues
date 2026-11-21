@@ -1,4 +1,4 @@
-import type { DocumentSnapshot, EngineSnapshot } from '../shared/protocol';
+import type { DocumentSnapshot, EngineSnapshot, HazeFired } from '../shared/protocol';
 
 // The least time between two playback parts, so a Grand Master fader or a
 // Tap Tempo burst does not flood the parent port.
@@ -50,7 +50,9 @@ export function createSnapshotReporter(
           ? now.midiInput.selected === last.midiInput.selected
           : part === 'house'
             ? now.house === last.house
-            : sameDocument(now[part], last[part]);
+            : part === 'haze'
+              ? sameHaze(now.haze, last.haze)
+              : sameDocument(now[part], last[part]);
       if (same) return;
       last = { ...last, [part]: now[part] };
       report({ [part]: now[part] });
@@ -61,4 +63,8 @@ export function createSnapshotReporter(
 // Documents are immutable, so an edit always makes a new one.
 function sameDocument(a: DocumentSnapshot<unknown>, b: DocumentSnapshot<unknown>): boolean {
   return a.document === b.document && a.path === b.path && a.unsaved === b.unsaved;
+}
+
+function sameHaze(a: HazeFired, b: HazeFired): boolean {
+  return a.type === b.type && (a.type !== 'preset' || a.id === (b as typeof a).id);
 }

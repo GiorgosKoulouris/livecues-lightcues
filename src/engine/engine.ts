@@ -117,6 +117,7 @@ const SNAPSHOT_PARTS: Partial<Record<EngineEvent['type'], keyof EngineSnapshot>>
   playback: 'playback',
   tempo: 'playback',
   house: 'house',
+  haze: 'haze',
   midiInput: 'midiInput',
 };
 
@@ -331,6 +332,7 @@ export function createEngine({
       venue: venue.snapshot(),
       playback: { ...playback.snapshot(), bpm: tempo.bpm(), tempoSource: tempo.source() },
       house: house.snapshot(),
+      haze: haze.snapshot(),
       midiInput: selected === undefined ? {} : { selected },
     };
   }
@@ -370,17 +372,18 @@ export function createEngine({
 
   // The Venue Patch first, so the Show's Scenes resolve against it. The
   // House Lights go to its Startup look, until the house state is restored.
+  // The Hazers get the held Haze Preset back, which the Show must have first.
   // Their files are granted, as the last engine held them: main re-grants
   // only the paths it granted, not the recent files the engine reopened
   // itself. The errors name no contents, since they are logged.
-  function restoreDocuments({ show: shown, venue: patched }: EngineSnapshot): void {
+  function restoreDocuments({ show: shown, venue: patched, haze: held }: EngineSnapshot): void {
     if (validatePatch(patched.document).length > 0) throw new Error('Invalid Venue Patch');
     if (validateShow(shown.document).length > 0) throw new Error('Invalid Show');
     for (const { path } of [patched, shown]) if (path !== undefined) grants.grant(path);
     venue.restore(patched);
     show.restore(shown);
     house.venueReplaced();
-    haze.reset();
+    haze.restore(held);
   }
 
   function resolveOnce(): void {

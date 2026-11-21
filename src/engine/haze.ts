@@ -71,6 +71,18 @@ export function createHaze({ patch, show, now, emit }: HazeOptions) {
         crossfade(preset.id, preset.level, preset.fade);
       }
     },
+    // The held Haze Preset, or Haze Off, for the engine snapshot.
+    snapshot: (): HazeFired => fired,
+    // Brings back `held` from a snapshot: the output jumps to the preset's
+    // level with no fade. Haze Off restores Off; a Haze Preset the Show lacks
+    // restores `none`, with the output at 0.
+    restore(held: HazeFired): void {
+      if (held.type === 'off') return off();
+      const preset = held.type === 'preset' ? findHazePreset(show(), held.id) : undefined;
+      fade = { from: 0, to: preset?.level ?? 0, since: 0, fade: 0 };
+      fired = preset ? { type: 'preset', id: preset.id } : { type: 'none' };
+      emitHaze();
+    },
     emitHaze,
     // The haze level (0–1) the Hazers follow now, mid-fade too.
     level: levelNow,

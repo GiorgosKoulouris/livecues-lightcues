@@ -61,7 +61,7 @@ The house look a Venue Patch sends from launch and when it is opened, and that S
 ### Haze
 
 **Hazer**:
-A haze machine on a Universe the app drives. Patched in the Venue Patch with a Profile that has a haze channel, a Universe, an address, a max output and a fan level, but no stage position, Zone, Role or Mounting. Scenes never target it, and Blackout, Grand Master, Freeze and Blind do not apply to it. Every Hazer follows the same Haze Preset. It sends the Haze Preset's level times its max output, and its fan level whenever that output is above 0 (0 otherwise). It is off at launch and when a Show or Venue Patch is opened, and holds its output when the MIDI Input is lost.
+A haze machine on a Universe the app drives. Patched in the Venue Patch with a Profile that has a haze channel, a Universe, an address, a max output and a fan level, but no stage position, Zone, Role or Mounting. Scenes never target it, and Blackout, Grand Master, Freeze and Blind do not apply to it. Every Hazer follows the same Haze Preset. It sends the Haze Preset's level times its max output, and its fan level whenever that output is above 0 (0 otherwise). It is off at launch and when a Show or Venue Patch is opened, and holds its output when the MIDI Input is lost. After an engine recovery the held Haze Preset comes back, its output at its level at once with no fade; Haze Off stays off, and a Haze Preset no longer in the Show comes back as none, at 0.
 _Avoid_: Fogger, smoke machine, atmosphere
 
 **Haze Preset**:

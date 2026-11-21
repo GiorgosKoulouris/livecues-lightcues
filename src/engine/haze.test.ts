@@ -278,6 +278,37 @@ describe('Haze safe state', () => {
   });
 });
 
+describe('restoring the held Haze Preset', () => {
+  it('jumps to the preset level at once, with no fade', () => {
+    const { haze, at, events } = firingHaze([preset('light', 0.6, 5)]);
+
+    haze.restore({ type: 'preset', id: 'light' });
+
+    expect(at(0)).toEqual([153, 255]);
+    expect(haze.snapshot()).toEqual({ type: 'preset', id: 'light' });
+    expect(events.at(-1)).toEqual({ type: 'haze', fired: { type: 'preset', id: 'light' } });
+  });
+
+  it('restores Haze Off as 0', () => {
+    const { haze, at } = firingHaze([preset('light', 0.6, 0)]);
+    haze.fire('light');
+
+    haze.restore({ type: 'off' });
+
+    expect(at(0)).toEqual([0, 0]);
+    expect(haze.snapshot()).toEqual({ type: 'off' });
+  });
+
+  it('restores none, output 0, when the Show lacks the Haze Preset', () => {
+    const { haze, at } = firingHaze([preset('light', 0.6, 0)]);
+
+    haze.restore({ type: 'preset', id: 'gone' });
+
+    expect(at(0)).toEqual([0, 0]);
+    expect(haze.snapshot()).toEqual({ type: 'none' });
+  });
+});
+
 describe('editing the Show while a Haze Preset is held', () => {
   it('holds the output and reports none when the held Haze Preset is removed', () => {
     const { haze, at, events, edit } = firingHaze([preset('light', 0.6, 0), preset('heavy', 1, 0)]);

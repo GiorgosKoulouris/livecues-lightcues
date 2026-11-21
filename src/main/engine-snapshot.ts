@@ -18,9 +18,9 @@ export function createSnapshotStore() {
       parts = { ...parts, ...message };
     },
     latest(): EngineSnapshot | undefined {
-      const { show, venue, playback, house, midiInput } = parts;
-      if (!show || !venue || !playback || !house || !midiInput) return undefined;
-      return { show, venue, playback, house, midiInput };
+      const { show, venue, playback, house, haze, midiInput } = parts;
+      if (!show || !venue || !playback || !house || !haze || !midiInput) return undefined;
+      return { show, venue, playback, house, haze, midiInput };
     },
   };
 }

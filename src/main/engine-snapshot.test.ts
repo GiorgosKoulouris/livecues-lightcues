@@ -29,6 +29,7 @@ const snapshot: EngineSnapshot = {
     tempoSource: 'default',
   },
   house: { look: {}, fired: { type: 'startup' } },
+  haze: { type: 'preset', id: 'light' },
   midiInput: {},
 };
 
@@ -43,6 +44,9 @@ describe('createSnapshotStore', () => {
     expect(store.latest()).toBeUndefined();
 
     store.merge({ type: 'snapshot', house: snapshot.house });
+    expect(store.latest()).toBeUndefined();
+
+    store.merge({ type: 'snapshot', haze: snapshot.haze });
     expect(store.latest()).toEqual(snapshot);
   });
 
@@ -53,6 +57,15 @@ describe('createSnapshotStore', () => {
     store.merge({ type: 'snapshot', show: { ...snapshot.show, unsaved: false } });
 
     expect(store.latest()).toEqual({ ...snapshot, show: { ...snapshot.show, unsaved: false } });
+  });
+
+  it('keeps the latest haze part', () => {
+    const store = createSnapshotStore();
+    store.merge({ type: 'snapshot', ...snapshot });
+
+    store.merge({ type: 'snapshot', haze: { type: 'off' } });
+
+    expect(store.latest()).toEqual({ ...snapshot, haze: { type: 'off' } });
   });
 });
 

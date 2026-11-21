@@ -410,6 +410,8 @@ export interface EngineSnapshot {
   venue: DocumentSnapshot<VenuePatch>;
   playback: PlaybackSnapshot;
   house: HouseSnapshot;
+  // The Haze Preset the Hazers hold, or Haze Off. Not the mid-fade position.
+  haze: HazeFired;
   // The selected MIDI Input's name, absent when none is selected.
   midiInput: { selected?: string };
 }

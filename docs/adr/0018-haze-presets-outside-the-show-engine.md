@@ -6,7 +6,7 @@ Haze is a room-wide device, not a light: it has no position that matters, no col
 
 How much haze a song wants is a Show decision, so the Show holds Haze Presets: named slots with a level (0–100%), a fade and an optional MIDI note, fired by the DAW like House Presets. How much a given machine and room need is a venue fact, so each Hazer in the Venue Patch has a max output that scales the level, and a fan level sent whenever its output is above 0. Every Hazer follows the same Haze Preset. A built-in Haze Off goes to 0 at once.
 
-Hazers are off at launch and whenever a Show or Venue Patch is opened. The app never starts haze before a cue asks for it. A lost MIDI Input holds the current output, like the rest of the look.
+Hazers are off at launch and whenever a Show or Venue Patch is opened. The app never starts haze before a cue asks for it. A lost MIDI Input holds the current output, like the rest of the look. Engine recovery (ADR 0011) restores haze, since haze takes minutes to build: the held Haze Preset id comes back and the output jumps to its level, not the mid-fade position. Opening a Show or Venue Patch still resets it.
 
 ## Considered Options
 
