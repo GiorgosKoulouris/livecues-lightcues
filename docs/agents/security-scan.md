@@ -67,6 +67,7 @@ Read the code at the scanned SHA (`git show <sha>:<path>`), not the working tree
 - [ ] `contextBridge` exposes named functions only. No raw `ipcRenderer`, no generic `send(channel, …)`.
 - [ ] Every `ipcMain.handle` / `ipcMain.on` handler checks its payload's type and range before use. Include handlers registered by reference to a function from another module or another block: `electron-ipc-unvalidated-payload` doesn't see them.
 - [ ] `electron-ipc-unvalidated-payload` is a heuristic. A payload checked by a predicate with an unusual name (not `is*`/`validate*`) still shows up. Read the handler before assigning relevance.
+- [ ] Every handler checks `event.sender`, or carries a `nosemgrep: electron-ipc-unchecked-sender -- <reason>` whose reason still holds. `electron-ipc-unchecked-sender` sees inline handlers only; check named ones by hand.
 - [ ] Engine `utilityProcess` messages ([src/main/engine-process.ts](../../src/main/engine-process.ts), [src/engine/serve.ts](../../src/engine/serve.ts)): what the renderer can make the engine do.
 
 **Engine input parsing** (untrusted input; anything here is a candidate for **reachable**):

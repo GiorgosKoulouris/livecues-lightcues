@@ -167,7 +167,7 @@ rules:
                     - $F(..., $P, ...)
                   where:
                     - metavariable: $F
-                      regex: ^(?!(licensePath|saveFromSnapshot)$)
+                      regex: ^(?!(licensePath|saveFromSnapshot|parseHandover)$)
                 - new $C(..., $P, ...)
                 - $P.$PROP
                 - $P[$KEY]
@@ -227,6 +227,37 @@ rules:
                   any:
                     - $SCHEMA.parse($P);
                     - $SCHEMA.safeParse($P);
+
+  - id: electron-ipc-unchecked-sender
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >-
+      IPC handler never reads `event.sender`, so any window can call it. Check
+      the sender against the windows allowed on this channel. If every window
+      may call it, say so:
+      `// nosemgrep: electron-ipc-unchecked-sender -- <why any window may>`.
+    patterns:
+      - pattern: $IPC.$METHOD($CHANNEL, $HANDLER)
+      - metavariable-regex:
+          metavariable: $IPC
+          regex: ^(ipcMain|.*\.ipc)$
+      - metavariable-regex:
+          metavariable: $METHOD
+          regex: ^(handle|handleOnce|on|once)$
+      # Inline handlers only: a named one is checked where it is declared.
+      # `function` patterns also match arrow functions.
+      - metavariable-pattern:
+          metavariable: $HANDLER
+          patterns:
+            - pattern: function (...) { ... }
+            - pattern-not: |
+                function ($EVENT, ...) { ... <... $EVENT.sender ...>; ... }
+            - pattern-not: |
+                function ($EVENT, ...) { ... <... $EVENT.senderFrame ...>; ... }
+            - pattern-not: |
+                ($EVENT, ...) => <... $EVENT.sender ...>
+            - pattern-not: |
+                ($EVENT, ...) => <... $EVENT.senderFrame ...>
 
   - id: electron-expose-ipc-renderer
     languages: [typescript, javascript]

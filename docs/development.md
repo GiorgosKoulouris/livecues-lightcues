@@ -13,7 +13,7 @@ The app targets Windows. Engine and logic work can also run in the [devcontainer
 | `security:scan`, `security:test-rules` | ✓ | |
 | `package` (Windows installer) | | ✓ |
 | `dev`, `start` (runs the Electron app) | | ✓ |
-| `e2e` (launches the built app) | | ✓ |
+| `e2e` (launches the built app) | `e2e:linux` | ✓ |
 | DMX Outputs, rtpMIDI | | ✓ |
 
 The container and the host each need their own `npm install`. In the container, `node_modules` is a separate Docker volume.
@@ -55,7 +55,8 @@ npm test
 | `npm test` | Run the test suite (Vitest). |
 | `npm run test:watch` | Run Vitest in watch mode. |
 | `npm run coverage` | Run the tests with coverage. Prints a summary and writes an HTML report and `coverage-summary.json` to `coverage/`. CI runs it too: see [CI](#ci). Not part of `check`. |
-| `npm run e2e` | Build, then launch the app and run the end-to-end tests in [e2e/](../e2e/) (Playwright). Opens the example, fires a Scene and checks the Virtual Output's frame in the channel monitor. Not part of `check`, not run in CI. Windows host only: run it there before promoting. |
+| `npm run e2e` | Build, then launch the app and run the end-to-end tests in [e2e/](../e2e/) (Playwright). Opens the example, fires a Scene and checks the Virtual Output's frame in the channel monitor. Not part of `check`, not run in CI. Run it on the Windows host before promoting. |
+| `npm run e2e:linux` | `e2e` in the devcontainer: runs it under `xvfb-run` with `ELECTRON_RUN_AS_NODE` unset, which the container sets. |
 | `npm run typecheck` | Typecheck engine, Electron side and renderer separately. |
 | `npm run lint` | ESLint. Also blocks Electron/UI imports in `src/engine` and `src/shared`. |
 | `npm run format` | Format with Prettier. |
@@ -183,5 +184,6 @@ Pull requests by arrangement: open an issue first.
 
 - Work on the `dev` branch: `git switch dev`. `dev` reaches `main` squashed, through `stage`, by `/branch-flow promote` and `ship`. Promote writes the [CHANGELOG.md](../CHANGELOG.md) lines. See [agents/promote.md](agents/promote.md).
 - Run `npm run check` before merging. CI runs it again on `stage` and on pull requests to `main`.
+- Claude Code's commit gate ([check-before-commit.mjs](../scripts/hooks/check-before-commit.mjs)) runs the `check` steps before each `git commit`. Where semgrep is installed (the devcontainer), it then runs the Electron rules in [security/semgrep/](../security/semgrep/) on `src/main` and `src/preload`.
 - Issues and specs are markdown files under `.scratch/<feature>/`. See [agents/issue-tracker.md](agents/issue-tracker.md).
 - Use the domain terms from [CONTEXT.md](../CONTEXT.md) in code, UI and docs.

@@ -85,88 +85,95 @@ function openWrongCheck(url: string, other: string): void {
 
 // --- IPC payloads -----------------------------------------------------------
 
-// ruleid: electron-ipc-unvalidated-payload
+// ruleid: electron-ipc-unvalidated-payload, electron-ipc-unchecked-sender
 ipcMain.handle('open', async (_event, folder?: string) => {
   return existsSync(folder);
 });
 
-// ruleid: electron-ipc-unvalidated-payload
+// ruleid: electron-ipc-unvalidated-payload, electron-ipc-unchecked-sender
 ipcMain.on('remove', (_event, path) => rmSync(path));
 
-// ruleid: electron-ipc-unvalidated-payload
+// ruleid: electron-ipc-unvalidated-payload, electron-ipc-unchecked-sender
 ipcMain.once('copy', function (_event, from: string, to: string) {
   if (typeof from !== 'string') return;
   copyFileSync(from, to);
 });
 
 // ok: electron-ipc-unvalidated-payload
+// ruleid: electron-ipc-unchecked-sender
 ipcMain.on('delegated', (_event, file: unknown) => {
   void licensePath(file, root);
 });
 
-// ruleid: electron-ipc-unvalidated-payload
+// ruleid: electron-ipc-unvalidated-payload, electron-ipc-unchecked-sender
 ipcMain.on('truthy', (_event, path: unknown) => {
   if (path) shell.showItemInFolder(path);
 });
 
-// ruleid: electron-ipc-unvalidated-payload
+// ruleid: electron-ipc-unvalidated-payload, electron-ipc-unchecked-sender
 ipcMain.on('exists', (_event, path: string) => {
   if (existsSync(path)) rmSync(path);
 });
 
-// ruleid: electron-ipc-unvalidated-payload
+// ruleid: electron-ipc-unvalidated-payload, electron-ipc-unchecked-sender
 ipcMain.on('present', (_event, path?: string) => {
   if (path === undefined) return;
   rmSync(path);
 });
 
-// ruleid: electron-ipc-unvalidated-payload
+// ruleid: electron-ipc-unvalidated-payload, electron-ipc-unchecked-sender
 ipcMain.on('no-exit', (_event, path: unknown) => {
   if (typeof path !== 'string') log('not a string');
   rmSync(path);
 });
 
-// ruleid: electron-ipc-unvalidated-payload
+// ruleid: electron-ipc-unvalidated-payload, electron-ipc-unchecked-sender
 ipcMain.on('destructured', (_event, { path }) => rmSync(path));
 
-// ruleid: electron-ipc-unvalidated-payload
+// ruleid: electron-ipc-unvalidated-payload, electron-ipc-unchecked-sender
 ipcMain.on('iterate', (_event, paths: string[]) => {
   for (const path of paths) rmSync(path);
 });
 
-// ruleid: electron-ipc-unvalidated-payload
+// ruleid: electron-ipc-unvalidated-payload, electron-ipc-unchecked-sender
 window.webContents.ipc.handle('scoped', (_event, path: string) => readFileSync(path));
 
 // ok: electron-ipc-unvalidated-payload
+// ruleid: electron-ipc-unchecked-sender
 ipcMain.on('reveal', (_event, path: unknown) => {
   if (typeof path !== 'string' || dirname(resolve(path)) !== backups) return;
   shell.showItemInFolder(path);
 });
 
 // ok: electron-ipc-unvalidated-payload
+// ruleid: electron-ipc-unchecked-sender
 ipcMain.handle('volume', (_event, level: unknown) => {
   if (typeof level === 'number' && level >= 0 && level <= 1) setVolume(level);
 });
 
 // ok: electron-ipc-unvalidated-payload
+// ruleid: electron-ipc-unchecked-sender
 ipcMain.handle('list', (_event, items: unknown) => {
   if (!Array.isArray(items)) return;
   return items.length;
 });
 
 // ok: electron-ipc-unvalidated-payload
+// ruleid: electron-ipc-unchecked-sender
 ipcMain.handle('kind', (_event, kind: unknown) => {
   if (kind !== 'show' && kind !== 'venue') return;
   return load(kind);
 });
 
 // ok: electron-ipc-unvalidated-payload
+// ruleid: electron-ipc-unchecked-sender
 ipcMain.handle('allowed', (_event, kind: unknown) => {
   if (!KINDS.includes(kind)) throw new Error('Unknown kind');
   return load(kind);
 });
 
 // ok: electron-ipc-unvalidated-payload
+// ruleid: electron-ipc-unchecked-sender
 ipcMain.handle('custom', (_event, venue: unknown) => {
   if (!isVenue(venue)) {
     log('bad venue');
@@ -176,22 +183,50 @@ ipcMain.handle('custom', (_event, venue: unknown) => {
 });
 
 // ok: electron-ipc-unvalidated-payload
+// ruleid: electron-ipc-unchecked-sender
 ipcMain.handle('settings', (_event, raw: unknown) => {
   const settings = SettingsSchema.parse(raw);
   save(settings);
 });
 
 // ok: electron-ipc-unvalidated-payload
+// ruleid: electron-ipc-unchecked-sender
 ipcMain.on('saved', (_event, saved: boolean) => {
   if (!saved) return;
   state = saved ? 'saved' : 'unsaved';
 });
 
 // ok: electron-ipc-unvalidated-payload
+// ruleid: electron-ipc-unchecked-sender
 ipcMain.handle('ping', (_event, _unused: unknown) => 'pong');
 
 // ok: electron-ipc-unvalidated-payload
 ipcMain.removeListener('remove', (_event, path) => rmSync(path));
+
+// --- IPC senders ------------------------------------------------------------
+
+// ruleid: electron-ipc-unchecked-sender
+ipcMain.handle('is-down', () => supervisor.isDown());
+
+// ok: electron-ipc-unchecked-sender
+ipcMain.on('detach', (event) => {
+  if (event.sender === main.webContents) detach();
+});
+
+// ok: electron-ipc-unchecked-sender
+ipcMain.handle('get-state', (event) => (isOwn(event.sender) ? handover : undefined));
+
+// ok: electron-ipc-unchecked-sender
+ipcMain.handle('choose', async (event) => {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  return dialog.showOpenDialog(window);
+});
+
+// ok: electron-ipc-unchecked-sender
+ipcMain.on('frame', (event) => trusted(event.senderFrame?.url));
+
+// ok: electron-ipc-unchecked-sender
+ipcMain.on('named', onNamed);
 
 function namedHandlers(contents: WebContents): void {
   // ruleid: electron-ipc-unvalidated-payload

@@ -22,6 +22,7 @@
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
     "e2e": "npm run build && playwright test",
+    "e2e:linux": "env -u ELECTRON_RUN_AS_NODE xvfb-run -a npm run e2e",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

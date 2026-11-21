@@ -193,6 +193,7 @@ function startSupervisedEngine(windows: Windows): Supervisor {
     down: () => windows.sendAll(ENGINE_DOWN_CHANNEL),
   });
   app.on('before-quit', () => supervisor.quitting());
+  // nosemgrep: electron-ipc-unchecked-sender -- read-only, every window shows engine-down
   ipcMain.handle(ENGINE_IS_DOWN_CHANNEL, () => supervisor.isDown());
   ipcMain.handle(SAVE_FROM_SNAPSHOT_CHANNEL, (event, document: unknown) =>
     saveFromSnapshot(supervisor, event.sender, document),
@@ -327,6 +328,7 @@ function examplePaths(): ExamplePaths {
 // Grants the engine both example files, like a dialog's choice (ADR 0010),
 // and gives the renderer their paths.
 function handleOpenExample(supervisor: Supervisor): void {
+  // nosemgrep: electron-ipc-unchecked-sender -- fixed bundled files, no payload
   ipcMain.handle(OPEN_EXAMPLE_CHANNEL, async () => {
     const paths = examplePaths();
     await grantPath(supervisor, paths.venue);
@@ -339,6 +341,7 @@ function handleOpenExample(supervisor: Supervisor): void {
 // the renderer cannot reveal arbitrary paths.
 function handleShowLibraryBackup(): void {
   const backups = join(dirname(libraryPath()), LIBRARY_BACKUPS_FOLDER);
+  // nosemgrep: electron-ipc-unchecked-sender -- path limited to the backups folder
   ipcMain.on(SHOW_LIBRARY_BACKUP_CHANNEL, (_event, path: unknown) => {
     if (typeof path !== 'string' || dirname(resolve(path)) !== backups) return;
     shell.showItemInFolder(path);
@@ -349,6 +352,7 @@ function handleShowLibraryBackup(): void {
 // app. The renderer names the file; main picks the fixed path. Resolves to
 // false when it could not, e.g. in development, where the files do not exist.
 function handleOpenLicense(): void {
+  // nosemgrep: electron-ipc-unchecked-sender -- main picks the fixed license path
   ipcMain.handle(OPEN_LICENSE_CHANNEL, async (_event, file: unknown) => {
     const path = licensePath(file, process.resourcesPath);
     if (path === undefined) return false;
@@ -361,6 +365,7 @@ function handleOpenLicense(): void {
 // Main's part of the diagnostics for a bug report. Takes no arguments, so
 // there is no renderer payload to check.
 function handleAppInfo(): void {
+  // nosemgrep: electron-ipc-unchecked-sender -- read-only diagnostics
   ipcMain.handle(APP_INFO_CHANNEL, (): AppInfo => ({
     appVersion: app.getVersion(),
     electronVersion: process.versions.electron,
@@ -390,12 +395,17 @@ function handleUpdateCheck(window: BrowserWindow): void {
       setTimeout(() => void check.run().then(done), UPDATE_CHECK_DELAY_MS);
     });
   });
+  // nosemgrep: electron-ipc-unchecked-sender -- read-only
   ipcMain.handle(UPDATE_AVAILABLE_CHANNEL, () => result);
+  // nosemgrep: electron-ipc-unchecked-sender -- read-only
   ipcMain.handle(UPDATE_ENABLED_CHANNEL, () => check.enabled());
+  // nosemgrep: electron-ipc-unchecked-sender -- fetches only this project's releases
   ipcMain.handle(CHECK_FOR_UPDATES_CHANNEL, () => check.checkNow());
+  // nosemgrep: electron-ipc-unchecked-sender -- a boolean user preference
   ipcMain.on(SET_UPDATE_ENABLED_CHANNEL, (_event, enabled: unknown) => {
     if (typeof enabled === 'boolean') check.setEnabled(enabled);
   });
+  // nosemgrep: electron-ipc-unchecked-sender -- opens only this project's release pages
   ipcMain.on(OPEN_RELEASE_PAGE_CHANNEL, (_event, url: unknown) => {
     if (isReleasePageUrl(url)) void shell.openExternal(url);
   });
@@ -563,6 +573,7 @@ function handleDetachedVisualiser(
   ipcMain.on(VISUALISER_REATTACH_CHANNEL, (event) => {
     if (isOwn(event.sender)) detached.reattach();
   });
+  // nosemgrep: electron-ipc-unchecked-sender -- read-only, both windows need it
   ipcMain.handle(VISUALISER_IS_DETACHED_CHANNEL, () => detached.isDetached());
   // The camera and haze override move with the Visualiser. Main holds the
   // latest, in memory only, so a window closing on its own loses nothing.
