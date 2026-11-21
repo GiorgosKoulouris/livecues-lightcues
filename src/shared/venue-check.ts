@@ -11,11 +11,10 @@ import {
   type Direction,
   type HazePreset,
   type HousePreset,
-  type Scene,
   type Show,
-  type StrobeRate,
 } from './show';
 import { hasGobo, hasPrism } from './gobo-prism';
+import { engages, sceneSnap } from './snap-settings';
 import { strobeDrives } from './strobe';
 import {
   fixtureMode,
@@ -94,8 +93,7 @@ export function fixtureApproximatedStrobe(
   fixture: PatchedFixture,
 ): ApproximatedStrobe | undefined {
   const scenes = show.scenes.filter((scene) => {
-    const rate = sceneStrobe(patch, fixture, scene);
-    return rate !== undefined && rate !== 'Off';
+    return engages('strobe', sceneSnap(patch, fixture, scene).strobe);
   });
   if (scenes.length === 0) return undefined;
   const drives = [...strobeDrives(fixtureMode(patch, fixture).channels).values()];
@@ -107,15 +105,6 @@ export function fixtureApproximatedStrobe(
   if (drives.length === 0) return approximated('noStrobeChannel');
   if (drives.some((d) => d.kind === 'rate' && d.assumed)) return approximated('assumedHzSpan');
   return undefined;
-}
-
-function sceneStrobe(
-  patch: VenuePatch,
-  fixture: PatchedFixture,
-  scene: Scene,
-): StrobeRate | undefined {
-  return scene.rules.findLast((r) => r.strobe !== undefined && ruleTargets(patch, fixture, r))
-    ?.strobe;
 }
 
 // A Rule setting a Fixture can lack the hardware for: a prism or a gobo.
@@ -146,10 +135,7 @@ export function fixtureUnsupportedGoboPrisms(
   return lacking.flatMap(([kind, lacks]) => {
     if (!lacks) return [];
     const scenes = show.scenes.filter((scene) => {
-      const setting = scene.rules.findLast(
-        (r) => r[kind] !== undefined && ruleTargets(patch, fixture, r),
-      )?.[kind];
-      return setting !== undefined && setting !== 'Off' && setting !== 'Open';
+      return engages(kind, sceneSnap(patch, fixture, scene)[kind]);
     });
     return scenes.length > 0
       ? [{ fixtureId: fixture.id, kind, scenes: scenes.map((s) => s.id) }]

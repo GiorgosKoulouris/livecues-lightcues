@@ -22,7 +22,6 @@ import {
   type GoboSetting,
   PRISM_BEHAVIOUR,
   type PrismSetting,
-  type StrobeRate,
   type Swatch,
 } from '../shared/show';
 import {
@@ -32,6 +31,7 @@ import {
   strobeHz,
   type StrobeDrive,
 } from '../shared/strobe';
+import { mergeSnap, sceneSnap, type SnapSettings } from '../shared/snap-settings';
 import { goboPrismDrive, hasPrism, rotationSpan, type GoboPrismDrive } from '../shared/gobo-prism';
 import {
   colourEffectMix,
@@ -267,9 +267,7 @@ function fixtureOutput(
   let direction: Direction | undefined;
   let turn: Turn | undefined;
   let scale: number | undefined;
-  let strobe: StrobeRate | undefined;
-  let prism: PrismSetting | undefined;
-  let gobo: GoboSetting | undefined;
+  let snap: SnapSettings = {};
   const entries = byChange(show, active);
   for (const entry of entries) {
     const look = layerLook(show, patch, fixture, entry, time, beat, runs);
@@ -279,9 +277,7 @@ function fixtureOutput(
     direction = look.direction ?? direction;
     turn = combinedTurn(turn, look);
     scale = combinedScale(scale, look);
-    strobe = look.strobe ?? strobe;
-    prism = look.prism ?? prism;
-    gobo = look.gobo ?? gobo;
+    if (look.snap) snap = mergeSnap(snap, look.snap);
   }
   const shown =
     effectColour === undefined || effectColour === NO_EFFECT
@@ -289,6 +285,7 @@ function fixtureOutput(
       : effectColour;
   const { channels } = fixtureMode(patch, fixture);
   const output = levelOutput(channels, intensity * (scale ?? STEADY) * grandMaster, shown);
+  const { strobe, prism, gobo } = snap;
   const hz = strobe === undefined ? 0 : strobeHz(strobe, bpm);
   if (hz > 0 && output.intensity > 0) {
     const drives = strobeDrives(channels);
@@ -478,9 +475,7 @@ interface Look {
   turnFade?: Fade<Turn>;
   scale?: number;
   scaleFade?: Fade<number>;
-  strobe?: StrobeRate;
-  prism?: PrismSetting;
-  gobo?: GoboSetting;
+  snap?: SnapSettings;
 }
 
 // An Effect fading `p` (0–1) of the way between two looks' values. An absent
@@ -595,9 +590,7 @@ function layerLook(
       : (target.colour ?? before.colour);
   if (colour) look.colour = colour;
   if (target.direction) look.direction = target.direction;
-  if (target.strobe) look.strobe = target.strobe;
-  if (target.prism) look.prism = target.prism;
-  if (target.gobo) look.gobo = target.gobo;
+  if (target.snap) look.snap = target.snap;
   // A fade underway before is taken as over the Fixture held still and steady.
   // A colour Effect's fade keeps fading under this one.
   const beforeTurn = before.turnFade ? combinedTurn(STILL, before) : before.turn;
@@ -631,6 +624,8 @@ function sceneLook(
   runs: EffectRuns,
 ): Look {
   const look: Look = {};
+  const snap = sceneSnap(patch, fixture, scene);
+  if (Object.keys(snap).length > 0) look.snap = snap;
   const moving = isMovingFixture(patch, fixture);
   for (const [index, rule] of scene.rules.entries()) {
     if (!ruleTargets(patch, fixture, rule)) continue;
@@ -640,9 +635,6 @@ function sceneLook(
       look.effectColour = NO_EFFECT;
     }
     if (rule.direction !== undefined) look.direction = rule.direction;
-    if (rule.strobe !== undefined) look.strobe = rule.strobe;
-    if (rule.prism !== undefined) look.prism = rule.prism;
-    if (rule.gobo !== undefined) look.gobo = rule.gobo;
     const effect = rule.movementEffect;
     if (effect === NO_EFFECT && moving) {
       look.turn = STILL;

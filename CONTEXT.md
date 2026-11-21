@@ -119,6 +119,10 @@ _Avoid_: Beam split (a Visualiser look, not the setting)
 A Rule setting for the targeted Fixtures with a gobo wheel: Open or Gobo. Gobo sends the first slot of the wheel that is not open, or the gobo slot the Venue Patch picks for that Fixture. Open sends the open slot and stops the gobo from earlier Rules and lower Layers. It snaps on and off at Scene start, and Freeze does not stop it. Not an Effect.
 _Avoid_: Pattern, wheel (the Fixture's part, not the setting)
 
+**Snap setting**:
+A Rule setting that takes effect at once at Scene start and is never crossfaded: Strobe, Prism and Gobo. Freeze does not stop it. The last Rule in a Scene that targets a Fixture with it wins, and across Layers the most recently started Scene's wins. Each has a resting value (Strobe Off, Prism Off, Gobo Open) that stops it from earlier Rules and lower Layers; any other value needs the Fixture's hardware, and the Venue Check notes a Fixture without it.
+_Avoid_: Instant setting, non-fading setting
+
 **Focus Check**:
 A Venue Patch editor mode that sends every moving Fixture, open in white, to one chosen Direction on the real rig, in Blind too, so placement and Mounting can be corrected live. Blackout still wins. Ends when the editor is left.
 
