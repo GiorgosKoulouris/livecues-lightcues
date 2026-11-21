@@ -50,6 +50,7 @@ npm test
 | `npm run icon` | Regenerate `build/icon.ico` from `build/icon.svg`. |
 | `npm run examples` | Regenerate the example Venue Patch and Show in [examples/](../examples/). |
 | `npm run show:palette` | Write the Palette Show and its Cue Sheet to `shows/`. Options: `-- --out <folder>` to write elsewhere, `--venue <file.lcvenue>` to print the Venue Check. See [Palette Show](#palette-show). |
+| `npm run show:generate` | Generate a Show and its Cue Sheet from a Brief: `-- <brief.yaml> [--out <folder>] [--venue <file.lcvenue>]`. Writes beside the brief and prints the Venue Check against its venue. See [Show generator](#show-generator). |
 | `npm run show:energy` | Write the Energy Show and its Cue Sheet to `shows/`. Same options as `show:palette`. See [Energy Show](#energy-show). |
 | `npm run lights:song` | Reaper Lights: `inspect <project.rpp> <region>` prints a song's span, tempo and markers; `analyse <project.rpp> <region>` prints RMS and onsets per bar from the WAV stems; `render <project.rpp> <plan>` writes the timeline page; `write <project.rpp> <plan> [--force]` saves a Plan's MIDI into `<name>.lights.rpp`. See [Reaper Lights](#reaper-lights). |
 | `npm test` | Run the test suite (Vitest). |
@@ -103,6 +104,15 @@ To change it:
 5. Commit `energy.ts` and the files in `shows/` together.
 
 Don't edit the files in `shows/` by hand. They are overwritten on the next run, and a test fails when they differ from the script.
+
+## Show generator
+
+`npm run show:generate -- <brief.yaml>` builds a venue-independent Show and its Cue Sheet from a Brief (`bands/<Band>/brief.yaml`). Source: [scripts/make-shows/generate.ts](../scripts/make-shows/generate.ts). Thresholds and the generator's knobs are in `scripts/make-shows/rules.ts`, shared with `npm run show:lint`.
+
+- One Colour Set per song, on channel 6. Looks per tier and the utilities (Base, Dark, Silhouette, Shafts, Walk-on, Reveal, Bow) are on channel 1, built from slots. Scenes carry `tier:`, `part:` and `dynamic` tags for the lint.
+- Parts the venue has no Fixtures for are left out, and the Cue Sheet says so. With no venue it builds for the default rig.
+- Movement, Pulse, Colour FX and Hits are not built yet (`dynamicEntries` is the seam).
+- The sample brief's output is committed in `scripts/make-shows/fixtures/`. After a change to the generator or the app models, run `npm run show:generate -- scripts/make-shows/fixtures/sample-brief.yaml` and commit it (`git add -f`, as `fixtures/` is ignored). `npm test` fails while it is stale. Never commit a real Venue Patch.
 
 ## Reaper Lights
 

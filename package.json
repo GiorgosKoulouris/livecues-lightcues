@@ -34,6 +34,7 @@
     "show:palette": "node scripts/make-palette.mjs",
     "show:energy": "node scripts/make-energy.mjs",
     "show:lint": "node scripts/show-lint.mjs",
+    "show:generate": "node scripts/make-show.mjs",
     "lights:song": "node scripts/lights-song.mjs"
   },
   "engines": {

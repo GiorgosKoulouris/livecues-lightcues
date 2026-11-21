@@ -16,6 +16,10 @@
 - Venue Patches are local to the user. Never commit one or copy it into the repo.
 - Reaper Lights uses `shows/Energy.lcshow` when a Plan has no `show:` line. Read `shows/Energy cue sheet.md` for its Scene names.
 
+## Show generator
+
+`npm run show:generate -- <brief.yaml>` writes a Show and Cue Sheet beside the brief (or to `--out`). Its sample output is committed under `scripts/make-shows/fixtures/` with `git add -f`; rerun it after changing `scripts/make-shows/generate.ts`, `rules.ts` or the app models, and commit both. Never write generated output into `shows/`. See [docs/development.md](../development.md#show-generator).
+
 ## Show lint
 
 `npm run show:lint -- <file.lcshow> [--strict]` scores any Show against the rubric items checkable from the file (1-12 and 17). It is report-only: Palette and Energy are a baseline, not a gate. `--strict` exits 1 when item 3, 4 or 11 scores 0. Source: `scripts/make-shows/show-lint.ts`. Thresholds are in `scripts/make-shows/rules.ts`, which the generator shares. Tiers come from `tier:<name>` tags (or a `Chill: ` name prefix), parts from `part:<name>` tags.

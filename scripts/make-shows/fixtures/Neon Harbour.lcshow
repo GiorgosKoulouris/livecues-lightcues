@@ -1,0 +1,2530 @@
+{
+  "version": 13,
+  "layers": [
+    {
+      "id": "look",
+      "name": "Look"
+    }
+  ],
+  "scenes": [
+    {
+      "id": "base",
+      "name": "Base",
+      "tags": [
+        "utility",
+        "part:front",
+        "part:back"
+      ],
+      "layer": "look",
+      "fadeIn": 2,
+      "fadeUnit": "beats",
+      "fadeOut": 2,
+      "fadeOutUnit": "beats",
+      "rules": [
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Front",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 0.6,
+          "colour": {
+            "kelvin": 3200
+          }
+        },
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Midstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Midstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Midstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 0.5,
+          "colour": {
+            "kelvin": 3200
+          }
+        }
+      ]
+    },
+    {
+      "id": "dark",
+      "name": "Dark",
+      "tags": [
+        "utility"
+      ],
+      "layer": "look",
+      "fadeIn": 1,
+      "fadeUnit": "beats",
+      "fadeOut": 1,
+      "fadeOutUnit": "beats",
+      "rules": [
+        {
+          "target": {},
+          "intensity": 0
+        }
+      ]
+    },
+    {
+      "id": "silhouette",
+      "name": "Silhouette",
+      "tags": [
+        "utility",
+        "part:back",
+        "part:floor"
+      ],
+      "layer": "look",
+      "fadeIn": 2,
+      "fadeUnit": "beats",
+      "fadeOut": 2,
+      "fadeOutUnit": "beats",
+      "rules": [
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Front",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 0,
+          "colour": {
+            "kelvin": 3000
+          }
+        },
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Midstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Midstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Midstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 0.8,
+          "colour": {
+            "slot": "Primary"
+          }
+        },
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Front",
+                "column": "Stage Right",
+                "level": "Floor"
+              },
+              {
+                "row": "Front",
+                "column": "Centre",
+                "level": "Floor"
+              },
+              {
+                "row": "Front",
+                "column": "Stage Left",
+                "level": "Floor"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Right",
+                "level": "Floor"
+              },
+              {
+                "row": "Downstage",
+                "column": "Centre",
+                "level": "Floor"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Left",
+                "level": "Floor"
+              },
+              {
+                "row": "Midstage",
+                "column": "Stage Right",
+                "level": "Floor"
+              },
+              {
+                "row": "Midstage",
+                "column": "Centre",
+                "level": "Floor"
+              },
+              {
+                "row": "Midstage",
+                "column": "Stage Left",
+                "level": "Floor"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Right",
+                "level": "Floor"
+              },
+              {
+                "row": "Upstage",
+                "column": "Centre",
+                "level": "Floor"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Left",
+                "level": "Floor"
+              }
+            ]
+          },
+          "intensity": 0.5,
+          "colour": {
+            "slot": "Secondary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "shafts",
+      "name": "Shafts",
+      "tags": [
+        "utility",
+        "part:front",
+        "part:back",
+        "part:beams"
+      ],
+      "layer": "look",
+      "fadeIn": 4,
+      "fadeUnit": "beats",
+      "fadeOut": 4,
+      "fadeOutUnit": "beats",
+      "rules": [
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Front",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 0.35,
+          "colour": {
+            "kelvin": 3000
+          }
+        },
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Midstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Midstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Midstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 0.25,
+          "colour": {
+            "slot": "Primary"
+          }
+        },
+        {
+          "target": {
+            "roles": [
+              "Spot/Beam"
+            ]
+          },
+          "intensity": 0.8,
+          "colour": {
+            "slot": "Accent"
+          }
+        }
+      ]
+    },
+    {
+      "id": "walk-on",
+      "name": "Walk-on",
+      "tags": [
+        "utility",
+        "part:front",
+        "part:back"
+      ],
+      "layer": "look",
+      "fadeIn": 4,
+      "fadeUnit": "beats",
+      "fadeOut": 4,
+      "fadeOutUnit": "beats",
+      "rules": [
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Front",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 0.2,
+          "colour": {
+            "kelvin": 3000
+          }
+        },
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Midstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Midstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Midstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 0.5,
+          "colour": {
+            "slot": "Primary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "reveal",
+      "name": "Reveal",
+      "tags": [
+        "utility",
+        "part:front",
+        "part:back"
+      ],
+      "layer": "look",
+      "fadeIn": 8,
+      "fadeUnit": "beats",
+      "fadeOut": 4,
+      "fadeOutUnit": "beats",
+      "rules": [
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Front",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 0.6,
+          "colour": {
+            "kelvin": 3400
+          }
+        },
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Midstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Midstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Midstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 0.4,
+          "colour": {
+            "slot": "Primary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "bow",
+      "name": "Bow",
+      "tags": [
+        "utility",
+        "part:front",
+        "part:back",
+        "part:floor",
+        "part:beams"
+      ],
+      "layer": "look",
+      "fadeIn": 1,
+      "fadeUnit": "beats",
+      "fadeOut": 4,
+      "fadeOutUnit": "beats",
+      "rules": [
+        {
+          "target": {},
+          "intensity": 0.9,
+          "colour": {
+            "swatch": "White"
+          }
+        }
+      ]
+    },
+    {
+      "id": "chill-glow",
+      "name": "Chill: Glow",
+      "tags": [
+        "look",
+        "tier:chill",
+        "part:front",
+        "part:back"
+      ],
+      "layer": "look",
+      "fadeIn": 8,
+      "fadeUnit": "beats",
+      "fadeOut": 4,
+      "fadeOutUnit": "beats",
+      "rules": [
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Front",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 0.4,
+          "colour": {
+            "kelvin": 3000
+          }
+        },
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Midstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Midstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Midstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 0.45,
+          "colour": {
+            "slot": "Primary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "chill-floor-glow",
+      "name": "Chill: Floor Glow",
+      "tags": [
+        "look",
+        "tier:chill",
+        "part:front",
+        "part:floor"
+      ],
+      "layer": "look",
+      "fadeIn": 8,
+      "fadeUnit": "beats",
+      "fadeOut": 4,
+      "fadeOutUnit": "beats",
+      "rules": [
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Front",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 0.4,
+          "colour": {
+            "kelvin": 3000
+          }
+        },
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Front",
+                "column": "Stage Right",
+                "level": "Floor"
+              },
+              {
+                "row": "Front",
+                "column": "Centre",
+                "level": "Floor"
+              },
+              {
+                "row": "Front",
+                "column": "Stage Left",
+                "level": "Floor"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Right",
+                "level": "Floor"
+              },
+              {
+                "row": "Downstage",
+                "column": "Centre",
+                "level": "Floor"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Left",
+                "level": "Floor"
+              },
+              {
+                "row": "Midstage",
+                "column": "Stage Right",
+                "level": "Floor"
+              },
+              {
+                "row": "Midstage",
+                "column": "Centre",
+                "level": "Floor"
+              },
+              {
+                "row": "Midstage",
+                "column": "Stage Left",
+                "level": "Floor"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Right",
+                "level": "Floor"
+              },
+              {
+                "row": "Upstage",
+                "column": "Centre",
+                "level": "Floor"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Left",
+                "level": "Floor"
+              }
+            ]
+          },
+          "intensity": 0.4,
+          "colour": {
+            "slot": "Secondary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "chill-haze-beams",
+      "name": "Chill: Haze Beams",
+      "tags": [
+        "look",
+        "tier:chill",
+        "part:front",
+        "part:beams"
+      ],
+      "layer": "look",
+      "fadeIn": 8,
+      "fadeUnit": "beats",
+      "fadeOut": 4,
+      "fadeOutUnit": "beats",
+      "rules": [
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Front",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 0.4,
+          "colour": {
+            "kelvin": 3000
+          }
+        },
+        {
+          "target": {
+            "roles": [
+              "Spot/Beam"
+            ]
+          },
+          "intensity": 0.3,
+          "colour": {
+            "slot": "Accent"
+          }
+        }
+      ]
+    },
+    {
+      "id": "groove-steady",
+      "name": "Groove: Steady",
+      "tags": [
+        "look",
+        "tier:groove",
+        "part:front",
+        "part:back"
+      ],
+      "layer": "look",
+      "fadeIn": 2,
+      "fadeUnit": "beats",
+      "fadeOut": 2,
+      "fadeOutUnit": "beats",
+      "rules": [
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Front",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 0.55,
+          "colour": {
+            "kelvin": 3400
+          }
+        },
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Midstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Midstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Midstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 0.65,
+          "colour": {
+            "slot": "Primary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "groove-colour",
+      "name": "Groove: Colour",
+      "tags": [
+        "look",
+        "tier:groove",
+        "part:front",
+        "part:back",
+        "part:floor"
+      ],
+      "layer": "look",
+      "fadeIn": 2,
+      "fadeUnit": "beats",
+      "fadeOut": 2,
+      "fadeOutUnit": "beats",
+      "rules": [
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Front",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 0.55,
+          "colour": {
+            "kelvin": 3400
+          }
+        },
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Midstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Midstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Midstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 0.65,
+          "colour": {
+            "slot": "Primary"
+          }
+        },
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Front",
+                "column": "Stage Right",
+                "level": "Floor"
+              },
+              {
+                "row": "Front",
+                "column": "Centre",
+                "level": "Floor"
+              },
+              {
+                "row": "Front",
+                "column": "Stage Left",
+                "level": "Floor"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Right",
+                "level": "Floor"
+              },
+              {
+                "row": "Downstage",
+                "column": "Centre",
+                "level": "Floor"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Left",
+                "level": "Floor"
+              },
+              {
+                "row": "Midstage",
+                "column": "Stage Right",
+                "level": "Floor"
+              },
+              {
+                "row": "Midstage",
+                "column": "Centre",
+                "level": "Floor"
+              },
+              {
+                "row": "Midstage",
+                "column": "Stage Left",
+                "level": "Floor"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Right",
+                "level": "Floor"
+              },
+              {
+                "row": "Upstage",
+                "column": "Centre",
+                "level": "Floor"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Left",
+                "level": "Floor"
+              }
+            ]
+          },
+          "intensity": 0.5,
+          "colour": {
+            "slot": "Secondary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "groove-beams",
+      "name": "Groove: Beams",
+      "tags": [
+        "look",
+        "tier:groove",
+        "part:front",
+        "part:back",
+        "part:beams"
+      ],
+      "layer": "look",
+      "fadeIn": 2,
+      "fadeUnit": "beats",
+      "fadeOut": 2,
+      "fadeOutUnit": "beats",
+      "rules": [
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Front",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 0.55,
+          "colour": {
+            "kelvin": 3400
+          }
+        },
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Midstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Midstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Midstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 0.65,
+          "colour": {
+            "slot": "Primary"
+          }
+        },
+        {
+          "target": {
+            "roles": [
+              "Spot/Beam"
+            ]
+          },
+          "intensity": 0.5,
+          "colour": {
+            "slot": "Accent"
+          }
+        }
+      ]
+    },
+    {
+      "id": "groove-full",
+      "name": "Groove: Full",
+      "tags": [
+        "look",
+        "tier:groove",
+        "part:front",
+        "part:back",
+        "part:floor",
+        "part:beams"
+      ],
+      "layer": "look",
+      "fadeIn": 2,
+      "fadeUnit": "beats",
+      "fadeOut": 2,
+      "fadeOutUnit": "beats",
+      "rules": [
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Front",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 0.55,
+          "colour": {
+            "kelvin": 3400
+          }
+        },
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Midstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Midstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Midstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 0.65,
+          "colour": {
+            "slot": "Primary"
+          }
+        },
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Front",
+                "column": "Stage Right",
+                "level": "Floor"
+              },
+              {
+                "row": "Front",
+                "column": "Centre",
+                "level": "Floor"
+              },
+              {
+                "row": "Front",
+                "column": "Stage Left",
+                "level": "Floor"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Right",
+                "level": "Floor"
+              },
+              {
+                "row": "Downstage",
+                "column": "Centre",
+                "level": "Floor"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Left",
+                "level": "Floor"
+              },
+              {
+                "row": "Midstage",
+                "column": "Stage Right",
+                "level": "Floor"
+              },
+              {
+                "row": "Midstage",
+                "column": "Centre",
+                "level": "Floor"
+              },
+              {
+                "row": "Midstage",
+                "column": "Stage Left",
+                "level": "Floor"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Right",
+                "level": "Floor"
+              },
+              {
+                "row": "Upstage",
+                "column": "Centre",
+                "level": "Floor"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Left",
+                "level": "Floor"
+              }
+            ]
+          },
+          "intensity": 0.5,
+          "colour": {
+            "slot": "Secondary"
+          }
+        },
+        {
+          "target": {
+            "roles": [
+              "Spot/Beam"
+            ]
+          },
+          "intensity": 0.5,
+          "colour": {
+            "slot": "Accent"
+          }
+        }
+      ]
+    },
+    {
+      "id": "drive-wide",
+      "name": "Drive: Wide",
+      "tags": [
+        "look",
+        "tier:drive",
+        "part:front",
+        "part:back",
+        "part:floor"
+      ],
+      "layer": "look",
+      "fadeIn": 0.5,
+      "fadeUnit": "beats",
+      "fadeOut": 1,
+      "fadeOutUnit": "beats",
+      "rules": [
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Front",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 0.6,
+          "colour": {
+            "kelvin": 3800
+          }
+        },
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Midstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Midstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Midstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 0.9,
+          "colour": {
+            "slot": "Primary"
+          }
+        },
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Front",
+                "column": "Stage Right",
+                "level": "Floor"
+              },
+              {
+                "row": "Front",
+                "column": "Centre",
+                "level": "Floor"
+              },
+              {
+                "row": "Front",
+                "column": "Stage Left",
+                "level": "Floor"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Right",
+                "level": "Floor"
+              },
+              {
+                "row": "Downstage",
+                "column": "Centre",
+                "level": "Floor"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Left",
+                "level": "Floor"
+              },
+              {
+                "row": "Midstage",
+                "column": "Stage Right",
+                "level": "Floor"
+              },
+              {
+                "row": "Midstage",
+                "column": "Centre",
+                "level": "Floor"
+              },
+              {
+                "row": "Midstage",
+                "column": "Stage Left",
+                "level": "Floor"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Right",
+                "level": "Floor"
+              },
+              {
+                "row": "Upstage",
+                "column": "Centre",
+                "level": "Floor"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Left",
+                "level": "Floor"
+              }
+            ]
+          },
+          "intensity": 0.7,
+          "colour": {
+            "slot": "Secondary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "drive-beams",
+      "name": "Drive: Beams",
+      "tags": [
+        "look",
+        "tier:drive",
+        "part:front",
+        "part:back",
+        "part:beams"
+      ],
+      "layer": "look",
+      "fadeIn": 0.5,
+      "fadeUnit": "beats",
+      "fadeOut": 1,
+      "fadeOutUnit": "beats",
+      "rules": [
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Front",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 0.6,
+          "colour": {
+            "kelvin": 3800
+          }
+        },
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Midstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Midstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Midstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 0.9,
+          "colour": {
+            "slot": "Primary"
+          }
+        },
+        {
+          "target": {
+            "roles": [
+              "Spot/Beam"
+            ]
+          },
+          "intensity": 0.85,
+          "colour": {
+            "slot": "Accent"
+          }
+        }
+      ]
+    },
+    {
+      "id": "drive-chorus",
+      "name": "Drive: Chorus",
+      "tags": [
+        "look",
+        "tier:drive",
+        "part:front",
+        "part:back",
+        "part:floor",
+        "part:beams"
+      ],
+      "layer": "look",
+      "fadeIn": 0.5,
+      "fadeUnit": "beats",
+      "fadeOut": 1,
+      "fadeOutUnit": "beats",
+      "rules": [
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Front",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 0.6,
+          "colour": {
+            "kelvin": 3800
+          }
+        },
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Midstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Midstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Midstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 0.9,
+          "colour": {
+            "slot": "Primary"
+          }
+        },
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Front",
+                "column": "Stage Right",
+                "level": "Floor"
+              },
+              {
+                "row": "Front",
+                "column": "Centre",
+                "level": "Floor"
+              },
+              {
+                "row": "Front",
+                "column": "Stage Left",
+                "level": "Floor"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Right",
+                "level": "Floor"
+              },
+              {
+                "row": "Downstage",
+                "column": "Centre",
+                "level": "Floor"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Left",
+                "level": "Floor"
+              },
+              {
+                "row": "Midstage",
+                "column": "Stage Right",
+                "level": "Floor"
+              },
+              {
+                "row": "Midstage",
+                "column": "Centre",
+                "level": "Floor"
+              },
+              {
+                "row": "Midstage",
+                "column": "Stage Left",
+                "level": "Floor"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Right",
+                "level": "Floor"
+              },
+              {
+                "row": "Upstage",
+                "column": "Centre",
+                "level": "Floor"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Left",
+                "level": "Floor"
+              }
+            ]
+          },
+          "intensity": 0.7,
+          "colour": {
+            "slot": "Secondary"
+          }
+        },
+        {
+          "target": {
+            "roles": [
+              "Spot/Beam"
+            ]
+          },
+          "intensity": 0.85,
+          "colour": {
+            "slot": "Accent"
+          }
+        }
+      ]
+    },
+    {
+      "id": "peak-everything",
+      "name": "Peak: Everything",
+      "tags": [
+        "look",
+        "tier:peak",
+        "part:front",
+        "part:back",
+        "part:floor",
+        "part:beams"
+      ],
+      "layer": "look",
+      "fadeIn": 0,
+      "fadeUnit": "beats",
+      "fadeOut": 0.5,
+      "fadeOutUnit": "beats",
+      "rules": [
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Front",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 0.7,
+          "colour": {
+            "kelvin": 4200
+          }
+        },
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Midstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Midstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Midstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 1,
+          "colour": {
+            "slot": "Primary"
+          }
+        },
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Front",
+                "column": "Stage Right",
+                "level": "Floor"
+              },
+              {
+                "row": "Front",
+                "column": "Centre",
+                "level": "Floor"
+              },
+              {
+                "row": "Front",
+                "column": "Stage Left",
+                "level": "Floor"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Right",
+                "level": "Floor"
+              },
+              {
+                "row": "Downstage",
+                "column": "Centre",
+                "level": "Floor"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Left",
+                "level": "Floor"
+              },
+              {
+                "row": "Midstage",
+                "column": "Stage Right",
+                "level": "Floor"
+              },
+              {
+                "row": "Midstage",
+                "column": "Centre",
+                "level": "Floor"
+              },
+              {
+                "row": "Midstage",
+                "column": "Stage Left",
+                "level": "Floor"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Right",
+                "level": "Floor"
+              },
+              {
+                "row": "Upstage",
+                "column": "Centre",
+                "level": "Floor"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Left",
+                "level": "Floor"
+              }
+            ]
+          },
+          "intensity": 1,
+          "colour": {
+            "slot": "Secondary"
+          }
+        },
+        {
+          "target": {
+            "roles": [
+              "Spot/Beam"
+            ]
+          },
+          "intensity": 1,
+          "colour": {
+            "slot": "Accent"
+          }
+        }
+      ]
+    },
+    {
+      "id": "peak-beam-wall",
+      "name": "Peak: Beam Wall",
+      "tags": [
+        "look",
+        "tier:peak",
+        "part:front",
+        "part:back",
+        "part:beams"
+      ],
+      "layer": "look",
+      "fadeIn": 0,
+      "fadeUnit": "beats",
+      "fadeOut": 0.5,
+      "fadeOutUnit": "beats",
+      "rules": [
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Front",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Front",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Downstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 0.7,
+          "colour": {
+            "kelvin": 4200
+          }
+        },
+        {
+          "target": {
+            "roles": [
+              "Wash",
+              "Pixel/Bar"
+            ],
+            "zones": [
+              {
+                "row": "Midstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Midstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Midstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Right",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Centre",
+                "level": "Overhead"
+              },
+              {
+                "row": "Upstage",
+                "column": "Stage Left",
+                "level": "Overhead"
+              }
+            ]
+          },
+          "intensity": 1,
+          "colour": {
+            "slot": "Primary"
+          }
+        },
+        {
+          "target": {
+            "roles": [
+              "Spot/Beam"
+            ]
+          },
+          "intensity": 1,
+          "colour": {
+            "slot": "Accent"
+          }
+        }
+      ]
+    }
+  ],
+  "triggers": [
+    {
+      "channel": 1,
+      "note": 0,
+      "scene": "base",
+      "mode": "release"
+    },
+    {
+      "channel": 1,
+      "note": 12,
+      "scene": "base",
+      "mode": "go"
+    },
+    {
+      "channel": 1,
+      "note": 13,
+      "scene": "dark",
+      "mode": "go"
+    },
+    {
+      "channel": 1,
+      "note": 14,
+      "scene": "silhouette",
+      "mode": "go"
+    },
+    {
+      "channel": 1,
+      "note": 15,
+      "scene": "shafts",
+      "mode": "go"
+    },
+    {
+      "channel": 1,
+      "note": 16,
+      "scene": "walk-on",
+      "mode": "go"
+    },
+    {
+      "channel": 1,
+      "note": 17,
+      "scene": "reveal",
+      "mode": "go"
+    },
+    {
+      "channel": 1,
+      "note": 18,
+      "scene": "bow",
+      "mode": "go"
+    },
+    {
+      "channel": 1,
+      "note": 24,
+      "scene": "chill-glow",
+      "mode": "go"
+    },
+    {
+      "channel": 1,
+      "note": 25,
+      "scene": "chill-floor-glow",
+      "mode": "go"
+    },
+    {
+      "channel": 1,
+      "note": 26,
+      "scene": "chill-haze-beams",
+      "mode": "go"
+    },
+    {
+      "channel": 1,
+      "note": 48,
+      "scene": "groove-steady",
+      "mode": "go"
+    },
+    {
+      "channel": 1,
+      "note": 49,
+      "scene": "groove-colour",
+      "mode": "go"
+    },
+    {
+      "channel": 1,
+      "note": 50,
+      "scene": "groove-beams",
+      "mode": "go"
+    },
+    {
+      "channel": 1,
+      "note": 51,
+      "scene": "groove-full",
+      "mode": "go"
+    },
+    {
+      "channel": 1,
+      "note": 72,
+      "scene": "drive-wide",
+      "mode": "go"
+    },
+    {
+      "channel": 1,
+      "note": 73,
+      "scene": "drive-beams",
+      "mode": "go"
+    },
+    {
+      "channel": 1,
+      "note": 74,
+      "scene": "drive-chorus",
+      "mode": "go"
+    },
+    {
+      "channel": 1,
+      "note": 96,
+      "scene": "peak-everything",
+      "mode": "go"
+    },
+    {
+      "channel": 1,
+      "note": 97,
+      "scene": "peak-beam-wall",
+      "mode": "go"
+    }
+  ],
+  "baseLook": "base",
+  "colourSets": [
+    {
+      "id": "set-1-opener",
+      "name": "Opener + Last Train",
+      "colours": {
+        "Primary": {
+          "swatch": "Amber"
+        },
+        "Secondary": {
+          "swatch": "Blue"
+        },
+        "Accent": {
+          "swatch": "White"
+        }
+      },
+      "fade": 2,
+      "note": {
+        "channel": 6,
+        "note": 12
+      }
+    },
+    {
+      "id": "set-2-slow-tide",
+      "name": "Slow Tide",
+      "colours": {
+        "Primary": {
+          "swatch": "Blue"
+        },
+        "Secondary": {
+          "swatch": "Lavender"
+        },
+        "Accent": {
+          "swatch": "White"
+        }
+      },
+      "fade": 2,
+      "note": {
+        "channel": 6,
+        "note": 13
+      }
+    }
+  ],
+  "strobeCap": 4
+}
