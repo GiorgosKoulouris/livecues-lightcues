@@ -6,7 +6,7 @@ import { installFakeEngine, type FakeEngine } from '../test-engine';
 import { installFakeVisualiserWindow, type FakeVisualiserWindow } from '../test-visualiser-window';
 import { UiProvider } from '../ui/UiProvider';
 import { createSceneRenderer, type SceneRenderer } from './sceneRenderer';
-import { forgetCamera } from './cameraMemory';
+import { forgetCamera, rememberCamera } from './cameraMemory';
 import { setHandedOverHaze } from './handover';
 import { DetachedVisualiser } from './DetachedVisualiser';
 
@@ -122,6 +122,10 @@ describe('DetachedVisualiser', () => {
   });
 
   it('sends main its camera and haze override as they change, for a close with the X', async () => {
+    rememberCamera(
+      { position: { x: 1, y: -2, z: 3 }, target: { x: 0, y: 1, z: 0 } },
+      { width: 10, depth: 6 },
+    );
     render(
       <UiProvider>
         <DetachedVisualiser />

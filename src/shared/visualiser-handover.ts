@@ -46,6 +46,7 @@ export function parseHandover(value: unknown): VisualiserHandover | undefined {
     const target = parseVec3(camera['pose']['target']);
     const { width, depth } = camera['stage'];
     if (!position || !target || !isNumber(width) || !isNumber(depth)) return undefined;
+    if (width <= 0 || depth <= 0) return undefined;
     result.camera = { pose: { position, target }, stage: { width, depth } };
   }
   return result;

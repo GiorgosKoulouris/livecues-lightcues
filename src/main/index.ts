@@ -523,6 +523,8 @@ function handleDetachedVisualiser(
   main: BrowserWindow,
   pageUrl: string,
 ): void {
+  // The open Detached Visualiser's window, to tell its messages from a stranger's.
+  let detachedWindow: BrowserWindow | undefined;
   const detached = createDetachedVisualiser<BrowserWindow>({
     open: (onClosed) => {
       const { workArea } = screen.getDisplayMatching(main.getBounds());
@@ -533,7 +535,11 @@ function handleDetachedVisualiser(
         pageUrl + DETACHED_VISUALISER_HASH,
         { ...centredBounds(workArea, DETACHED_SIZE), title: DETACHED_VISUALISER_TITLE },
       );
-      window.on('closed', onClosed);
+      detachedWindow = window;
+      window.on('closed', () => {
+        if (detachedWindow === window) detachedWindow = undefined;
+        onClosed();
+      });
       return window;
     },
     focus: (window) => {
@@ -543,19 +549,33 @@ function handleDetachedVisualiser(
     close: (window) => window.close(),
     changed: (isDetached) => windows.sendAll(VISUALISER_DETACHED_CHANNEL, isDetached),
   });
+  // Only the app's own windows may speak here: the main window and the open
+  // Detached Visualiser.
+  const isOwn = (sender: unknown) =>
+    sender === main.webContents ||
+    (detachedWindow !== undefined && sender === detachedWindow.webContents);
+  // The window whose Visualiser shows: main while attached, the other while detached.
+  const showing = () => (detached.isDetached() ? detachedWindow?.webContents : main.webContents);
   // Only the main window detaches; either window may reattach.
   ipcMain.on(VISUALISER_DETACH_CHANNEL, (event) => {
     if (event.sender === main.webContents) detached.detach();
   });
-  ipcMain.on(VISUALISER_REATTACH_CHANNEL, () => detached.reattach());
+  ipcMain.on(VISUALISER_REATTACH_CHANNEL, (event) => {
+    if (isOwn(event.sender)) detached.reattach();
+  });
   ipcMain.handle(VISUALISER_IS_DETACHED_CHANNEL, () => detached.isDetached());
   // The camera and haze override move with the Visualiser. Main holds the
   // latest, in memory only, so a window closing on its own loses nothing.
   let handover: VisualiserHandover | undefined;
-  ipcMain.on(VISUALISER_SET_STATE_CHANNEL, (_event, state: unknown) => {
+  // Only the window whose Visualiser shows sets it, so a hidden or stale
+  // window cannot overwrite it.
+  ipcMain.on(VISUALISER_SET_STATE_CHANNEL, (event, state: unknown) => {
+    if (event.sender !== showing()) return;
     handover = parseHandover(state) ?? handover;
   });
-  ipcMain.handle(VISUALISER_GET_STATE_CHANNEL, () => handover);
+  ipcMain.handle(VISUALISER_GET_STATE_CHANNEL, (event) =>
+    isOwn(event.sender) ? handover : undefined,
+  );
   main.on('closed', () => detached.reattach());
 }
 

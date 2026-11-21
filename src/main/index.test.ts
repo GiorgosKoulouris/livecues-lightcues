@@ -182,6 +182,7 @@ const electron = await import('electron');
 const dialog = vi.mocked(electron.dialog);
 const shell = vi.mocked(electron.shell);
 const { state } = h;
+const { handlers } = state;
 
 const invoke = (channel: string, ...args: unknown[]) =>
   state.handlers.get(channel)!({ sender: state.windows[0]?.webContents }, ...args);
@@ -797,6 +798,21 @@ describe('Detached Visualiser', () => {
     expect(await invoke(VISUALISER_IS_DETACHED_CHANNEL)).toBe(false);
   });
 
+  it('ignores a reattach from any other sender', async () => {
+    await boot();
+    detach();
+    send(VISUALISER_REATTACH_CHANNEL, {} as never);
+    expect(detached().close).not.toHaveBeenCalled();
+    expect(await invoke(VISUALISER_IS_DETACHED_CHANNEL)).toBe(true);
+  });
+
+  it('reattaches on request from the main window too', async () => {
+    await boot();
+    detach();
+    send(VISUALISER_REATTACH_CHANNEL, win().webContents);
+    expect(detached().close).toHaveBeenCalled();
+  });
+
   describe('hand-over of camera and haze override', () => {
     const state = {
       camera: {
@@ -829,6 +845,34 @@ describe('Detached Visualiser', () => {
       send(VISUALISER_SET_STATE_CHANNEL, win().webContents, { haze: 'lots' });
       send(VISUALISER_SET_STATE_CHANNEL, win().webContents, 'x');
       expect(await invoke(VISUALISER_GET_STATE_CHANNEL)).toEqual(state);
+    });
+
+    it('ignores state from any other sender', async () => {
+      await boot();
+      send(VISUALISER_SET_STATE_CHANNEL, {} as never, state);
+      expect(await invoke(VISUALISER_GET_STATE_CHANNEL)).toBeUndefined();
+    });
+
+    it('takes state only from the window whose Visualiser shows', async () => {
+      await boot();
+      send(VISUALISER_SET_STATE_CHANNEL, win().webContents, state);
+      detach();
+      // The main window's Visualiser is gone while detached.
+      send(VISUALISER_SET_STATE_CHANNEL, win().webContents, { haze: 0.9 });
+      expect(await invoke(VISUALISER_GET_STATE_CHANNEL)).toEqual(state);
+      const gone = detached().webContents;
+      detached().close();
+      // The closed window's Visualiser is gone while attached.
+      send(VISUALISER_SET_STATE_CHANNEL, gone, { haze: 0.1 });
+      expect(await invoke(VISUALISER_GET_STATE_CHANNEL)).toEqual(state);
+    });
+
+    it('answers a state request only from its own windows', async () => {
+      await boot();
+      send(VISUALISER_SET_STATE_CHANNEL, win().webContents, state);
+      const ask = (sender: unknown) => handlers.get(VISUALISER_GET_STATE_CHANNEL)!({ sender });
+      expect(await ask({})).toBeUndefined();
+      expect(await ask(win().webContents)).toEqual(state);
     });
 
     it('holds nothing at first', async () => {

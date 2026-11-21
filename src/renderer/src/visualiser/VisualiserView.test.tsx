@@ -8,7 +8,7 @@ import { UiProvider } from '../ui/UiProvider';
 import type { RendererCallbacks, SceneRenderer } from './sceneRenderer';
 import { createSceneRenderer } from './sceneRenderer';
 import { buildScene } from './sceneModel';
-import { forgetCamera } from './cameraMemory';
+import { forgetCamera, rememberCamera } from './cameraMemory';
 import { acceptHandover } from './handover';
 import { VisualiserView } from './VisualiserView';
 
@@ -112,11 +112,30 @@ describe('VisualiserView', () => {
     const moved = { position: { x: 1, y: -2, z: 3 }, target: { x: 0, y: 1, z: 0 } };
     const stage = { width: 10, depth: 6 };
 
-    it('sends main its camera on mount and as it moves', () => {
+    it('sends main no camera on mount when there is no free camera, only the default FOH', () => {
       show();
-      expect(windowBridge.held).toMatchObject({ camera: { pose: cameras.foh, stage } });
-      act(() => callbacks.onCamera(moved));
+      expect(windowBridge.held?.camera).toBeUndefined();
+    });
+
+    it('sends main the free camera it opens on, and as it moves', () => {
+      rememberCamera(moved, stage);
+      show();
       expect(windowBridge.held).toMatchObject({ camera: { pose: moved, stage } });
+      const next = { position: { x: 4, y: -5, z: 6 }, target: { x: 0, y: 1, z: 0 } };
+      act(() => callbacks.onCamera(next));
+      expect(windowBridge.held).toMatchObject({ camera: { pose: next, stage } });
+    });
+
+    it('takes back the camera it sent when the stage bounds change', () => {
+      const view = (patch: typeof PATCH) => (
+        <UiProvider>
+          <VisualiserView patch={patch} />
+        </UiProvider>
+      );
+      rememberCamera(moved, stage);
+      const { rerender } = render(view(PATCH));
+      rerender(view(emptyPatch({ width: 20, depth: 8 })));
+      expect(windowBridge.held?.camera).toBeUndefined();
     });
 
     it('sends main its haze override as it is set, and cleared', async () => {

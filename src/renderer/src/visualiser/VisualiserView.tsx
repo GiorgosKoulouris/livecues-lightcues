@@ -94,9 +94,12 @@ function Stage({
         return;
       }
       created.setModel(drawn.current);
+      // Only the free camera moves with the Visualiser, never the default FOH
+      // it opens on when there is none.
+      const free = rememberedCamera(latest.current.patch.stage);
       handover.current = {
         ...handover.current,
-        camera: { pose: created.camera(), stage: latest.current.patch.stage },
+        camera: free && { pose: free, stage: latest.current.patch.stage },
       };
       publish();
       applied.current = { model: drawn.current, patch: latest.current.patch };
@@ -132,8 +135,10 @@ function Stage({
     if (moved) {
       drawing.setCamera(model.cameras.foh);
       forgetCamera();
+      handover.current = { ...handover.current, camera: undefined };
+      publish();
     }
-  }, [model, patch]);
+  }, [model, patch, publish]);
 
   useEffect(() => renderer.current?.setAssumedHaze(assumed), [assumed]);
   useEffect(() => {

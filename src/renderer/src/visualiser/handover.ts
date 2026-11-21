@@ -1,5 +1,5 @@
 import type { VisualiserHandover } from '../../../shared/visualiser-handover';
-import { rememberCamera } from './cameraMemory';
+import { forgetCamera, rememberCamera } from './cameraMemory';
 
 // The haze override a Visualiser starts with: what the other window handed
 // over, until the Visualiser that took it unmounts. View-only, never saved.
@@ -18,7 +18,9 @@ export function setHandedOverHaze(value: number | undefined): void {
 // camera goes to the free camera memory, which the Visualiser opens on.
 export function acceptHandover(handover: VisualiserHandover | undefined): void {
   if (!handover) return;
+  // No camera means the other window had no free camera: open on the default.
   if (handover.camera) rememberCamera(handover.camera.pose, handover.camera.stage);
+  else forgetCamera();
   haze = handover.haze;
 }
 

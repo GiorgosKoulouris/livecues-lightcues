@@ -32,6 +32,11 @@ describe('parseHandover', () => {
       { camera: { ...camera, pose: { ...camera.pose, target: { x: NaN, y: 0, z: 0 } } } },
     ],
     ['camera with a bad stage', { camera: { ...camera, stage: { width: 'a', depth: 1 } } }],
+    ['camera with a zero stage width', { camera: { ...camera, stage: { width: 0, depth: 6 } } }],
+    [
+      'camera with a negative stage depth',
+      { camera: { ...camera, stage: { width: 10, depth: -1 } } },
+    ],
   ])('rejects %s', (_name, value) => {
     expect(parseHandover(value)).toBeUndefined();
   });
