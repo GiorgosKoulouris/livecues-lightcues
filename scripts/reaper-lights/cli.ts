@@ -1,4 +1,4 @@
-// `npm run lights:song -- <subcommand> ...`: `inspect`, `analyse` and `write` so far.
+// `npm run lights:song -- <subcommand> ...`: `inspect`, `analyse`, `render` and `write`.
 import { readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { analyseRegion, formatAnalysis } from './analyse';
@@ -14,7 +14,7 @@ const USAGE = [
   'Usage: npm run lights:song -- inspect <project.rpp> <region>',
   '       npm run lights:song -- analyse <project.rpp> <region>',
   '       npm run lights:song -- render <project.rpp> <plan.lights.yaml>',
-  '       npm run lights:song -- write <project.rpp> <plan.lights.yaml> [--force]',
+  '       npm run lights:song -- write <project.rpp> <plan.lights.yaml> [--force] [--allow-stack]',
 ].join('\n');
 
 const clock = (seconds: number): string => {
@@ -79,7 +79,13 @@ export function run(
   const [command, file, ...rest] = argv;
   if (command === 'inspect' && file && rest.length > 0) return inspect(read(file), rest.join(' '));
   if (command === 'render' && file && rest.length === 1) {
-    return `Wrote: ${renderLights({ rpp: file, plan: rest[0] as string })}`;
+    const warnings: string[] = [];
+    const output = renderLights({
+      rpp: file,
+      plan: rest[0] as string,
+      onWarning: (m) => warnings.push(`Warning: ${m}`),
+    });
+    return [...warnings, `Wrote: ${output}`].join('\n');
   }
   if (command === 'analyse' && file && rest.length > 0) {
     const { project, region } = openRegion(read(file), rest.join(' '));
@@ -87,10 +93,12 @@ export function run(
   }
   if (command === 'write' && file) {
     const force = rest.includes('--force');
-    const [plan, ...extra] = rest.filter((a) => a !== '--force');
+    const allowStack = rest.includes('--allow-stack');
+    const [plan, ...extra] = rest.filter((a) => a !== '--force' && a !== '--allow-stack');
     if (!plan || extra.length > 0) throw new UsageError(USAGE);
-    const r = writeLights({ rpp: file, plan, force });
+    const r = writeLights({ rpp: file, plan, force, allowStack });
     return [
+      ...r.warnings.map((w) => `Warning: ${w}`),
       `${r.replaced ? 'Replaced' : 'Inserted'} lights:${r.region} on MidiToLights (${r.notes} events).`,
       `Wrote: ${r.output}`,
       `Hash: ${r.hashFile}`,

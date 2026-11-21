@@ -27,6 +27,8 @@ export interface MidiEvent {
 }
 
 export const VELOCITY = 100;
+/** The `layer` of the events that cue a Colour Set. */
+export const COLOUR_SET_LAYER = 'colourset';
 /** The Scene on the Look Layer the end cue fires when the plan sets none. */
 export const DEFAULT_END_SCENE = 'Intro/Outro: Fade';
 /** A Flash with no `length` lasts this many beats. */
@@ -84,6 +86,7 @@ class Compiler {
     for (const tier of Object.values(plan.palette)) {
       for (const [key, pick] of Object.entries(tier)) this.layerPick(key, pick);
     }
+    if (plan.colourSet) this.colourSet(plan.colourSet, this.timeline.start, plan.colourSet.line);
     for (const cue of plan.cues) this.cue(cue);
     for (const ev of plan.events) this.event(ev);
     for (const p of plan.patterns) this.pattern(p);
@@ -153,8 +156,35 @@ class Compiler {
     this.drafts.push({ time, layer, scene, line });
   }
 
+  /** A Colour Set is Go only, on the channel and note the Show gives it. It is no Layer of the Show. */
+  private colourSet(pick: ScenePick, time: number, line: number): void {
+    const { show } = this;
+    if (show.colourSets.length === 0) throw new PlanError('The Show has no Colour Sets', line);
+    const set = show.colourSet(pick.value);
+    if (!set) {
+      const names = show.colourSets.map((s) => s.name).join(', ');
+      throw new PlanError(`Unknown Colour Set '${pick.value}'. The Show has: ${names}`, line);
+    }
+    if (set.channel === undefined || set.note === undefined) {
+      throw new PlanError(`Colour Set '${set.name}' has no MIDI note in the Show`, line);
+    }
+    const layer: ShowLayer = { key: COLOUR_SET_LAYER, name: 'Colour Set', channel: set.channel };
+    const scene: ShowScene = {
+      id: set.id,
+      name: set.name,
+      layer: COLOUR_SET_LAYER,
+      channel: set.channel,
+      note: set.note,
+      mode: 'go',
+      colours: [],
+      tags: [],
+    };
+    this.drafts.push({ time, layer, scene, line });
+  }
+
   private cue(cue: Plan['cues'][number]): void {
     const time = this.time(cue.at, cue.line);
+    if (cue.colourSet) this.colourSet(cue.colourSet, time, cue.colourSet.line);
     const picks = { ...cue.picks };
     if (cue.tier) {
       const tier = this.plan.palette[cue.tier];

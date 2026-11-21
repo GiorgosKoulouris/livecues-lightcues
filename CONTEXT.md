@@ -223,7 +223,7 @@ A report, produced when a Show is combined with a Venue Patch, listing Scenes wh
 ### Reaper Lights
 
 **Plan**:
-A YAML file per song (`<Song>.lights.yaml`) that names the Scenes a song plays and when: a palette per tier, section cues, timed events and patterns. `lights:song write` compiles it to MIDI on the Show's note map. It holds Scene names, never notes. Not a Show.
+A YAML file per song (`<Song>.lights.yaml`) that names the Scenes a song plays and when: a Colour Set, a palette per tier, section cues, timed events and patterns. `lights:song` lints it for over-stacked dynamic Layers. `lights:song write` compiles it to MIDI on the Show's note map. It holds Scene names, never notes. Not a Show.
 _Avoid_: Cue list, script
 
 **Region**:

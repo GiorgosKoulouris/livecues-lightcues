@@ -2,7 +2,7 @@
 // Usage: npm run lights:song -- inspect <project.rpp> <region>
 //        npm run lights:song -- analyse <project.rpp> <region>
 //        npm run lights:song -- render <project.rpp> <plan.lights.yaml>
-//        npm run lights:song -- write <project.rpp> <plan.lights.yaml> [--force]
+//        npm run lights:song -- write <project.rpp> <plan.lights.yaml> [--force] [--allow-stack]
 import { fileURLToPath } from 'node:url';
 import { runnerImport } from 'vite';
 

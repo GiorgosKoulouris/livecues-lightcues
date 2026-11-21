@@ -27,6 +27,8 @@ export interface Cue {
   line: number;
   at: string;
   tier?: string;
+  /** A Colour Set to hold from this cue. */
+  colourSet?: ScenePick;
   /** Layer key as written to its Pick. */
   picks: Record<string, ScenePick>;
 }
@@ -60,6 +62,8 @@ export interface Plan {
   brief?: Brief;
   /** Tier name (lower case) to Layer key to Pick. */
   palette: Record<string, Record<string, ScenePick>>;
+  /** The song's Colour Set, cued at bar 1. */
+  colourSet?: ScenePick;
   /** Overrides of the start-of-song reset. */
   start: Record<string, ScenePick>;
   cues: Cue[];
@@ -139,6 +143,9 @@ class Reader {
   }
 }
 
+/** `colourset`, `colour-set` and `colour set` all name the Colour Set key. */
+const isColourSetKey = (key: string): boolean => /^colour[ -]?set$/i.test(key);
+
 const TOP = ['song', 'show', 'brief', 'palette', 'start', 'cues', 'events', 'patterns', 'end'];
 const CUE = ['at', 'tier'];
 const EVENT = ['at', 'scene', 'release', 'length', 'until'];
@@ -151,6 +158,10 @@ export function parsePlan(text: string): Plan {
   const plan: Plan = { song: '', palette: {}, start: {}, cues: [], events: [], patterns: [] };
   let song = false;
   for (const { key, value, line } of r.entries(top)) {
+    if (isColourSetKey(key)) {
+      plan.colourSet = r.pick(value, key, value);
+      continue;
+    }
     if (!TOP.includes(key)) throw new PlanError(`Unknown key '${key}'`, line);
     if (key === 'song') {
       plan.song = r.text(value, 'song', value);
@@ -194,6 +205,7 @@ function readCue(r: Reader, node: YAMLMap): Cue {
   for (const { key, value, line } of r.entries(node)) {
     const k = key.toLowerCase();
     if (k === 'at') cue.at = r.text(value, 'at', value);
+    else if (isColourSetKey(k)) cue.colourSet = r.pick(value, key, value);
     else if (k === 'tier') cue.tier = r.text(value, 'tier', value).toLowerCase();
     else if (CUE.includes(k)) continue;
     else if (k in cue.picks) throw new PlanError(`Layer '${key}' is set twice`, line);

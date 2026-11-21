@@ -9,6 +9,7 @@ import { parsePlan } from './plan';
 import { LightsError } from './errors';
 import { findRegion, readProject, type Region, type RppNode, type RppProject } from './rpp';
 import { loadShowFor } from './show';
+import { stackingWarnings } from './stacking';
 import { regionTimeline, TempoMap } from './timeline';
 
 export class WriteError extends LightsError {}
@@ -224,9 +225,13 @@ export interface WriteOptions {
   rpp: string;
   plan: string;
   force?: boolean;
+  /** Write a plan that stacks more dynamic Layers than its tier allows (M4). */
+  allowStack?: boolean;
 }
 
 export interface WriteResult {
+  /** The stacking warnings that `allowStack` let through. */
+  warnings: string[];
   region: string;
   notes: number;
   replaced: boolean;
@@ -262,7 +267,16 @@ export function writeLights(opts: WriteOptions): WriteResult {
 
   const plan = parsePlan(readFileSync(opts.plan, 'utf8'));
   const region = findRegion(project, plan.song);
-  const events = compilePlan(plan, loadShowFor(plan, opts.plan), regionTimeline(project, region));
+  const show = loadShowFor(plan, opts.plan);
+  const timeline = regionTimeline(project, region);
+  const events = compilePlan(plan, show, timeline);
+  const warnings = stackingWarnings(plan, events, show, timeline).map((w) => w.message);
+  if (warnings.length > 0 && !opts.allowStack) {
+    throw new WriteError(
+      `The plan stacks too many dynamic Layers (M4):\n${warnings.join('\n')}\n` +
+        'Fix the cues, or pass --allow-stack to write it anyway.',
+    );
+  }
 
   const hashFile = hashFileFor(opts.plan, region.name);
   const stored = existsSync(hashFile) ? readFileSync(hashFile, 'utf8').trim() : undefined;
@@ -273,6 +287,7 @@ export function writeLights(opts: WriteOptions): WriteResult {
   renameSync(temp, output);
   writeFileSync(hashFile, `${spliced.hash}\n`);
   return {
+    warnings,
     region: region.name,
     notes: spliced.notes,
     replaced: spliced.replaced,

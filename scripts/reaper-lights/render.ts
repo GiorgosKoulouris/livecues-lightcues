@@ -7,6 +7,7 @@ import { compilePlan, type MidiEvent } from './compile';
 import { parsePlan, type Plan } from './plan';
 import { findRegion, readProject } from './rpp';
 import { loadShowFor, type ShowLayer, type ShowMap } from './show';
+import { stackingWarnings } from './stacking';
 import { formatBarBeat, regionTimeline, type SongTimeline } from './timeline';
 
 /** Pixels per second of song. */
@@ -175,6 +176,8 @@ export function htmlPathFor(planPath: string): string {
 export interface RenderOptions {
   rpp: string;
   plan: string;
+  /** Called with each stacking warning (M4). The page is written either way. */
+  onWarning?: (message: string) => void;
 }
 
 /** Compiles the plan and writes the timeline next to it. Returns the path written. */
@@ -184,6 +187,7 @@ export function renderLights(opts: RenderOptions): string {
   const timeline = regionTimeline(project, findRegion(project, plan.song));
   const show = loadShowFor(plan, opts.plan);
   const events = compilePlan(plan, show, timeline);
+  for (const w of stackingWarnings(plan, events, show, timeline)) opts.onWarning?.(w.message);
   const output = htmlPathFor(opts.plan);
   writeFileSync(output, renderTimeline({ plan, events, timeline, show }));
   return output;

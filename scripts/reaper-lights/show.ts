@@ -29,6 +29,17 @@ export interface ShowScene {
   mode: SceneMode;
   /** CSS colours of the Scene's Rules, in order and without repeats. Empty when it sets none. */
   colours: string[];
+  /** The Scene's tags (`dynamic`, `tier:drive`). Empty for a Show that has none. */
+  tags: string[];
+}
+
+/** A Colour Set: Go only. It has a MIDI note only when the Show gives it one. */
+export interface ShowColourSet {
+  id: string;
+  name: string;
+  /** MIDI channel, 1-based. */
+  channel?: number;
+  note?: number;
 }
 
 export interface ShowLayer {
@@ -82,7 +93,8 @@ function sceneColours(rules: RawRule[] = []): string[] {
 
 interface RawShow {
   layers?: { id: string; name: string }[];
-  scenes?: { id: string; name: string; layer: string; rules?: RawRule[] }[];
+  scenes?: { id: string; name: string; layer: string; tags?: string[]; rules?: RawRule[] }[];
+  colourSets?: { id: string; name: string; note?: { channel: number; note: number } }[];
   triggers?: (Omit<Trigger, 'mode'> & { mode: string })[];
   baseLook?: string;
 }
@@ -93,6 +105,7 @@ export const layerKey = (text: string): string => text.toLowerCase().replace(/[^
 export class ShowMap {
   readonly layers: ShowLayer[] = [];
   readonly scenes: ShowScene[] = [];
+  readonly colourSets: ShowColourSet[] = [];
   /** The Scene the Show falls back to on its Look Layer, when it names one. */
   readonly baseLook?: ShowScene;
 
@@ -111,6 +124,15 @@ export class ShowMap {
         note: t.note,
         mode: t.mode as SceneMode,
         colours: sceneColours(scene.rules),
+        tags: scene.tags ?? [],
+      });
+    }
+    for (const set of raw.colourSets ?? []) {
+      this.colourSets.push({
+        id: set.id,
+        name: set.name,
+        channel: set.note?.channel,
+        note: set.note?.note,
       });
     }
     for (const layer of raw.layers ?? []) {
@@ -127,6 +149,12 @@ export class ShowMap {
   scene(name: string): ShowScene | undefined {
     const wanted = name.trim().toLowerCase();
     return this.scenes.find((s) => s.name.toLowerCase() === wanted);
+  }
+
+  /** A Colour Set by name, case-insensitively. */
+  colourSet(name: string): ShowColourSet | undefined {
+    const wanted = name.trim().toLowerCase();
+    return this.colourSets.find((s) => s.name.toLowerCase() === wanted);
   }
 
   /** The Go Scene that sets a Layer to rest: `Down` on Movement (`Chill: Down`). */
