@@ -2,12 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { Channel, FixtureProfile } from '../shared/fixture-profile';
 import type { EngineEvent } from '../shared/protocol';
 import { emptyShow, type HousePreset, type Show } from '../shared/show';
+import { applyVenueEdit, type VenueEdit } from '../shared/venue-edit';
 import {
   emptyPatch,
-  putHouseGroup,
-  putHouseLight,
-  setHouseLook,
-  setStartupLook,
   type HouseLight,
   type HouseLook,
   type PatchResult,
@@ -59,18 +56,26 @@ function light(id: string, mode: string, address: number, group = 'bar'): HouseL
   return { id, name: id, group, profileId: 'acme/house', mode, universe: 1, address };
 }
 
+// Applies an edit that must succeed. `profile` is the one Profile Library entry.
+function applied(patch: VenuePatch, edit: VenueEdit, profile?: FixtureProfile): VenuePatch {
+  return ok(applyVenueEdit(patch, edit, () => profile));
+}
+
 // Bar holds a dimmer at 1, an RGB light at 2 and one with both at 5. Ceiling
 // holds a dimmer at 20.
 function patch(): VenuePatch {
-  let result = ok(putHouseGroup(emptyPatch({ width: 10, depth: 8 }), { id: 'bar', name: 'Bar' }));
-  result = ok(putHouseGroup(result, { id: 'ceiling', name: 'Ceiling' }));
+  let result = applied(emptyPatch({ width: 10, depth: 8 }), {
+    type: 'putHouseGroup',
+    group: { id: 'bar', name: 'Bar' },
+  });
+  result = applied(result, { type: 'putHouseGroup', group: { id: 'ceiling', name: 'Ceiling' } });
   for (const l of [
     light('dimmer', 'dimmer', 1),
     light('rgb', 'rgb', 2),
     light('both', 'both', 5),
     light('top', 'dimmer', 20, 'ceiling'),
   ]) {
-    result = ok(putHouseLight(result, l, house));
+    result = applied(result, { type: 'putHouseLight', light: l }, house);
   }
   return result;
 }
@@ -135,8 +140,9 @@ function firingHouse(
   startup?: HouseLook,
 ) {
   let venue = patch();
-  for (const [id, look] of Object.entries(looks)) venue = ok(setHouseLook(venue, id, look));
-  if (startup) venue = ok(setStartupLook(venue, startup));
+  for (const [id, look] of Object.entries(looks))
+    venue = applied(venue, { type: 'setHouseLook', preset: id, look });
+  if (startup) venue = applied(venue, { type: 'setStartupLook', look: startup });
   let show: Show = { ...emptyShow(), housePresets: presets };
   const clock = { now: 0 };
   const events: EngineEvent[] = [];
@@ -320,8 +326,11 @@ describe('houseAmbient', () => {
   });
 
   it('is the one Group when only one holds lights', () => {
-    let venue = ok(putHouseGroup(emptyPatch({ width: 10, depth: 8 }), { id: 'bar', name: 'Bar' }));
-    venue = ok(putHouseLight(venue, light('a', 'rgb', 1), house));
+    let venue = applied(emptyPatch({ width: 10, depth: 8 }), {
+      type: 'putHouseGroup',
+      group: { id: 'bar', name: 'Bar' },
+    });
+    venue = applied(venue, { type: 'putHouseLight', light: light('a', 'rgb', 1) }, house);
     expect(ambient({ bar: { intensity: 0.5, colour: { swatch: 'Red' } } }, venue)).toEqual({
       intensity: 0.5,
       red: 1,

@@ -1,17 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { FixtureProfile } from '../shared/fixture-profile';
+import { applyVenueEdit, type VenueEdit } from '../shared/venue-edit';
 import {
   DEFAULT_MOUNTING,
   emptyPatch,
   fixtureRole,
   patchHouse,
   patchProfile,
-  putFixture,
-  putHouseGroup,
-  putHazer,
-  putHouseLight,
-  setHouseLook,
-  setStartupLook,
   type Hazer,
   type HouseLight,
   type PatchedFixture,
@@ -58,10 +53,15 @@ function fixture(overrides: Partial<PatchedFixture>): PatchedFixture {
   };
 }
 
+// Applies an edit that must succeed, with `profile` as the Profile Library entry.
+function applied(patch: VenuePatch, edit: VenueEdit, profile?: FixtureProfile): VenuePatch {
+  return ok(applyVenueEdit(patch, edit, () => profile));
+}
+
 function patch(...entries: [PatchedFixture, FixtureProfile][]): VenuePatch {
   let result: VenuePatch = emptyPatch({ width: 10, depth: 6 });
   for (const [f, profile] of entries) {
-    const put = putFixture(result, f, profile);
+    const put = applyVenueEdit(result, { type: 'putFixture', fixture: f }, () => profile);
     if ('errors' in put) throw new Error(put.errors.join('\n'));
     result = put.patch;
   }
@@ -162,10 +162,17 @@ describe('.lcvenue file', () => {
       ...{ id: 'h1', name: 'Bar 1', group: 'bar', profileId: 'acme/led-bar', mode: '1ch' },
       ...{ universe: 1, address: 10 },
     };
-    let lit = ok(putHouseGroup(patch(), { id: 'bar', name: 'Bar' }));
-    lit = ok(putHouseLight(lit, light, handMade));
-    lit = ok(setStartupLook(lit, { bar: { intensity: 0.4, colour: { swatch: 'Warm White' } } }));
-    lit = ok(setHouseLook(lit, 'dim', { bar: { intensity: 0.1, colour: { swatch: 'Amber' } } }));
+    let lit = applied(patch(), { type: 'putHouseGroup', group: { id: 'bar', name: 'Bar' } });
+    lit = applied(lit, { type: 'putHouseLight', light }, handMade);
+    lit = applied(lit, {
+      type: 'setStartupLook',
+      look: { bar: { intensity: 0.4, colour: { swatch: 'Warm White' } } },
+    });
+    lit = applied(lit, {
+      type: 'setHouseLook',
+      preset: 'dim',
+      look: { bar: { intensity: 0.1, colour: { swatch: 'Amber' } } },
+    });
 
     const opened = loadVenueFile(saveVenueFile(lit));
 
@@ -195,7 +202,7 @@ describe('.lcvenue file', () => {
       ...{ id: 'z1', name: 'Haze 1', profileId: 'fos/haze', mode: '1ch' },
       ...{ universe: 1, address: 20, maxOutput: 0.5, fanLevel: 1 },
     };
-    const hazy = ok(putHazer(patch(), hazer, haze));
+    const hazy = applied(patch(), { type: 'putHazer', hazer }, haze);
 
     const saved = saveVenueFile(hazy);
 

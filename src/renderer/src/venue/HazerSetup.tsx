@@ -1,10 +1,10 @@
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import { modeHasHaze, type FixtureProfile } from '../../../shared/fixture-profile';
-import type { VenueEdit } from '../../../shared/protocol';
 import type { Show } from '../../../shared/show';
 import { hazePresetsWithoutHazers } from '../../../shared/venue-check';
-import { patchHazers, putHazer, type Hazer, type VenuePatch } from '../../../shared/venue-patch';
+import { applyVenueEdit, type VenueEdit } from '../../../shared/venue-edit';
+import { patchHazers, type Hazer, type VenuePatch } from '../../../shared/venue-patch';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { NumberField } from '../ui/fields';
@@ -117,7 +117,7 @@ function HazerRow({
     <AddressedRow
       patch={patch}
       fixture={hazer}
-      check={(next) => putHazer(patch, next)}
+      check={(next) => applyVenueEdit(patch, { type: 'putHazer', hazer: next }, () => undefined)}
       profileOf={(profile) => ({ ...profile, modes: profile.modes.filter(modeHasHaze) })}
       onPut={onPut}
       onRemove={onRemove}

@@ -1,6 +1,7 @@
 import { Grid3x3, Tag } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import type { OutputStatus, VenueEdit } from '../../../shared/protocol';
+import type { OutputStatus } from '../../../shared/protocol';
+import type { VenueEdit } from '../../../shared/venue-edit';
 import { DIRECTIONS, type Direction } from '../../../shared/show';
 import {
   addressedInUniverse,

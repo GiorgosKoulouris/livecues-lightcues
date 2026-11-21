@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CapabilityRange, Channel, FixtureProfile } from '../shared/fixture-profile';
-import type { EngineCommand, EngineEvent, OutputStatus, VenueEdit } from '../shared/protocol';
+import type { EngineCommand, EngineEvent, OutputStatus } from '../shared/protocol';
+import type { VenueEdit } from '../shared/venue-edit';
 import type { ShowEdit } from '../shared/show-edit';
 import type { Scene } from '../shared/show';
 import {

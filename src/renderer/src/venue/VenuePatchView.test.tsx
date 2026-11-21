@@ -2,28 +2,12 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FixtureProfile } from '../../../shared/fixture-profile';
-import type { EngineCommand, EngineEvent, VenueEdit } from '../../../shared/protocol';
+import type { EngineCommand, EngineEvent } from '../../../shared/protocol';
 import type { Direction, Rule, Show } from '../../../shared/show';
+import { applyVenueEdit, type VenueEdit } from '../../../shared/venue-edit';
 import {
-  addUniverse,
   DEFAULT_MOUNTING,
-  moveFixture,
-  putFixture,
-  putFixtures,
-  putHouseGroup,
-  putHazer,
-  putHouseLight,
-  removeHazers,
-  putUniverse,
-  removeFixtures,
-  removeHouseGroup,
-  removeHouseLights,
-  removeUniverse,
-  setHouseLook,
-  setStage,
-  setStartupLook,
   type PatchedFixture,
-  type PatchResult,
   type VenuePatch,
 } from '../../../shared/venue-patch';
 import { installFakeEngine, type FakeEngine } from '../test-engine';
@@ -138,7 +122,7 @@ function answer(command: EngineCommand): EngineEvent[] {
         },
       ];
     case 'editVenue': {
-      const result = applied(patch, command.edit);
+      const result = applyVenueEdit(patch, command.edit, libraryProfile);
       if ('patch' in result) patch = result.patch;
       const errors = 'errors' in result ? result.errors : [];
       const done: EngineEvent = { type: 'venueDone', requestId: command.requestId, errors };
@@ -161,42 +145,7 @@ function playbackEvent(): EngineEvent {
   };
 }
 
-function applied(current: VenuePatch, edit: VenueEdit): PatchResult {
-  switch (edit.type) {
-    case 'setStage':
-      return setStage(current, edit.stage);
-    case 'addUniverse':
-      return addUniverse(current, edit.universe);
-    case 'putUniverse':
-      return putUniverse(current, edit.universe);
-    case 'removeUniverse':
-      return { patch: removeUniverse(current, edit.number) };
-    case 'putFixture':
-      return putFixture(current, edit.fixture, par);
-    case 'putFixtures':
-      return putFixtures(current, edit.fixtures);
-    case 'moveFixture':
-      return moveFixture(current, edit.id, edit.position);
-    case 'removeFixtures':
-      return { patch: removeFixtures(current, edit.ids) };
-    case 'putHouseGroup':
-      return putHouseGroup(current, edit.group);
-    case 'removeHouseGroup':
-      return { patch: removeHouseGroup(current, edit.id) };
-    case 'putHouseLight':
-      return putHouseLight(current, edit.light, par);
-    case 'removeHouseLights':
-      return { patch: removeHouseLights(current, edit.ids) };
-    case 'setStartupLook':
-      return setStartupLook(current, edit.look);
-    case 'setHouseLook':
-      return setHouseLook(current, edit.preset, edit.look);
-    case 'putHazer':
-      return putHazer(current, edit.hazer, edit.hazer.profileId === haze.id ? haze : par);
-    case 'removeHazers':
-      return { patch: removeHazers(current, edit.ids) };
-  }
-}
+const libraryProfile = (id: string) => [par, haze].find((p) => p.id === id);
 
 const edits = () =>
   engine.sent.flatMap((c) => (c.type === 'editVenue' ? [c.edit] : ([] as VenueEdit[])));

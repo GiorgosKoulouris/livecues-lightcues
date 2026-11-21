@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { EngineEvent, VenueEdit } from '../../../shared/protocol';
+import type { EngineEvent } from '../../../shared/protocol';
+import type { VenueEdit } from '../../../shared/venue-edit';
 import { request } from '../engine-request';
 
 export type VenueState = Omit<Extract<EngineEvent, { type: 'venue' }>, 'type'>;

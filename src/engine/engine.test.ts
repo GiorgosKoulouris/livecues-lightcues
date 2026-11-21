@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { FixtureProfile } from '../shared/fixture-profile';
-import type { EngineCommand, EngineEvent, VenueEdit } from '../shared/protocol';
+import type { EngineCommand, EngineEvent } from '../shared/protocol';
+import type { VenueEdit } from '../shared/venue-edit';
 import type { ShowEdit } from '../shared/show-edit';
 import type { Scene, Show } from '../shared/show';
 import {

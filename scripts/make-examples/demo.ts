@@ -8,9 +8,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { FixtureProfile, Role } from '../../src/shared/fixture-profile';
 import type { Colour, RuleTarget, Scene, Show, Swatch, Trigger } from '../../src/shared/show';
+import { applyVenueEdit } from '../../src/shared/venue-edit';
 import {
-  putFixtures,
-  putHazer,
   type Mounting,
   type PatchedFixture,
   type VenuePatch,
@@ -164,24 +163,27 @@ export function demoVenue(): VenuePatch {
     fixtures: [],
     profiles: [],
   };
-  const result = putFixtures(empty, fixtures, (id) =>
+  const result = applyVenueEdit(empty, { type: 'putFixtures', fixtures }, (id) =>
     Object.values(kinds).find((p) => p.id === id),
   );
   if ('errors' in result) throw new Error(result.errors.join('\n'));
   // A hazer after the LED bar, on Universe 1.
-  const hazed = putHazer(
+  const hazed = applyVenueEdit(
     result.patch,
     {
-      id: 'hazer',
-      name: 'Hazer',
-      profileId: HAZER_PROFILE.id,
-      mode: '2-channel',
-      universe: 1,
-      address: 61,
-      maxOutput: 1,
-      fanLevel: 1,
+      type: 'putHazer',
+      hazer: {
+        id: 'hazer',
+        name: 'Hazer',
+        profileId: HAZER_PROFILE.id,
+        mode: '2-channel',
+        universe: 1,
+        address: 61,
+        maxOutput: 1,
+        fanLevel: 1,
+      },
     },
-    HAZER_PROFILE,
+    () => HAZER_PROFILE,
   );
   if ('errors' in hazed) throw new Error(hazed.errors.join('\n'));
   return hazed.patch;

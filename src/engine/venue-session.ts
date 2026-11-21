@@ -1,25 +1,11 @@
 import type { FixtureProfile } from '../shared/fixture-profile';
-import type { DocumentSnapshot, EngineCommand, EngineEvent, VenueEdit } from '../shared/protocol';
+import type { DocumentSnapshot, EngineCommand, EngineEvent } from '../shared/protocol';
+import type { VenueEdit } from '../shared/venue-edit';
+import { applyVenueEdit } from '../shared/venue-edit';
 import {
-  addUniverse,
   emptyPatch,
-  moveFixture,
   patchHazers,
   patchHouse,
-  putHazer,
-  removeHazers,
-  putFixture,
-  putFixtures,
-  putHouseGroup,
-  putHouseLight,
-  putUniverse,
-  removeFixtures,
-  removeHouseGroup,
-  removeHouseLights,
-  removeUniverse,
-  setStage,
-  setHouseLook,
-  setStartupLook,
   type PatchResult,
   type StageBounds,
   type VenuePatch,
@@ -129,62 +115,7 @@ export function createVenueSession({
   }
 
   function edit(change: VenueEdit): PatchResult {
-    const patch = history.current();
-    switch (change.type) {
-      case 'setStage':
-        return setStage(patch, change.stage);
-      case 'addUniverse':
-        return addUniverse(patch, change.universe);
-      case 'putUniverse':
-        return putUniverse(patch, change.universe);
-      case 'removeUniverse':
-        if (!patch.universes.some((u) => u.number === change.number)) {
-          return { errors: [`Universe ${change.number} is not in the patch`] };
-        }
-        return { patch: removeUniverse(patch, change.number) };
-      case 'putFixture':
-        return putFixture(patch, change.fixture, libraryProfile(change.fixture.profileId));
-      case 'putFixtures':
-        return putFixtures(patch, change.fixtures, libraryProfile);
-      case 'moveFixture':
-        return moveFixture(patch, change.id, change.position);
-      case 'removeFixtures': {
-        const missing = change.ids.find((id) => !patch.fixtures.some((f) => f.id === id));
-        if (missing !== undefined) {
-          return { errors: [`Fixture id "${missing}" is not in the patch`] };
-        }
-        return { patch: removeFixtures(patch, change.ids) };
-      }
-      case 'putHouseGroup':
-        return putHouseGroup(patch, change.group);
-      case 'removeHouseGroup':
-        if (!patchHouse(patch).groups.some((g) => g.id === change.id)) {
-          return { errors: [`House Group "${change.id}" is not in the patch`] };
-        }
-        return { patch: removeHouseGroup(patch, change.id) };
-      case 'putHouseLight':
-        return putHouseLight(patch, change.light, libraryProfile(change.light.profileId));
-      case 'removeHouseLights': {
-        const { lights } = patchHouse(patch);
-        const missing = change.ids.find((id) => !lights.some((l) => l.id === id));
-        if (missing !== undefined) {
-          return { errors: [`House Light id "${missing}" is not in the patch`] };
-        }
-        return { patch: removeHouseLights(patch, change.ids) };
-      }
-      case 'putHazer':
-        return putHazer(patch, change.hazer, libraryProfile(change.hazer.profileId));
-      case 'removeHazers': {
-        const hazers = patchHazers(patch);
-        const missing = change.ids.find((id) => !hazers.some((h) => h.id === id));
-        if (missing !== undefined) return { errors: [`Hazer id "${missing}" is not in the patch`] };
-        return { patch: removeHazers(patch, change.ids) };
-      }
-      case 'setStartupLook':
-        return setStartupLook(patch, change.look);
-      case 'setHouseLook':
-        return setHouseLook(patch, change.preset, change.look);
-    }
+    return applyVenueEdit(history.current(), change, libraryProfile);
   }
 
   // Undo or redo, when there is a step to take.

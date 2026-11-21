@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { EngineEvent, EngineSnapshot, PlaybackSnapshot, VenueEdit } from '../shared/protocol';
+import type { EngineEvent, EngineSnapshot, PlaybackSnapshot } from '../shared/protocol';
+import type { VenueEdit } from '../shared/venue-edit';
 import type { ShowEdit } from '../shared/show-edit';
 import type { Scene } from '../shared/show';
 import { createEngine } from './engine';

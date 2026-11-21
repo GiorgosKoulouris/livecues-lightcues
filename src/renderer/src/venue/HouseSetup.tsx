@@ -1,14 +1,13 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import type { FixtureProfile } from '../../../shared/fixture-profile';
-import type { VenueEdit } from '../../../shared/protocol';
 import { showHousePresets, type Show } from '../../../shared/show';
+import { applyVenueEdit, type VenueEdit } from '../../../shared/venue-edit';
 import { lookPresetsNotInShow, unsetHousePresets } from '../../../shared/venue-check';
 import {
   FULL_WHITE,
   houseLook,
   patchHouse,
-  putHouseLight,
   type HouseGroup,
   type HouseLight,
   type HouseLook,
@@ -308,7 +307,9 @@ function HouseLightRow({
     <AddressedRow
       patch={patch}
       fixture={light}
-      check={(next) => putHouseLight(patch, next)}
+      check={(next) =>
+        applyVenueEdit(patch, { type: 'putHouseLight', light: next }, () => undefined)
+      }
       onPut={onPut}
       onRemove={onRemove}
     >

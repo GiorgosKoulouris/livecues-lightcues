@@ -4,6 +4,7 @@ import { ASSUMED_DEGREES, type Approximation } from '../../../shared/aim';
 import { ROLES, type Role } from '../../../shared/fixture-profile';
 import type { Show } from '../../../shared/show';
 import { goboSlotNames } from '../../../shared/gobo-prism';
+import { applyVenueEdit } from '../../../shared/venue-edit';
 import { ASSUMED_STROBE_HZ } from '../../../shared/strobe';
 import {
   fixtureApproximatedAims,
@@ -20,7 +21,6 @@ import {
   MOUNTS,
   normalRotation,
   patchProfile,
-  putFixtures,
   suggestZone,
   ZONE_COLUMNS,
   ZONE_LEVELS,
@@ -123,7 +123,9 @@ export function FixtureInspector({
 
   // Checks a change against the patch first, as the engine would.
   function put(next: PatchedFixture[], field?: CheckedField) {
-    const result = putFixtures(patch, next);
+    // The Inspector only edits patched Fixtures, whose Profiles are already
+    // embedded.
+    const result = applyVenueEdit(patch, { type: 'putFixtures', fixtures: next }, () => undefined);
     if ('errors' in result && field) {
       setErrors({ [field]: result.errors.join(' ') });
       return;

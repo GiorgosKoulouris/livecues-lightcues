@@ -3,6 +3,7 @@
 import type { AimAngles } from './aim';
 import type { FixtureProfile, UnsupportedFeature } from './fixture-profile';
 import type { ShowEdit } from './show-edit';
+import type { VenueEdit } from './venue-edit';
 import type {
   Direction,
   EffectLength,
@@ -11,17 +12,7 @@ import type {
   PRISM_BEHAVIOUR,
   PrismSetting,
 } from './show';
-import type {
-  HouseGroup,
-  HouseLight,
-  Hazer,
-  HouseLook,
-  PatchedFixture,
-  StageBounds,
-  StagePosition,
-  Universe,
-  VenuePatch,
-} from './venue-patch';
+import type { HouseLook, VenuePatch } from './venue-patch';
 
 export type EngineCommand =
   | { type: 'ping'; id: number }
@@ -179,39 +170,6 @@ export type ActiveByLayer = Record<string, string>;
 // The longest length in beats the Speed limit runs an active Scene's movement
 // Effects at, by Layer id, for the Layers it slows.
 export type LimitedByLayer = Record<string, EffectLength>;
-
-// A change to the current Venue Patch. `putFixture` and `putFixtures` embed a
-// Fixture's Profile from the Profile Library when the patch does not have it
-// yet. `putFixtures` changes several Fixtures at once, or none if one does not
-// fit.
-export type VenueEdit =
-  | { type: 'setStage'; stage: StageBounds }
-  // `addUniverse` rejects a number already in the patch; `putUniverse`
-  // replaces that Universe.
-  | { type: 'addUniverse'; universe: Universe }
-  | { type: 'putUniverse'; universe: Universe }
-  | { type: 'removeUniverse'; number: number }
-  | { type: 'putFixture'; fixture: PatchedFixture }
-  | { type: 'putFixtures'; fixtures: PatchedFixture[] }
-  | { type: 'moveFixture'; id: string; position: StagePosition }
-  | { type: 'removeFixtures'; ids: string[] }
-  // Adds a House Group, or renames it.
-  | { type: 'putHouseGroup'; group: HouseGroup }
-  // Removes its House Lights and its Startup look setting too.
-  | { type: 'removeHouseGroup'; id: string }
-  // Embeds the House Light's Profile from the Profile Library, as for a
-  // Fixture.
-  | { type: 'putHouseLight'; light: HouseLight }
-  | { type: 'removeHouseLights'; ids: string[] }
-  // Embeds the Hazer's Profile from the Profile Library. Its mode needs a
-  // haze channel.
-  | { type: 'putHazer'; hazer: Hazer }
-  | { type: 'removeHazers'; ids: string[] }
-  // Without a look, the House Lights start at full white.
-  | { type: 'setStartupLook'; look?: HouseLook }
-  // The house look of the House Preset with id `preset`. Without a look, or
-  // with one that sets no House Group, removes it.
-  | { type: 'setHouseLook'; preset: string; look?: HouseLook };
 
 // A DMX interface port that Universes are sent to. `id` is what a Universe's
 // `output` names: the device's USB serial number, or its port when it has

@@ -2,13 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { FixtureProfile } from '../shared/fixture-profile';
 import type { EngineEvent } from '../shared/protocol';
 import { emptyShow, type HazePreset, type Show } from '../shared/show';
-import {
-  emptyPatch,
-  putHazer,
-  type Hazer,
-  type PatchResult,
-  type VenuePatch,
-} from '../shared/venue-patch';
+import { applyVenueEdit } from '../shared/venue-edit';
+import { emptyPatch, type Hazer, type PatchResult, type VenuePatch } from '../shared/venue-patch';
 import { createHaze, hazerFrames } from './haze';
 
 // A hazer in two modes: haze and fan, and haze with a channel nothing drives,
@@ -70,7 +65,7 @@ function ok(result: PatchResult): VenuePatch {
 
 function patched(...hazers: Hazer[]): VenuePatch {
   return hazers.reduce(
-    (patch, h) => ok(putHazer(patch, h, hazeProfile)),
+    (patch, h) => ok(applyVenueEdit(patch, { type: 'putHazer', hazer: h }, () => hazeProfile)),
     emptyPatch({ width: 10, depth: 8 }),
   );
 }
