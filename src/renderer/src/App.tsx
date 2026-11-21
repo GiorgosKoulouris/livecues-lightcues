@@ -24,6 +24,8 @@ import { cx } from './ui/cx';
 import { useOutputs } from './venue/useOutputs';
 import { useVenuePatch } from './venue/useVenuePatch';
 import { VenuePatchView } from './venue/VenuePatchView';
+import { DetachedPlaceholder } from './visualiser/DetachedPlaceholder';
+import { useVisualiserDetached } from './visualiser/useVisualiserDetached';
 import { VisualiserView } from './visualiser/VisualiserView';
 
 // The shell: sidebar, top bar with the Fallback Panel, which the Perform view
@@ -41,6 +43,7 @@ export function App() {
   const midiInput = useMidiInput();
   const tempo = useTempo();
   const outputs = useOutputs();
+  const visualiserDetached = useVisualiserDetached();
   const copyDiagnostics = useCopyDiagnostics(outputs, midiInput, tempo);
   useViewShortcuts(setView);
   useReopenErrors();
@@ -104,9 +107,19 @@ export function App() {
             />
           </div>
           <div hidden={view !== 'visualiser'}>
-            {view === 'visualiser' && (
-              <VisualiserView patch={venue?.patch} blind={playback?.mode === 'blind'} />
-            )}
+            {view === 'visualiser' &&
+              (visualiserDetached ? (
+                <DetachedPlaceholder />
+              ) : (
+                <VisualiserView
+                  patch={venue?.patch}
+                  blind={playback?.mode === 'blind'}
+                  windowButton={{
+                    label: 'Detach',
+                    onClick: () => window.visualiserWindow.detach(),
+                  }}
+                />
+              ))}
           </div>
         </main>
       </div>

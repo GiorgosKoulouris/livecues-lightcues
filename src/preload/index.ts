@@ -23,6 +23,10 @@ import {
   UNSAVED_CHANNEL,
   UPDATE_AVAILABLE_CHANNEL,
   UPDATE_ENABLED_CHANNEL,
+  VISUALISER_DETACH_CHANNEL,
+  VISUALISER_DETACHED_CHANNEL,
+  VISUALISER_IS_DETACHED_CHANNEL,
+  VISUALISER_REATTACH_CHANNEL,
   type CloseGuardBridge,
   type DiagnosticsBridge,
   type DialogBridge,
@@ -34,6 +38,7 @@ import {
   type LicensesBridge,
   type RestoreResult,
   type UpdatesBridge,
+  type VisualiserWindowBridge,
 } from '../shared/protocol';
 import { createStateRequests } from './state-requests';
 
@@ -140,3 +145,16 @@ const licenses: LicensesBridge = {
 };
 
 contextBridge.exposeInMainWorld('licenses', licenses);
+
+const visualiserWindow: VisualiserWindowBridge = {
+  detach: () => ipcRenderer.send(VISUALISER_DETACH_CHANNEL),
+  reattach: () => ipcRenderer.send(VISUALISER_REATTACH_CHANNEL),
+  isDetached: () => ipcRenderer.invoke(VISUALISER_IS_DETACHED_CHANNEL),
+  onDetached(listener) {
+    const onDetached = (_event: unknown, detached: boolean) => listener(detached);
+    ipcRenderer.on(VISUALISER_DETACHED_CHANNEL, onDetached);
+    return () => ipcRenderer.removeListener(VISUALISER_DETACHED_CHANNEL, onDetached);
+  },
+};
+
+contextBridge.exposeInMainWorld('visualiserWindow', visualiserWindow);

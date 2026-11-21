@@ -569,6 +569,32 @@ export function unsavedMessage(documents: readonly DocumentKind[]): string {
   return `${list.charAt(0).toUpperCase()}${list.slice(1)} ${verb} unsaved changes.`;
 }
 
+// IPC channels for the Detached Visualiser (ADR 0022). The main window asks
+// main to detach; either window asks it to reattach. Main tells every renderer
+// when the Visualiser goes to or comes back from its own window, and answers
+// whether it is detached now.
+export const VISUALISER_DETACH_CHANNEL = 'visualiser:detach';
+export const VISUALISER_REATTACH_CHANNEL = 'visualiser:reattach';
+export const VISUALISER_IS_DETACHED_CHANNEL = 'visualiser:isDetached';
+export const VISUALISER_DETACHED_CHANNEL = 'visualiser:detached';
+
+// The hash of the page the Detached Visualiser's window loads. It mounts only
+// the Visualiser.
+export const DETACHED_VISUALISER_HASH = '#detached-visualiser';
+
+// Its window's title.
+export const DETACHED_VISUALISER_TITLE = 'LightCues – Visualiser';
+
+// What the preload script exposes to the renderer as `window.visualiserWindow`.
+export interface VisualiserWindowBridge {
+  // Opens the Detached Visualiser, or focuses it when it is open.
+  detach(): void;
+  reattach(): void;
+  isDetached(): Promise<boolean>;
+  // Returns an unsubscribe function.
+  onDetached(listener: (detached: boolean) => void): () => void;
+}
+
 // What the preload script exposes to the renderer as `window.closeGuard`.
 export interface CloseGuardBridge {
   setUnsaved(document: DocumentKind, unsaved: boolean): void;

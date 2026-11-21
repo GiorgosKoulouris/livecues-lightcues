@@ -295,4 +295,18 @@ describe('VisualiserView', () => {
     const high = screen.getByRole('button', { name: 'High' });
     expect(high.className).not.toMatch(/primary/);
   });
+
+  it('has a window button only when given one, and it runs the action', async () => {
+    show();
+    expect(screen.queryByRole('button', { name: 'Detach' })).not.toBeInTheDocument();
+    cleanup();
+    const onClick = vi.fn();
+    render(
+      <UiProvider>
+        <VisualiserView patch={PATCH} windowButton={{ label: 'Detach', onClick }} />
+      </UiProvider>,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Detach' }));
+    expect(onClick).toHaveBeenCalledOnce();
+  });
 });

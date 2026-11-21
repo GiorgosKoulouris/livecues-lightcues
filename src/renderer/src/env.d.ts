@@ -8,6 +8,7 @@ import type {
   EngineRecoveryBridge,
   LicensesBridge,
   UpdatesBridge,
+  VisualiserWindowBridge,
 } from '../../shared/protocol';
 
 declare global {
@@ -19,5 +20,6 @@ declare global {
     updates: UpdatesBridge;
     diagnostics: DiagnosticsBridge;
     licenses: LicensesBridge;
+    visualiserWindow: VisualiserWindowBridge;
   }
 }

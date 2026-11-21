@@ -25,15 +25,32 @@ const PRESETS: { id: CameraPresetName | 'reset'; label: string }[] = [
 export function VisualiserView({
   patch,
   blind = false,
+  windowButton,
 }: {
   patch: VenuePatch | undefined;
   blind?: boolean;
+  windowButton?: WindowButton;
 }) {
   if (!patch) return <p className={styles.empty}>Open a Venue Patch to see it here.</p>;
-  return <Stage patch={patch} blind={blind} />;
+  return <Stage patch={patch} blind={blind} windowButton={windowButton} />;
 }
 
-function Stage({ patch, blind }: { patch: VenuePatch; blind: boolean }) {
+// The toolbar's button that moves the Visualiser between its View and its own
+// window: Detach in the View, Reattach in the window.
+export interface WindowButton {
+  label: 'Detach' | 'Reattach';
+  onClick: () => void;
+}
+
+function Stage({
+  patch,
+  blind,
+  windowButton,
+}: {
+  patch: VenuePatch;
+  blind: boolean;
+  windowButton: WindowButton | undefined;
+}) {
   const renderer = useRef<SceneRenderer>(undefined);
   const model = useMemo(() => buildScene(patch), [patch]);
   const [failed, setFailed] = useState(false);
@@ -155,6 +172,11 @@ function Stage({ patch, blind }: { patch: VenuePatch; blind: boolean }) {
           </output>
         </label>
         {assumed !== undefined && <Button onClick={() => setAssumed(undefined)}>Clear</Button>}
+        {windowButton && (
+          <Button className={styles.windowButton} onClick={windowButton.onClick}>
+            {windowButton.label}
+          </Button>
+        )}
       </div>
       <div className={styles.stage}>
         <div ref={attach} className={styles.canvas} />

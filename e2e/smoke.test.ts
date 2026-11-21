@@ -130,6 +130,51 @@ test('Ctrl+5 opens the Visualiser and it draws a canvas', async () => {
   }
 });
 
+test('the Detached Visualiser updates while Perform is shown, and closing it brings the View back', async () => {
+  const userData = mkdtempSync(join(tmpdir(), 'lightcues-e2e-'));
+  const app = await electron.launch({
+    args: [`--user-data-dir=${userData}`, '.'],
+    env: inheritedEnv(),
+  });
+  try {
+    const page = await app.firstWindow();
+    const sidebar = page.getByRole('navigation', { name: 'Views' });
+    await sidebar.getByRole('button', { name: 'Open example' }).click();
+    await page.keyboard.press('Control+5');
+    await expect(page.locator('main canvas')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Detach' }).click();
+    const detached = await app.waitForEvent('window');
+    await expect(detached).toHaveTitle('LightCues – Visualiser');
+    expect(app.windows()).toHaveLength(2);
+    // The View gives up its canvas for a placeholder.
+    await expect(page.getByRole('button', { name: 'Reattach' })).toBeVisible();
+    await expect(page.locator('main canvas')).toHaveCount(0);
+    const canvas = detached.locator('canvas');
+    await expect(canvas).toBeVisible();
+
+    await sidebar.getByRole('button', { name: 'Perform' }).click();
+    const dark = await canvas.screenshot();
+    const chorus = page.getByRole('button', { name: /Chorus: full red/ });
+    await chorus.click();
+    await expect(chorus).toHaveAttribute('aria-pressed', 'true');
+    await expect
+      .poll(async () => !(await canvas.screenshot()).equals(dark), {
+        message: 'the detached canvas changed',
+      })
+      .toBe(true);
+
+    await detached.close();
+    await sidebar.getByRole('button', { name: 'Visualiser' }).click();
+    await expect(page.locator('main canvas')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Reattach' })).toHaveCount(0);
+    expect(app.windows()).toHaveLength(1);
+  } finally {
+    await app.close();
+    rmSync(userData, { recursive: true, force: true });
+  }
+});
+
 // This process's environment, without a dev server URL: the app loads the
 // built renderer.
 function inheritedEnv(): Record<string, string> {

@@ -16,7 +16,11 @@ import { emptyShow, type Show } from '../../shared/show';
 import { emptyPatch } from '../../shared/venue-patch';
 import { App } from './App';
 import { installFakeEngine, type FakeEngine } from './test-engine';
+import { installFakeVisualiserWindow, type FakeVisualiserWindow } from './test-visualiser-window';
 import { UiProvider } from './ui/UiProvider';
+import { createSceneRenderer, type SceneRenderer } from './visualiser/sceneRenderer';
+
+vi.mock('./visualiser/sceneRenderer', () => ({ createSceneRenderer: vi.fn() }));
 
 const SHOW: Show = {
   layers: [{ id: 'layer-1', name: 'Layer 1' }],
@@ -136,6 +140,7 @@ function fakeRecovery() {
   };
 }
 let recovery: ReturnType<typeof fakeRecovery>;
+let visualiserWindow: FakeVisualiserWindow;
 
 async function renderApp() {
   render(
@@ -171,6 +176,7 @@ beforeEach(() => {
   licenses = { open: vi.fn(async () => true) };
   vi.stubGlobal('licenses', licenses);
   recovery = fakeRecovery();
+  visualiserWindow = installFakeVisualiserWindow();
   vi.stubGlobal('engineRecovery', recovery.bridge);
 });
 afterEach(() => {
@@ -549,5 +555,76 @@ describe('App licenses', () => {
     await renderApp();
     await userEvent.keyboard('{Control>}4{/Control}');
     expect(screen.queryByRole('button', { name: 'Licenses' })).toBeNull();
+  });
+});
+
+describe('Detached Visualiser', () => {
+  beforeEach(() => {
+    vi.mocked(createSceneRenderer).mockReturnValue({
+      setModel: vi.fn(),
+      setLooks: vi.fn(),
+      setHaze: vi.fn(),
+      setHouse: vi.fn(),
+      setAssumedHaze: vi.fn(),
+      setQuality: vi.fn(),
+      setCamera: vi.fn(),
+      camera: vi.fn(),
+      dispose: vi.fn(),
+    } as unknown as SceneRenderer);
+  });
+
+  it('the Detach button asks main to detach, and the View shows a placeholder with Reattach', async () => {
+    await renderApp();
+    await userEvent.keyboard('{Control>}5{/Control}');
+    await userEvent.click(await screen.findByRole('button', { name: 'Detach' }));
+    expect(visualiserWindow.detach).toHaveBeenCalledOnce();
+    expect(await screen.findByRole('button', { name: 'Reattach' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'FOH' })).not.toBeInTheDocument();
+    expect(screen.getByText(/in its own window/)).toBeInTheDocument();
+  });
+
+  it('renders no Visualiser in the main window while detached', async () => {
+    await renderApp();
+    await userEvent.keyboard('{Control>}5{/Control}');
+    await screen.findByRole('button', { name: 'Detach' });
+    expect(createSceneRenderer).toHaveBeenCalledOnce();
+    const drawn = vi.mocked(createSceneRenderer).mock.results[0]?.value as SceneRenderer;
+    await userEvent.click(screen.getByRole('button', { name: 'Detach' }));
+    await screen.findByRole('button', { name: 'Reattach' });
+    expect(drawn.dispose).toHaveBeenCalledOnce();
+    expect(createSceneRenderer).toHaveBeenCalledOnce();
+  });
+
+  it('Reattach in the placeholder asks main to reattach, and the View comes back', async () => {
+    await renderApp();
+    await userEvent.keyboard('{Control>}5{/Control}');
+    await userEvent.click(await screen.findByRole('button', { name: 'Detach' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Reattach' }));
+    expect(visualiserWindow.reattach).toHaveBeenCalledOnce();
+    expect(await screen.findByRole('button', { name: 'FOH' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reattach' })).not.toBeInTheDocument();
+  });
+
+  it('comes back when main says the window closed', async () => {
+    await renderApp();
+    await userEvent.keyboard('{Control>}5{/Control}');
+    await userEvent.click(await screen.findByRole('button', { name: 'Detach' }));
+    await screen.findByRole('button', { name: 'Reattach' });
+    visualiserWindow.set(false);
+    expect(await screen.findByRole('button', { name: 'FOH' })).toBeInTheDocument();
+  });
+
+  it('shows the placeholder when the Visualiser was already detached at load', async () => {
+    visualiserWindow = installFakeVisualiserWindow(true);
+    await renderApp();
+    await userEvent.keyboard('{Control>}5{/Control}');
+    expect(await screen.findByRole('button', { name: 'Reattach' })).toBeInTheDocument();
+  });
+
+  it('does not change the view when it detaches, so Perform stays', async () => {
+    await renderApp();
+    await userEvent.keyboard('{Control>}4{/Control}');
+    visualiserWindow.set(true);
+    expect(currentView()).toHaveTextContent('Perform');
   });
 });

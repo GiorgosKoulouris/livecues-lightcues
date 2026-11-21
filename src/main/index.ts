@@ -5,8 +5,10 @@ import {
   ipcMain,
   MessageChannelMain,
   net,
+  screen,
   shell,
   utilityProcess,
+  type BrowserWindowConstructorOptions,
   type FileFilter,
   type IpcMainEvent,
   type UtilityProcess,
@@ -26,6 +28,8 @@ import {
   CHOOSE_SHOW_TO_SAVE_CHANNEL,
   CHOOSE_VENUE_TO_OPEN_CHANNEL,
   CHOOSE_VENUE_TO_SAVE_CHANNEL,
+  DETACHED_VISUALISER_HASH,
+  DETACHED_VISUALISER_TITLE,
   DOCUMENTS,
   ENGINE_DOWN_CHANNEL,
   ENGINE_IS_DOWN_CHANNEL,
@@ -46,6 +50,10 @@ import {
   UNSAVED_CHANNEL,
   UPDATE_AVAILABLE_CHANNEL,
   UPDATE_ENABLED_CHANNEL,
+  VISUALISER_DETACH_CHANNEL,
+  VISUALISER_DETACHED_CHANNEL,
+  VISUALISER_IS_DETACHED_CHANNEL,
+  VISUALISER_REATTACH_CHANNEL,
   isDocumentKind,
   isEngineDocument,
   unsavedMessage,
@@ -60,6 +68,7 @@ import {
 } from '../shared/protocol';
 import { diskShowFiles, diskVenueFiles, fileStorage } from '../engine/file-storage';
 import { snapshotFile } from './engine-snapshot';
+import { centredBounds, createDetachedVisualiser } from './detached-visualiser';
 import { superviseEngine } from './engine-supervisor';
 import { createWindowRegistry } from './window-registry';
 import { licensePath } from './licenses';
@@ -474,6 +483,7 @@ function createWindow(
   supervisor: Supervisor,
   client: UiClient,
   pageUrl: string,
+  options: BrowserWindowConstructorOptions = {},
 ): BrowserWindow {
   const window = new BrowserWindow({
     width: 1280,
@@ -487,13 +497,56 @@ function createWindow(
       sandbox: true,
       nodeIntegration: false,
     },
+    ...options,
   });
   windows.add(window, client);
   window.on('closed', () => windows.remove(window));
   connectWindowToEngine(window, windows, supervisor);
-  guardClose(window, supervisor.isDown);
+  // The close guard belongs to the main window, which holds the documents.
+  if (client === 'main') guardClose(window, supervisor.isDown);
   void window.loadURL(pageUrl);
   return window;
+}
+
+// The Detached Visualiser's default size.
+const DETACHED_SIZE = { width: 1100, height: 700 };
+
+// The Visualiser in its own window (ADR 0022): opened centred on the main
+// window's display, reattached when it closes, and closed with the main
+// window. Nothing about it is saved.
+function handleDetachedVisualiser(
+  windows: Windows,
+  supervisor: Supervisor,
+  main: BrowserWindow,
+  pageUrl: string,
+): void {
+  const detached = createDetachedVisualiser<BrowserWindow>({
+    open: (onClosed) => {
+      const { workArea } = screen.getDisplayMatching(main.getBounds());
+      const window = createWindow(
+        windows,
+        supervisor,
+        'detachedVisualiser',
+        pageUrl + DETACHED_VISUALISER_HASH,
+        { ...centredBounds(workArea, DETACHED_SIZE), title: DETACHED_VISUALISER_TITLE },
+      );
+      window.on('closed', onClosed);
+      return window;
+    },
+    focus: (window) => {
+      if (window.isMinimized()) window.restore();
+      window.focus();
+    },
+    close: (window) => window.close(),
+    changed: (isDetached) => windows.sendAll(VISUALISER_DETACHED_CHANNEL, isDetached),
+  });
+  // Only the main window detaches; either window may reattach.
+  ipcMain.on(VISUALISER_DETACH_CHANNEL, (event) => {
+    if (event.sender === main.webContents) detached.detach();
+  });
+  ipcMain.on(VISUALISER_REATTACH_CHANNEL, () => detached.reattach());
+  ipcMain.handle(VISUALISER_IS_DETACHED_CHANNEL, () => detached.isDetached());
+  main.on('closed', () => detached.reattach());
 }
 
 // The renderer page: the dev server in development, the built file otherwise.
@@ -541,7 +594,9 @@ void app.whenReady().then(() => {
   handleOpenLicense();
   const pageUrl = rendererUrl();
   restrictNavigation(pageUrl);
-  handleUpdateCheck(createWindow(windows, engine, 'main', pageUrl));
+  const main = createWindow(windows, engine, 'main', pageUrl);
+  handleUpdateCheck(main);
+  handleDetachedVisualiser(windows, engine, main, pageUrl);
 });
 
 app.on('window-all-closed', () => app.quit());

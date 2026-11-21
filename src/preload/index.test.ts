@@ -23,6 +23,10 @@ import {
   UNSAVED_CHANNEL,
   UPDATE_AVAILABLE_CHANNEL,
   UPDATE_ENABLED_CHANNEL,
+  VISUALISER_DETACH_CHANNEL,
+  VISUALISER_DETACHED_CHANNEL,
+  VISUALISER_IS_DETACHED_CHANNEL,
+  VISUALISER_REATTACH_CHANNEL,
   type CloseGuardBridge,
   type DiagnosticsBridge,
   type DialogBridge,
@@ -32,6 +36,7 @@ import {
   type EngineRecoveryBridge,
   type LicensesBridge,
   type UpdatesBridge,
+  type VisualiserWindowBridge,
 } from '../shared/protocol';
 
 type Handler = (...args: unknown[]) => void;
@@ -69,6 +74,7 @@ async function load() {
     updates: exposed.get('updates') as UpdatesBridge,
     diagnostics: exposed.get('diagnostics') as DiagnosticsBridge,
     licenses: exposed.get('licenses') as LicensesBridge,
+    visualiserWindow: exposed.get('visualiserWindow') as VisualiserWindowBridge,
   };
 }
 
@@ -99,6 +105,7 @@ describe('engine bridge', () => {
       'engineRecovery',
       'licenses',
       'updates',
+      'visualiserWindow',
     ]);
   });
 
@@ -261,5 +268,29 @@ describe('updates, diagnostics and licenses', () => {
       [SET_UPDATE_ENABLED_CHANNEL, false],
       [OPEN_RELEASE_PAGE_CHANNEL, 'https://example.test'],
     ]);
+  });
+});
+
+describe('visualiser window', () => {
+  it('maps detach, reattach and the question to their channels', async () => {
+    const { visualiserWindow } = await load();
+    visualiserWindow.detach();
+    visualiserWindow.reattach();
+    await visualiserWindow.isDetached();
+    expect(ipcRenderer.send.mock.calls).toEqual([
+      [VISUALISER_DETACH_CHANNEL],
+      [VISUALISER_REATTACH_CHANNEL],
+    ]);
+    expect(ipcRenderer.invoke.mock.calls).toEqual([[VISUALISER_IS_DETACHED_CHANNEL]]);
+  });
+
+  it('tells a listener when main detaches or reattaches, until it unsubscribes', async () => {
+    const { visualiserWindow } = await load();
+    const listener = vi.fn();
+    const off = visualiserWindow.onDetached(listener);
+    fire(VISUALISER_DETACHED_CHANNEL, true);
+    off();
+    fire(VISUALISER_DETACHED_CHANNEL, false);
+    expect(listener.mock.calls).toEqual([[true]]);
   });
 });

@@ -24,6 +24,10 @@ import {
   UNSAVED_CHANNEL,
   UPDATE_AVAILABLE_CHANNEL,
   UPDATE_ENABLED_CHANNEL,
+  VISUALISER_DETACH_CHANNEL,
+  VISUALISER_DETACHED_CHANNEL,
+  VISUALISER_IS_DETACHED_CHANNEL,
+  VISUALISER_REATTACH_CHANNEL,
 } from '../shared/protocol';
 
 // Everything Electron-shaped, hoisted so the mock factory can reach it.
@@ -58,6 +62,10 @@ vi.mock('electron', async () => {
       state.windows.find((w) => w.webContents === contents),
     );
     webContents = new FakeContents();
+    getBounds = () => ({ x: 0, y: 0, width: 1280, height: 800 });
+    isMinimized = vi.fn(() => false);
+    restore = vi.fn();
+    focus = vi.fn();
     close = vi.fn(() => {
       const event = {
         defaultPrevented: false,
@@ -100,6 +108,9 @@ vi.mock('electron', async () => {
       quit: vi.fn(),
     },
     BrowserWindow: FakeWindow,
+    screen: {
+      getDisplayMatching: vi.fn(() => ({ workArea: { x: 100, y: 50, width: 1920, height: 1000 } })),
+    },
     MessageChannelMain: class {
       port1 = { id: 1 };
       port2 = { id: 2 };
@@ -703,5 +714,107 @@ describe('close guard', () => {
     win().emit('closed');
     expect(state.listeners.get(UNSAVED_CHANNEL)).toEqual([]);
     expect(state.listeners.get(SAVED_BEFORE_CLOSE_CHANNEL)).toEqual([]);
+  });
+});
+
+describe('Detached Visualiser', () => {
+  const detach = () => send(VISUALISER_DETACH_CHANNEL, win().webContents);
+  const detached = () => state.windows[1]!;
+
+  it('opens one window titled for it, centred on the main window display', async () => {
+    await boot();
+    detach();
+    expect(state.windows).toHaveLength(2);
+    expect(detached().options).toMatchObject({
+      title: 'LightCues – Visualiser',
+      width: 1100,
+      height: 700,
+      x: 100 + (1920 - 1100) / 2,
+      y: 50 + (1000 - 700) / 2,
+    });
+    expect(state.pageLoaded).toMatch(/#detached-visualiser$/);
+  });
+
+  it('has the same preload and security settings as the main window', async () => {
+    await boot();
+    detach();
+    expect((detached().options as any).webPreferences).toEqual(
+      (win().options as any).webPreferences,
+    );
+  });
+
+  it('connects it to the engine as the detachedVisualiser client', async () => {
+    await boot();
+    detach();
+    detached().webContents.emit('did-finish-load');
+    expect(engine().postMessage).toHaveBeenCalledWith(
+      { type: 'connect', client: 'detachedVisualiser' },
+      [{ id: 1 }],
+    );
+    expect(detached().webContents.postMessage).toHaveBeenCalledWith(ENGINE_PORT_CHANNEL, null, [
+      { id: 2 },
+    ]);
+  });
+
+  it('a second detach focuses the window and opens no other', async () => {
+    await boot();
+    detach();
+    detach();
+    expect(state.windows).toHaveLength(2);
+    expect(detached().focus).toHaveBeenCalled();
+  });
+
+  it('ignores a detach from any other sender', async () => {
+    await boot();
+    send(VISUALISER_DETACH_CHANNEL, {} as never);
+    expect(state.windows).toHaveLength(1);
+  });
+
+  it('says when it is detached, and answers the question', async () => {
+    await boot();
+    expect(await invoke(VISUALISER_IS_DETACHED_CHANNEL)).toBe(false);
+    detach();
+    expect(win().webContents.send).toHaveBeenCalledWith(VISUALISER_DETACHED_CHANNEL, true);
+    expect(await invoke(VISUALISER_IS_DETACHED_CHANNEL)).toBe(true);
+  });
+
+  it('reattaches when the window closes, without asking', async () => {
+    await boot();
+    detach();
+    detached().close();
+    expect(dialog.showMessageBoxSync).not.toHaveBeenCalled();
+    expect(win().webContents.send).toHaveBeenLastCalledWith(VISUALISER_DETACHED_CHANNEL, false);
+    expect(await invoke(VISUALISER_IS_DETACHED_CHANNEL)).toBe(false);
+  });
+
+  it('reattaches on request from either window', async () => {
+    await boot();
+    detach();
+    send(VISUALISER_REATTACH_CHANNEL, detached().webContents);
+    expect(detached().close).toHaveBeenCalled();
+    expect(await invoke(VISUALISER_IS_DETACHED_CHANNEL)).toBe(false);
+  });
+
+  it('closes with the main window', async () => {
+    await boot();
+    detach();
+    win().close();
+    expect(detached().close).toHaveBeenCalled();
+  });
+
+  it('can detach again after it closed', async () => {
+    await boot();
+    detach();
+    detached().close();
+    detach();
+    expect(state.windows).toHaveLength(3);
+  });
+
+  it('does not guard its close, though the main window has unsaved changes', async () => {
+    await boot();
+    send(UNSAVED_CHANNEL, win().webContents, 'show', true);
+    detach();
+    detached().close();
+    expect(dialog.showMessageBoxSync).not.toHaveBeenCalled();
   });
 });
