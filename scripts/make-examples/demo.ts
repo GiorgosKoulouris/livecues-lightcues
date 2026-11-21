@@ -215,9 +215,10 @@ export function demoShow(): Show {
       ...looks,
       fadeIn: 2,
       rules: [
-        { target: roles('Wash'), intensity: 0.4, colour: swatch('Blue') },
-        { target: roles('Pixel/Bar'), intensity: 0.3, colour: swatch('Cyan') },
-        { target: HEADS, intensity: 0.3, colour: swatch('Blue'), direction: 'Down' },
+        // Slots: the held Colour Set gives the colours. Blue, the first, holds at launch.
+        { target: roles('Wash'), intensity: 0.4, colour: { slot: 'Primary' } },
+        { target: roles('Pixel/Bar'), intensity: 0.3, colour: { slot: 'Secondary' } },
+        { target: HEADS, intensity: 0.3, colour: { slot: 'Primary' }, direction: 'Down' },
       ],
     },
     {
@@ -330,6 +331,22 @@ export function demoShow(): Show {
       trigger(62, 'outro', 'go'), // D4
     ],
     baseLook: 'base-look',
+    colourSets: [
+      {
+        id: 'blue',
+        name: 'Blue',
+        colours: { Primary: swatch('Blue'), Secondary: swatch('Cyan'), Accent: swatch('White') },
+        fade: 2,
+        note: { channel: 1, note: 37 }, // C#2
+      },
+      {
+        id: 'red',
+        name: 'Red',
+        colours: { Primary: swatch('Red'), Secondary: swatch('Amber'), Accent: swatch('White') },
+        fade: 2,
+        note: { channel: 1, note: 38 }, // D2
+      },
+    ],
     hazePresets: [
       { id: 'light-haze', name: 'Light haze', level: 0.3, fade: 2, note: { channel: 1, note: 36 } }, // C2
     ],

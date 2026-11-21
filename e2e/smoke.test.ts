@@ -181,6 +181,78 @@ test('the Detached Visualiser updates while Perform is shown, and closing it bri
   }
 });
 
+test('firing a Colour Set in Perform changes the Visualiser colour', async () => {
+  const userData = mkdtempSync(join(tmpdir(), 'lightcues-e2e-'));
+  const app = await electron.launch({
+    args: [`--user-data-dir=${userData}`, '.'],
+    env: inheritedEnv(),
+  });
+  try {
+    const page = await app.firstWindow();
+    const sidebar = page.getByRole('navigation', { name: 'Views' });
+    await sidebar.getByRole('button', { name: 'Open example' }).click();
+    await sidebar.getByRole('button', { name: 'Perform' }).click();
+
+    // Intro takes its colours from the slots. The first Colour Set, Blue, holds.
+    const blue = page.getByRole('button', { name: /^Blue/ });
+    const red = page.getByRole('button', { name: /^Red/ });
+    await expect(blue).toHaveAttribute('aria-pressed', 'true');
+    const intro = page.getByRole('button', { name: /Intro: blue wash/ });
+    await intro.click();
+    await expect(intro).toHaveAttribute('aria-pressed', 'true');
+
+    // The Visualiser is open with its canvas, and haze makes the beams show.
+    await page.keyboard.press('Control+5');
+    const canvas = page.locator('main canvas');
+    await expect(canvas).toBeVisible();
+    await page.getByRole('slider', { name: 'Assume haze' }).fill('40');
+    await expect
+      .poll(async () => mostlyBlue(page, await canvas.screenshot()), {
+        message: 'the wash is blue',
+      })
+      .toBe(true);
+
+    // Red crossfades the slots over 2 s, with the Scene still active.
+    await sidebar.getByRole('button', { name: 'Perform' }).click();
+    await red.click();
+    await expect(red).toHaveAttribute('aria-pressed', 'true');
+    await expect(blue).toHaveAttribute('aria-pressed', 'false');
+    await expect(intro).toHaveAttribute('aria-pressed', 'true');
+    await sidebar.getByRole('button', { name: 'Visualiser' }).click();
+    await expect
+      .poll(async () => mostlyBlue(page, await canvas.screenshot()), {
+        message: 'the wash left blue',
+      })
+      .toBe(false);
+  } finally {
+    await app.close();
+    rmSync(userData, { recursive: true, force: true });
+  }
+});
+
+// Whether blue outweighs red in the screenshot, summed over its pixels. The
+// page decodes the PNG, so the test needs no image library.
+async function mostlyBlue(page: Page, png: Buffer): Promise<boolean> {
+  return page.evaluate(async (base64) => {
+    const image = new Image();
+    image.src = `data:image/png;base64,${base64}`;
+    await image.decode();
+    const copy = document.createElement('canvas');
+    copy.width = image.width;
+    copy.height = image.height;
+    const context = copy.getContext('2d')!;
+    context.drawImage(image, 0, 0);
+    const { data } = context.getImageData(0, 0, copy.width, copy.height);
+    let red = 0;
+    let blue = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      red += data[i]!;
+      blue += data[i + 2]!;
+    }
+    return blue > red;
+  }, png.toString('base64'));
+}
+
 // This process's environment, without a dev server URL: the app loads the
 // built renderer.
 function inheritedEnv(): Record<string, string> {

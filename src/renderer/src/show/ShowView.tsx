@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import type { ShowEdit } from '../../../shared/show-edit';
-import type { Scene, Show } from '../../../shared/show';
+import { showColourSets, type Scene, type Show } from '../../../shared/show';
 import { useTempo } from '../panel/useTempo';
 import { FileButtons } from '../shell/FileButtons';
 import { HistoryButtons } from '../shell/HistoryButtons';
@@ -12,6 +12,8 @@ import { SidePanel, SidePanelToggle } from '../ui/SidePanel';
 import { Tabs } from '../ui/Tabs';
 import { useToast } from '../ui/Toast';
 import { useVenuePatch } from '../venue/useVenuePatch';
+import { heldSlotColours } from './colourCss';
+import { ColourSetPanel } from './ColourSetPanel';
 import { HazePresetPanel } from './HazePresetPanel';
 import { HousePresetPanel } from './HousePresetPanel';
 import { LayerStack } from './LayerStack';
@@ -22,7 +24,9 @@ import { SceneList } from './SceneList';
 import { filterScenes, freeId, sceneTags, type SceneFilter } from './scenes';
 import { ShowSettings } from './ShowSettings';
 import styles from './ShowView.module.css';
+import { SlotColoursContext } from './SlotColoursContext';
 import { TriggerPanel } from './TriggerPanel';
+import { useColourSet } from './useColourSet';
 import { useMidiInput } from './useMidiInput';
 import { usePlayback } from './usePlayback';
 import { useShow } from './useShow';
@@ -46,6 +50,7 @@ export function ShowView({ active }: { active: boolean }) {
   const playback = usePlayback();
   const tempo = useTempo();
   const midiInput = useMidiInput();
+  const heldColourSet = useColourSet();
   const toast = useToast();
   const [tab, setTab] = useState<SubTab>('scenes');
   const [selectedId, setSelectedId] = useState<string>();
@@ -109,107 +114,115 @@ export function ShowView({ active }: { active: boolean }) {
   }
 
   return (
-    <Tabs
-      label="Show"
-      tabs={TABS}
-      value={tab}
-      onChange={setTab}
-      className={styles.view}
-      actions={
-        <>
-          {tab === 'scenes' && (
-            <SidePanelToggle
+    <SlotColoursContext value={heldSlotColours(showColourSets(show), heldColourSet)}>
+      <Tabs
+        label="Show"
+        tabs={TABS}
+        value={tab}
+        onChange={setTab}
+        className={styles.view}
+        actions={
+          <>
+            {tab === 'scenes' && (
+              <SidePanelToggle
+                label="Preview and Layers"
+                open={sideOpen}
+                onToggle={() => setSideOpen(!sideOpen)}
+              />
+            )}
+            <ShowSettings show={show} onEdit={(showEdit) => void change(showEdit)} />
+            <HistoryButtons
+              commands={{ undo, redo }}
+              enabled={{ undo: state.canUndo, redo: state.canRedo }}
+            />
+            <FileButtons commands={fileCommands} />
+          </>
+        }
+      >
+        {tab === 'scenes' ? (
+          <div className={styles.scenes}>
+            <SceneList
+              show={show}
+              scenes={listed}
+              tags={tags}
+              filter={{ ...filter, tag }}
+              active={playback.active}
+              selectedId={selectedId}
+              searchRef={searchRef}
+              onFilter={setFilter}
+              onSelect={setSelectedId}
+              onGo={go}
+              onRemove={(id) => void removeScene(id)}
+              onNew={addScene}
+            />
+            {selected ? (
+              <SceneEditor
+                key={selected.id}
+                scene={selected}
+                show={show}
+                patch={venue.patch}
+                bpm={tempo?.bpm}
+                onPut={(scene) => change({ type: 'putScene', scene })}
+                onGo={() => go(selected.id)}
+                onRemove={() => void removeScene(selected.id)}
+              />
+            ) : (
+              <p className={styles.empty}>Select a Scene to edit it, or add a New Scene.</p>
+            )}
+            <SidePanel
               label="Preview and Layers"
               open={sideOpen}
-              onToggle={() => setSideOpen(!sideOpen)}
-            />
-          )}
-          <ShowSettings show={show} onEdit={(showEdit) => void change(showEdit)} />
-          <HistoryButtons
-            commands={{ undo, redo }}
-            enabled={{ undo: state.canUndo, redo: state.canRedo }}
-          />
-          <FileButtons commands={fileCommands} />
-        </>
-      }
-    >
-      {tab === 'scenes' ? (
-        <div className={styles.scenes}>
-          <SceneList
-            show={show}
-            scenes={listed}
-            tags={tags}
-            filter={{ ...filter, tag }}
-            active={playback.active}
-            selectedId={selectedId}
-            searchRef={searchRef}
-            onFilter={setFilter}
-            onSelect={setSelectedId}
-            onGo={go}
-            onRemove={(id) => void removeScene(id)}
-            onNew={addScene}
-          />
-          {selected ? (
-            <SceneEditor
-              key={selected.id}
-              scene={selected}
+              onClose={() => setSideOpen(false)}
+              className={styles.side}
+            >
+              <div className={styles.previewBar}>
+                <h3 className={styles.heading}>Preview</h3>
+                <ModeSwitch mode={playback.mode} />
+              </div>
+              <Preview patch={venue.patch} />
+              <LayerStack
+                show={show}
+                active={playback.active}
+                onAdd={() => {
+                  const id = freeId('layer', show.layers);
+                  const name = `Layer ${show.layers.length + 1}`;
+                  void change({ type: 'putLayer', layer: { id, name } });
+                }}
+                onRename={(layer) => void change({ type: 'putLayer', layer })}
+                onRemove={(layer) => change({ type: 'removeLayer', id: layer.id })}
+              />
+            </SidePanel>
+          </div>
+        ) : (
+          <div className={styles.triggers}>
+            <TriggerPanel
               show={show}
-              patch={venue.patch}
-              bpm={tempo?.bpm}
-              onPut={(scene) => change({ type: 'putScene', scene })}
-              onGo={() => go(selected.id)}
-              onRemove={() => void removeScene(selected.id)}
+              status={midiInput}
+              onPut={(trigger) => void change({ type: 'putTrigger', trigger })}
+              onRemove={(note) => change({ type: 'removeTrigger', note })}
             />
-          ) : (
-            <p className={styles.empty}>Select a Scene to edit it, or add a New Scene.</p>
-          )}
-          <SidePanel
-            label="Preview and Layers"
-            open={sideOpen}
-            onClose={() => setSideOpen(false)}
-            className={styles.side}
-          >
-            <div className={styles.previewBar}>
-              <h3 className={styles.heading}>Preview</h3>
-              <ModeSwitch mode={playback.mode} />
-            </div>
-            <Preview patch={venue.patch} />
-            <LayerStack
+            <HousePresetPanel
               show={show}
-              active={playback.active}
-              onAdd={() => {
-                const id = freeId('layer', show.layers);
-                const name = `Layer ${show.layers.length + 1}`;
-                void change({ type: 'putLayer', layer: { id, name } });
-              }}
-              onRename={(layer) => void change({ type: 'putLayer', layer })}
-              onRemove={(layer) => change({ type: 'removeLayer', id: layer.id })}
+              onPut={(preset) => void change({ type: 'putHousePreset', preset })}
+              onMove={(id, to) => void change({ type: 'moveHousePreset', id, to })}
+              onRemove={(id) => change({ type: 'removeHousePreset', id })}
             />
-          </SidePanel>
-        </div>
-      ) : (
-        <div className={styles.triggers}>
-          <TriggerPanel
-            show={show}
-            status={midiInput}
-            onPut={(trigger) => void change({ type: 'putTrigger', trigger })}
-            onRemove={(note) => change({ type: 'removeTrigger', note })}
-          />
-          <HousePresetPanel
-            show={show}
-            onPut={(preset) => void change({ type: 'putHousePreset', preset })}
-            onMove={(id, to) => void change({ type: 'moveHousePreset', id, to })}
-            onRemove={(id) => change({ type: 'removeHousePreset', id })}
-          />
-          <HazePresetPanel
-            show={show}
-            onPut={(preset) => void change({ type: 'putHazePreset', preset })}
-            onMove={(id, to) => void change({ type: 'moveHazePreset', id, to })}
-            onRemove={(id) => change({ type: 'removeHazePreset', id })}
-          />
-        </div>
-      )}
-    </Tabs>
+            <HazePresetPanel
+              show={show}
+              onPut={(preset) => void change({ type: 'putHazePreset', preset })}
+              onMove={(id, to) => void change({ type: 'moveHazePreset', id, to })}
+              onRemove={(id) => change({ type: 'removeHazePreset', id })}
+            />
+            <ColourSetPanel
+              show={show}
+              onPut={(set) => void change({ type: 'putColourSet', set })}
+              onMove={(id, to) => void change({ type: 'moveColourSet', id, to })}
+              onRemove={(id) => change({ type: 'removeColourSet', id })}
+            />
+          </div>
+        )}
+      </Tabs>
+    </SlotColoursContext>
   );
 }
 

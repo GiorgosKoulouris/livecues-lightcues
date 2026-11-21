@@ -1,12 +1,15 @@
 import type { CSSProperties, ReactNode } from 'react';
-import type { HazeFired, HouseFired, TempoSource } from '../../../shared/protocol';
+import type { HazeFired, HeldColourSet, HouseFired, TempoSource } from '../../../shared/protocol';
 import {
   beatsText,
+  SLOTS,
+  type ColourSet,
   type HazePreset,
   type HousePreset,
   type Scene,
   type Show,
 } from '../../../shared/show';
+import { colourCss } from '../show/colourCss';
 import { isActive } from '../show/scenes';
 import type { PlaybackState } from '../show/usePlayback';
 import { Badge } from '../ui/Badge';
@@ -243,6 +246,38 @@ export function HazePresetButton({
       onClick={() => window.engine.send({ type: 'fireHazePreset', id: preset.id })}
     >
       <span className={styles.name}>{preset.name}</span>
+    </Button>
+  );
+}
+
+// Fires a Colour Set. It has no key. Pressed while it is the one held, during
+// its crossfade too. Its three colours show on the button.
+export function ColourSetButton({
+  set,
+  held,
+  className,
+}: {
+  set: ColourSet;
+  held: HeldColourSet | undefined;
+  className?: string;
+}) {
+  return (
+    <Button
+      size="lg"
+      className={className}
+      aria-pressed={held?.id === set.id}
+      onClick={() => window.engine.send({ type: 'fireColourSet', id: set.id })}
+    >
+      <span className={styles.name}>{set.name}</span>
+      <span aria-hidden className={styles.setSamples}>
+        {SLOTS.map((slot) => (
+          <span
+            key={slot}
+            className={styles.setSample}
+            style={{ background: colourCss(set.colours[slot]) }}
+          />
+        ))}
+      </span>
     </Button>
   );
 }

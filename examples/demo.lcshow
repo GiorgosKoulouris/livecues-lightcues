@@ -1,5 +1,5 @@
 {
-  "version": 8,
+  "version": 12,
   "layers": [
     {
       "id": "looks",
@@ -32,7 +32,7 @@
           },
           "intensity": 0.4,
           "colour": {
-            "swatch": "Blue"
+            "slot": "Primary"
           }
         },
         {
@@ -43,7 +43,7 @@
           },
           "intensity": 0.3,
           "colour": {
-            "swatch": "Cyan"
+            "slot": "Secondary"
           }
         },
         {
@@ -63,7 +63,7 @@
           },
           "intensity": 0.3,
           "colour": {
-            "swatch": "Blue"
+            "slot": "Primary"
           },
           "direction": "Down"
         }
@@ -414,6 +414,48 @@
     }
   ],
   "baseLook": "base-look",
+  "colourSets": [
+    {
+      "id": "blue",
+      "name": "Blue",
+      "colours": {
+        "Primary": {
+          "swatch": "Blue"
+        },
+        "Secondary": {
+          "swatch": "Cyan"
+        },
+        "Accent": {
+          "swatch": "White"
+        }
+      },
+      "fade": 2,
+      "note": {
+        "channel": 1,
+        "note": 37
+      }
+    },
+    {
+      "id": "red",
+      "name": "Red",
+      "colours": {
+        "Primary": {
+          "swatch": "Red"
+        },
+        "Secondary": {
+          "swatch": "Amber"
+        },
+        "Accent": {
+          "swatch": "White"
+        }
+      },
+      "fade": 2,
+      "note": {
+        "channel": 1,
+        "note": 38
+      }
+    }
+  ],
   "hazePresets": [
     {
       "id": "light-haze",

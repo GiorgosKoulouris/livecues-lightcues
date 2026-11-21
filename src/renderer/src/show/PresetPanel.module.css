@@ -52,6 +52,13 @@
     auto;
 }
 
+/* Handle, name, three colours, fade, note, remove. */
+.colours {
+  grid-template-columns:
+    auto var(--name-width) minmax(320px, 2fr) var(--fade-width) minmax(0, 1fr)
+    auto;
+}
+
 .empty {
   padding: var(--space-4);
   color: var(--legend-dim);

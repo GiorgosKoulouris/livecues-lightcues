@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EngineCommand, EngineEvent } from '../../../shared/protocol';
 import type { ShowEdit } from '../../../shared/show-edit';
 import { applyShowEdit } from '../../../shared/show-edit';
-import type { Scene, Show } from '../../../shared/show';
+import type { ColourSet, Scene, Show } from '../../../shared/show';
 import { emptyPatch } from '../../../shared/venue-patch';
 import { installFakeEngine, type FakeEngine } from '../test-engine';
 import { stubListLayout } from '../test-layout';
@@ -82,6 +82,10 @@ function answer(command: EngineCommand): EngineEvent[] {
           blackout: false,
           freeze: false,
         },
+      ];
+    case 'getColourSet':
+      return [
+        { type: 'colourSet', held: show.colourSets?.[0] ? { id: show.colourSets[0].id } : {} },
       ];
     case 'listMidiInputs':
       return [{ type: 'midiInput', status: { state: 'none', ports: ['nanoKEY'] } }];
@@ -883,5 +887,113 @@ describe('Haze Presets', () => {
 
     expect(form.getByText(/note of Haze Preset Light/)).toBeInTheDocument();
     expect(form.getByRole('button', { name: 'Map' })).toBeDisabled();
+  });
+});
+
+describe('Colour Sets', () => {
+  const colourSets = () => within(screen.getByRole('list', { name: 'Colour Sets' }));
+  const WARM_SET: ColourSet = {
+    id: 'warm',
+    name: 'Warm',
+    colours: {
+      Primary: { swatch: 'Red' },
+      Secondary: { swatch: 'Amber' },
+      Accent: { swatch: 'White' },
+    },
+    fade: 2,
+  };
+
+  async function openTriggers() {
+    await renderView();
+    await userEvent.click(screen.getByRole('tab', { name: 'Triggers' }));
+  }
+
+  it('adds, renames and removes a Colour Set', async () => {
+    await openTriggers();
+    expect(screen.getByText(/No Colour Sets yet/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add Colour Set' }));
+    expect(edits()).toEqual([
+      {
+        type: 'putColourSet',
+        set: {
+          id: 'colour-set-1',
+          name: 'Colour Set 1',
+          colours: {
+            Primary: { swatch: 'Blue' },
+            Secondary: { swatch: 'Magenta' },
+            Accent: { swatch: 'White' },
+          },
+          fade: 2,
+        },
+      },
+    ]);
+
+    const name = await colourSets().findByLabelText('Name of Colour Set 1');
+    await userEvent.clear(name);
+    await userEvent.type(name, 'Verse{Enter}');
+    expect(edits().at(-1)).toMatchObject({ type: 'putColourSet', set: { name: 'Verse' } });
+
+    await userEvent.click(colourSets().getByRole('button', { name: 'Remove Colour Set Verse' }));
+    expect(edits().at(-1)).toEqual({ type: 'removeColourSet', id: 'colour-set-1' });
+    expect(await screen.findByText('Removed Verse')).toBeInTheDocument();
+    expect(screen.getByText(/No Colour Sets yet/)).toBeInTheDocument();
+  });
+
+  it('edits each slot colour, the fade and a note', async () => {
+    show = { ...SHOW, colourSets: [WARM_SET] };
+    await openTriggers();
+
+    await userEvent.selectOptions(colourSets().getByLabelText('Secondary of Warm'), 'Swatch');
+    expect(edits().at(-1)).toMatchObject({
+      set: { colours: { Primary: { swatch: 'Red' }, Secondary: { swatch: 'White' } } },
+    });
+
+    const fade = colourSets().getByLabelText('Fade of Warm (s)');
+    await userEvent.clear(fade);
+    await userEvent.type(fade, '4{Enter}');
+    expect(edits().at(-1)).toMatchObject({ set: { fade: 4 } });
+
+    // Note 60 on channel 1 is the Trigger's, so it takes the next free one.
+    await userEvent.click(colourSets().getByRole('button', { name: 'Add a note to Warm' }));
+    expect(edits().at(-1)).toMatchObject({ set: { note: { channel: 1, note: 61 } } });
+  });
+
+  it('reorders Colour Sets with the keyboard', async () => {
+    show = { ...SHOW, colourSets: [WARM_SET, { ...WARM_SET, id: 'cool', name: 'Cool' }] };
+    await openTriggers();
+
+    colourSets().getByRole('button', { name: 'Move Cool' }).focus();
+    await userEvent.keyboard(' ');
+    await userEvent.keyboard('{ArrowUp}');
+    await userEvent.keyboard(' ');
+    await act(async () => {});
+    expect(edits()).toEqual([{ type: 'moveColourSet', id: 'cool', to: 0 }]);
+  });
+
+  it('offers slots for a Rule colour and shows the held set colour for the slot', async () => {
+    show = { ...SHOW, colourSets: [WARM_SET] };
+    await renderView();
+    await userEvent.click(sceneList().getAllByRole('option')[0]!);
+    await userEvent.selectOptions(screen.getAllByLabelText('Colour')[0]!, 'Colour Set slot');
+    expect(rule()).toMatchObject({ colour: { slot: 'Primary' } });
+
+    await userEvent.selectOptions(screen.getByLabelText('Slot'), 'Secondary');
+    expect(rule()).toMatchObject({ colour: { slot: 'Secondary' } });
+    expect(await screen.findByRole('img', { name: 'Secondary now shows Amber' })).toBeVisible();
+  });
+
+  it('offers slots for the colours of a Step Effect', async () => {
+    show = { ...SHOW, colourSets: [WARM_SET] };
+    await renderView();
+    await userEvent.click(sceneList().getAllByRole('option')[0]!);
+    const switcher = within(screen.getAllByRole('group', { name: 'Colour or Colour Effect' })[0]!);
+    await userEvent.click(switcher.getByRole('button', { name: 'Colour Effect' }));
+    await userEvent.selectOptions(screen.getAllByLabelText('Colour Effect')[0]!, 'Step');
+
+    await userEvent.selectOptions(screen.getByLabelText('Colour 1'), 'Colour Set slot');
+    expect(rule()).toMatchObject({
+      colourEffect: { shape: 'Step', colours: [{ slot: 'Primary' }, expect.anything()] },
+    });
   });
 });

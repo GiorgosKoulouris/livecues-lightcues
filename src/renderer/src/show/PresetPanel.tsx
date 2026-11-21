@@ -11,6 +11,9 @@ import styles from './PresetPanel.module.css';
 import { freeId } from './scenes';
 import { useMidiLearn } from './useMidiInput';
 
+// The stylesheet class that lays out each kind of field cells.
+const ITEM_VARIANT = { 2: 'wide', colours: 'colours' } as const;
+
 // A Show's list of one kind of Preset, in order: each has a name, its own
 // fields, and an optional MIDI note, typed in or learned. House Presets and
 // Haze Presets share it.
@@ -38,8 +41,9 @@ export function PresetPanel<P extends { id: string; name: string; note?: MidiNot
   max: number;
   hint: ReactNode;
   emptyText: string;
-  // How many of its own fields `renderFields` gives, between name and note.
-  fieldColumns: 1 | 2;
+  // How many of its own fields `renderFields` gives, between name and note: one
+  // or two cells, or 'colours' for a wide cell and then one.
+  fieldColumns: 1 | 2 | 'colours';
   // A new Preset with this id and name.
   newPreset(id: string, name: string): P;
   renderFields(preset: P): ReactNode;
@@ -90,7 +94,11 @@ export function PresetPanel<P extends { id: string; name: string; note?: MidiNot
           getKey={(p) => p.id}
           itemLabel={(p) => p.name}
           onMove={(from, to) => onMove(presets[from]!.id, to)}
-          itemClassName={fieldColumns === 2 ? `${styles.item} ${styles.wide}` : styles.item}
+          itemClassName={
+            fieldColumns === 1
+              ? styles.item
+              : `${styles.item} ${styles[ITEM_VARIANT[fieldColumns]]}`
+          }
           renderItem={(preset, _, handle) => (
             <>
               {handle}

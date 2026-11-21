@@ -1,10 +1,11 @@
 import { useId, useState } from 'react';
-import type { HazeFired, HouseFired } from '../../../shared/protocol';
-import { showHazePresets, showHousePresets, type Show } from '../../../shared/show';
+import type { HazeFired, HeldColourSet, HouseFired } from '../../../shared/protocol';
+import { showColourSets, showHazePresets, showHousePresets, type Show } from '../../../shared/show';
 import { patchHazers, patchHouse, type VenuePatch } from '../../../shared/venue-patch';
 import {
   BaseLookButton,
   BlackoutButton,
+  ColourSetButton,
   FreezeButton,
   GrandMasterFader,
   HazeOffButton,
@@ -36,11 +37,12 @@ interface PerformViewProps {
   tempo: TempoState | undefined;
   house: HouseFired | undefined;
   haze: HazeFired | undefined;
+  colourSet: HeldColourSet | undefined;
 }
 
 // The gig view: Blackout, the Base Look, the Grand Master, Tap Tempo and Freeze along the top,
 // the House section while the Venue Patch has House Lights, the Haze section
-// while it has Hazers, every Scene as a button grouped by Layer, each Layer
+// while it has Hazers, the Colour Sets while the Show has any, every Scene as a button grouped by Layer, each Layer
 // with a small Clear, and the Preview with
 // Monitor/Blind. Nothing is edited here. It replaces the Fallback Panel in the
 // top bar, whose keys still work.
@@ -52,6 +54,7 @@ export function PerformView({
   tempo,
   house,
   haze,
+  colourSet,
 }: PerformViewProps) {
   // The Preview column, below 1280px where it is hidden by default.
   const [sideOpen, setSideOpen] = useState(false);
@@ -85,6 +88,7 @@ export function PerformView({
         <div className={styles.groups}>
           {patchHouse(patch).lights.length > 0 && <HouseSection show={show} fired={house} />}
           {patchHazers(patch).length > 0 && <HazeSection show={show} fired={haze} />}
+          {showColourSets(show).length > 0 && <ColourSetSection show={show} held={colourSet} />}
           {show.scenes.length === 0 ? (
             <p className={styles.empty}>No Scenes: add them in the Show view.</p>
           ) : (
@@ -169,6 +173,25 @@ function HazeSection({ show, fired }: { show: Show; fired: HazeFired | undefined
       {presets.length === 0 && (
         <p className={styles.empty}>No Haze Presets: add them in the Show view.</p>
       )}
+    </section>
+  );
+}
+
+// Each Colour Set, the one held pressed. Left out of the view when the Show has
+// none, so a Show without Colour Sets looks as it did.
+function ColourSetSection({ show, held }: { show: Show; held: HeldColourSet | undefined }) {
+  const headingId = useId();
+
+  return (
+    <section aria-labelledby={headingId} className={styles.layer}>
+      <h3 id={headingId} className={styles.heading}>
+        Colour Sets
+      </h3>
+      <div className={styles.scenes}>
+        {showColourSets(show).map((set) => (
+          <ColourSetButton key={set.id} set={set} held={held} className={styles.scene} />
+        ))}
+      </div>
     </section>
   );
 }

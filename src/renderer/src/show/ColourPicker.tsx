@@ -9,7 +9,9 @@ import {
   type Swatch,
 } from '../../../shared/show';
 import { Select } from '../ui/Select';
+import { colourCss, colourName } from './colourCss';
 import styles from './ColourPicker.module.css';
+import { useSlotColours } from './SlotColoursContext';
 
 type Kind = 'none' | 'swatch' | 'kelvin' | 'hue' | 'slot';
 
@@ -28,6 +30,7 @@ export function ColourPicker(props: ColourPickerProps) {
   const { label = 'Colour', unset = 'Not set', slots = false, colour } = props;
   // A picker without `slots` is given Colours and only ever sends Colours.
   const onChange = props.onChange as (colour: RuleColour | undefined) => void;
+  const held = useSlotColours();
   const kind: Kind =
     colour === undefined
       ? 'none'
@@ -59,12 +62,26 @@ export function ColourPicker(props: ColourPickerProps) {
         }}
       />
       {colour && isSlotRef(colour) && (
-        <Select<Slot>
-          label="Slot"
-          value={colour.slot}
-          options={SLOTS.map((slot) => ({ value: slot, label: slot }))}
-          onChange={(slot) => onChange({ slot })}
-        />
+        <>
+          <Select<Slot>
+            label="Slot"
+            value={colour.slot}
+            options={SLOTS.map((slot) => ({ value: slot, label: slot }))}
+            onChange={(slot) => onChange({ slot })}
+          />
+          {/* The held Colour Set's colour for the slot, as a sample. */}
+          <span
+            role="img"
+            aria-label={
+              held
+                ? `${colour.slot} now shows ${colourName(held[colour.slot])}`
+                : 'No Colour Set held'
+            }
+            data-testid="slot-sample"
+            className={styles.sample}
+            style={held ? { background: colourCss(held[colour.slot]) } : undefined}
+          />
+        </>
       )}
       {colour && 'swatch' in colour && (
         <Select<Swatch>

@@ -1,0 +1,26 @@
+.slots {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.slot {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.slot > :last-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.sample {
+  flex-shrink: 0;
+  width: var(--control-height);
+  height: var(--control-height);
+  /* A colour is data: its true colour, with a 1px Edge. */
+  border: 1px solid var(--edge);
+  border-radius: 0;
+}

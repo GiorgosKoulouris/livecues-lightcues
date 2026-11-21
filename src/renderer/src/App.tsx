@@ -16,6 +16,7 @@ import { useViewShortcuts } from './shell/useShortcuts';
 import type { View } from './shell/views';
 import { ShowView } from './show/ShowView';
 import { useMidiInput } from './show/useMidiInput';
+import { useColourSet } from './show/useColourSet';
 import { useHaze } from './show/useHaze';
 import { useHouse } from './show/useHouse';
 import { usePlayback } from './show/usePlayback';
@@ -40,6 +41,7 @@ export function App() {
   const playback = usePlayback();
   const house = useHouse();
   const haze = useHaze();
+  const colourSet = useColourSet();
   const midiInput = useMidiInput();
   const tempo = useTempo();
   const outputs = useOutputs();
@@ -104,6 +106,7 @@ export function App() {
               tempo={tempo}
               house={house}
               haze={haze}
+              colourSet={colourSet}
             />
           </div>
           <div hidden={view !== 'visualiser'}>

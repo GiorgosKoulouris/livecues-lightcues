@@ -9,6 +9,7 @@ The rig is a small band stage, 8 × 6 m:
 - 2 blinders on the downstage edge (Showtec LED Blinder 2 COB, 2-channel mode). Blinder SL has the Strobe Role.
 - 1 LED bar with 8 Cells on the floor upstage (Stairville LED Bar 240/8, 24-channel mode).
 - 1 Hazer on Universe 1 at 61 (a generic 2-channel haze and fan machine). The Show has one Haze Preset, Light haze (30%, 2 s fade), fired by note C2.
+- The Show has two Colour Sets, Blue (held at launch) and Red, fired by notes C#2 and D2. Intro: blue wash takes its colours from the held set's slots.
 
 Both Universes map to the Virtual Output, so nothing needs hardware. Open the channel monitor in the Venue Patch view to see the DMX values.
 
@@ -26,6 +27,8 @@ The Show has 8 Scenes on 3 Layers. Triggers listen on MIDI channel 1:
 | C4   | Warm white (Base Look)    | Go      |
 | D4   | Outro: slow fade to blue  | Go      |
 | C2   | Haze: Light haze          | Go      |
+| C#2  | Colour Set: Blue          | Go      |
+| D2   | Colour Set: Red           | Go      |
 
 C4 is MIDI note 60. Without MIDI, use the Scene buttons in Perform or on the Fallback Panel.
 

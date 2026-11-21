@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { HazeFired, HouseFired } from '../../../shared/protocol';
+import type { HazeFired, HeldColourSet, HouseFired } from '../../../shared/protocol';
 import type { Scene, Show } from '../../../shared/show';
 import { emptyPatch, type VenuePatch } from '../../../shared/venue-patch';
 import type { TempoState } from '../panel/useTempo';
@@ -67,7 +67,8 @@ function renderView(
     patch = emptyPatch({ width: 10, depth: 6 }),
     house,
     haze,
-  }: { patch?: VenuePatch; house?: HouseFired; haze?: HazeFired } = {},
+    colourSet,
+  }: { patch?: VenuePatch; house?: HouseFired; haze?: HazeFired; colourSet?: HeldColourSet } = {},
 ) {
   render(
     <UiProvider>
@@ -79,6 +80,7 @@ function renderView(
         tempo={TEMPO}
         house={house}
         haze={haze}
+        colourSet={colourSet}
       />
     </UiProvider>,
   );
@@ -284,6 +286,46 @@ describe('PerformView House', () => {
     renderView(HOUSE_SHOW);
 
     expect(screen.queryByRole('region', { name: 'House' })).toBeNull();
+  });
+});
+
+describe('PerformView Colour Sets', () => {
+  const colours = {
+    Primary: { swatch: 'Red' },
+    Secondary: { swatch: 'Amber' },
+    Accent: { swatch: 'White' },
+  } as const;
+  const SHOW_WITH_SETS: Show = {
+    ...SHOW,
+    colourSets: [
+      { id: 'warm', name: 'Warm set', colours, fade: 2 },
+      { id: 'cool', name: 'Cool set', colours, fade: 4 },
+    ],
+  };
+  const sets = () => screen.getByRole('region', { name: 'Colour Sets' });
+
+  it('shows each Colour Set with no key, the one held pressed', () => {
+    renderView(SHOW_WITH_SETS, PLAYBACK, true, { colourSet: { id: 'cool' } });
+
+    const buttons = within(sets()).getAllByRole('button');
+    expect(buttons.map((b) => b.textContent)).toEqual(['Warm set', 'Cool set']);
+    expect(buttons.map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'true']);
+  });
+
+  it('fires a Colour Set', async () => {
+    renderView(SHOW_WITH_SETS);
+
+    await userEvent.click(within(sets()).getByRole('button', { name: /Cool set/ }));
+
+    expect(engine.sent.filter((c) => c.type !== 'startPreview')).toEqual([
+      { type: 'fireColourSet', id: 'cool' },
+    ]);
+  });
+
+  it('leaves the section out when the Show has no Colour Sets', () => {
+    renderView(SHOW);
+
+    expect(screen.queryByRole('region', { name: 'Colour Sets' })).toBeNull();
   });
 });
 

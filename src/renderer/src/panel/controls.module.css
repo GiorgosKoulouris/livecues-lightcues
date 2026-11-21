@@ -154,3 +154,17 @@ button.freeze[aria-pressed='true']:hover:not(:disabled) {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* A Colour Set's three colours, as data: true colours with a 1px Edge. */
+.setSamples {
+  display: flex;
+  flex-shrink: 0;
+  gap: 2px;
+}
+
+.setSample {
+  width: var(--space-3);
+  height: var(--space-3);
+  border: 1px solid var(--edge);
+  border-radius: 0;
+}
