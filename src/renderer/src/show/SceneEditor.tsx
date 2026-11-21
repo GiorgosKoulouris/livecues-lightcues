@@ -121,6 +121,29 @@ export function SceneEditor({ scene, show, patch, bpm, onPut, onGo, onRemove }: 
             onPut(next);
           }}
         />
+        <NumberField
+          label={scene.fadeOutUnit === 'beats' ? 'Fade-out (beats)' : 'Fade-out (s)'}
+          value={scene.fadeOut ?? 0}
+          min={0}
+          integer={false}
+          step={FADE_STEP}
+          onCommit={(fadeOut) => {
+            // No fade-out snaps, so 0 is left out of the Scene.
+            const next: Scene = { ...scene, fadeOut };
+            if (fadeOut === 0) delete next.fadeOut;
+            onPut(next);
+          }}
+        />
+        <Select
+          label="Fade-out unit"
+          value={scene.fadeOutUnit ?? 'seconds'}
+          options={FADE_UNITS.map((unit) => ({ value: unit, label: FADE_UNIT_LABELS[unit] }))}
+          onChange={(unit) => {
+            const next: Scene = { ...scene, fadeOutUnit: unit };
+            if (unit === 'seconds') delete next.fadeOutUnit;
+            onPut(next);
+          }}
+        />
         <div className={styles.actions}>
           <Button variant="primary" icon={<Play />} onClick={onGo}>
             Go

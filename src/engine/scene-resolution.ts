@@ -66,6 +66,11 @@ export interface ActiveScene {
   fade?: number;
   from?: ActiveScene;
   shown?: Record<string, ShownAim>;
+  // Set when the Layer was released with a fade-out: from `since` (seconds) the
+  // Scene fades to what is under it over `fade` seconds. Its intensity and
+  // colour fade; its Effects, strobe, prism and gobo stop at once. `to` is what
+  // the Layer returns to, after a Flash.
+  releasing?: { since: number; fade: number; to?: ActiveScene };
 }
 
 // A moving Fixture's aim at activation: its pan and tilt, the Direction they
@@ -100,7 +105,7 @@ export function activate(
 ): ActiveScenes {
   const scene = findScene(show, sceneId);
   if (!scene) return active;
-  const from = active[scene.layer];
+  const from = settle(active[scene.layer], time);
   const entry: ActiveScene = {
     scene: sceneId,
     since: time,
@@ -108,7 +113,11 @@ export function activate(
     shown: shownAims(show, patch, active, time, grandMaster, beat, runs),
   };
   // A finished fade no longer needs what it faded from.
-  if (from) entry.from = fading(show, from, time) ? from : { scene: from.scene, since: from.since };
+  // A release still fading out is what the new Scene fades in from.
+  if (from) {
+    entry.from =
+      from.releasing || fading(show, from, time) ? from : { scene: from.scene, since: from.since };
+  }
   return { ...active, [scene.layer]: entry };
 }
 
@@ -147,6 +156,54 @@ export function clearLayer(active: ActiveScenes, layerId: string): ActiveScenes 
   return Object.fromEntries(Object.entries(active).filter(([id]) => id !== layerId));
 }
 
+// Releases a Layer at `time`. A Scene with a fade-out fades to what is under
+// it over that time, at `bpm` for beats, to `to` (what a Flash covered) if
+// given; one without snaps, as `clearLayer` does, and `to` is put back.
+export function releaseLayer(
+  active: ActiveScenes,
+  show: Show,
+  layerId: string,
+  time: number,
+  bpm = DEFAULT_BPM,
+  to?: ActiveScene,
+): ActiveScenes {
+  const entry = settle(active[layerId], time);
+  const fade = fadeOutSeconds(findScene(show, entry?.scene ?? ''), bpm);
+  if (!entry || fade <= 0) {
+    const cleared = clearLayer(active, layerId);
+    return to ? { ...cleared, [layerId]: to } : cleared;
+  }
+  // A release already fading out runs on.
+  if (entry.releasing) return { ...active, [layerId]: entry };
+  const releasing = { since: time, fade, ...(to ? { to } : {}) };
+  return { ...active, [layerId]: { ...entry, releasing } };
+}
+
+// The Layers with each finished release replaced by what it returned to.
+export function settleAll(active: ActiveScenes, time: number): ActiveScenes {
+  const settled: ActiveScenes = {};
+  for (const [id, entry] of Object.entries(active)) {
+    const kept = settle(entry, time);
+    if (kept) settled[id] = kept;
+  }
+  return settled;
+}
+
+// An entry as it is at `time`: what a finished release returned to, or nothing.
+function settle(entry: ActiveScene | undefined, time: number): ActiveScene | undefined {
+  const { releasing } = entry ?? {};
+  if (!releasing || time < releasing.since + releasing.fade) return entry;
+  return releasing.to;
+}
+
+// How far into its release a releasing entry is, 0-1.
+function releaseProgress(
+  { since, fade }: NonNullable<ActiveScene['releasing']>,
+  time: number,
+): number {
+  return clamp((time - since) / fade);
+}
+
 // Whether a Layer is still crossfading at `time`.
 function fading(show: Show, active: ActiveScene, time: number): boolean {
   return active.from !== undefined && progress(show, active, time) < 1;
@@ -156,6 +213,12 @@ function fading(show: Show, active: ActiveScene, time: number): boolean {
 function fadeSeconds(scene: Scene | undefined, bpm: number): number {
   if (!scene) return 0;
   return scene.fadeUnit === 'beats' ? (scene.fadeIn * 60) / bpm : scene.fadeIn;
+}
+
+// A Scene's fade-out in seconds, its beats taken at `bpm`; 0 when it has none.
+function fadeOutSeconds(scene: Scene | undefined, bpm: number): number {
+  if (!scene?.fadeOut) return 0;
+  return scene.fadeOutUnit === 'beats' ? (scene.fadeOut * 60) / bpm : scene.fadeOut;
 }
 
 // How far into its fade-in an active Scene is, 0–1.
@@ -275,24 +338,23 @@ function fixtureOutput(
   bpm: number,
   runs: EffectRuns,
 ): { channels: Channel[]; output: FixtureOutput } {
-  let intensity = 0;
-  let colour: ColourLevels | undefined;
-  let effectColour: EffectColour | undefined;
-  let direction: Direction | undefined;
-  let turn: Turn | undefined;
-  let scale: number | undefined;
-  let snap: SnapSettings = {};
-  const entries = byChange(show, active);
+  let state: Combined = { intensity: 0, snap: {} };
+  const entries = byChange(show, active, time);
   for (const entry of entries) {
     const look = layerLook(show, patch, fixture, entry, time, beat, runs);
-    intensity = Math.max(intensity, look.intensity ?? 0);
-    effectColour = combinedEffectColour(effectColour, look, colour ?? defaultColour(show));
-    colour = look.colour ?? colour;
-    direction = look.direction ?? direction;
-    turn = combinedTurn(turn, look);
-    scale = combinedScale(scale, look);
-    if (look.snap) snap = mergeSnap(snap, look.snap);
+    const { releasing } = entry;
+    if (!releasing) {
+      state = combineLook(show, state, look);
+      continue;
+    }
+    // Fading out: intensity and colour fade to what is under, Effects and
+    // strobe stop at once.
+    const to = releasing.to && layerLook(show, patch, fixture, releasing.to, time, beat, runs);
+    const under = to ? combineLook(show, state, to) : state;
+    const over = combineLook(show, state, stoppedLook(look));
+    state = mixCombined(show, over, under, releaseProgress(releasing, time));
   }
+  const { intensity, colour, effectColour, direction, turn, scale, snap } = state;
   const shown =
     effectColour === undefined || effectColour === NO_EFFECT
       ? (colour ?? defaultColour(show))
@@ -314,6 +376,78 @@ function fixtureOutput(
     output.aim = fixtureAim(show, patch, fixture, channels, output.direction, entries, time, turn);
   }
   return { channels, output };
+}
+
+// What the Layers combined so far set on a Fixture.
+interface Combined {
+  intensity: number;
+  colour?: ColourLevels;
+  effectColour?: EffectColour;
+  direction?: Direction;
+  turn?: Turn;
+  scale?: number;
+  snap: SnapSettings;
+}
+
+// `state` with a Layer's `look` combined over it.
+function combineLook(show: Show, state: Combined, look: Look): Combined {
+  const next: Combined = {
+    intensity: Math.max(state.intensity, look.intensity ?? 0),
+    snap: look.snap ? mergeSnap(state.snap, look.snap) : state.snap,
+  };
+  const effectColour = combinedEffectColour(
+    state.effectColour,
+    look,
+    state.colour ?? defaultColour(show),
+  );
+  if (effectColour !== undefined) next.effectColour = effectColour;
+  const colour = look.colour ?? state.colour;
+  if (colour) next.colour = colour;
+  const direction = look.direction ?? state.direction;
+  if (direction) next.direction = direction;
+  const turn = combinedTurn(state.turn, look);
+  if (turn) next.turn = turn;
+  const scale = combinedScale(state.scale, look);
+  if (scale !== undefined) next.scale = scale;
+  return next;
+}
+
+// What a fading-out Layer keeps of its look: intensity, colour and Direction.
+// Its Effects, strobe, prism and gobo have stopped.
+function stoppedLook({ intensity, colour, direction }: Look): Look {
+  return {
+    ...(intensity !== undefined && { intensity }),
+    ...(colour && { colour, effectColour: NO_EFFECT }),
+    ...(direction && { direction }),
+  };
+}
+
+// `over`, a fading-out Layer combined over the Layers below, `p` (0-1) of the
+// way to `under`, what it returns to. Effects and the Direction are `under`'s.
+function mixCombined(show: Show, over: Combined, under: Combined, p: number): Combined {
+  const fallback = defaultColour(show);
+  const shown = (c: Combined): ColourLevels => {
+    const effect = c.effectColour;
+    return effect && effect !== NO_EFFECT ? effect : (c.colour ?? fallback);
+  };
+  const mixed: Combined = {
+    intensity: lerp(over.intensity, under.intensity, p),
+    snap: under.snap,
+  };
+  // With no colour below, the colour is held as the intensity fades.
+  const colour = over.colour && under.colour ? blend(over.colour, under.colour, p) : under.colour;
+  if (colour ?? over.colour) mixed.colour = colour ?? over.colour;
+  const effects = [over, under].some((c) => c.effectColour && c.effectColour !== NO_EFFECT);
+  if (effects) mixed.effectColour = blend(shown(over), shown(under), p);
+  else if (under.effectColour !== undefined) mixed.effectColour = under.effectColour;
+  const direction = under.direction ?? over.direction;
+  if (direction) mixed.direction = direction;
+  if (over.turn || under.turn) {
+    const [a, b] = [over.turn ?? STILL, under.turn ?? STILL];
+    mixed.turn = { pan: lerp(a.pan, b.pan, p), tilt: lerp(a.tilt, b.tilt, p) };
+  }
+  if (under.scale !== undefined) mixed.scale = under.scale;
+  return mixed;
 }
 
 // A Fixture set to `intensity` and `colour`, on the channels of its mode.
@@ -474,8 +608,10 @@ function shownColour(channels: Channel[], { colour, emitters }: FixtureOutput): 
 
 // The active Scenes, the one changed least recently first, so later ones
 // take precedence. Layers changed at the same time go in Layer order.
-function byChange(show: Show, active: ActiveScenes): ActiveScene[] {
-  return show.layers.flatMap((layer) => active[layer.id] ?? []).sort((a, b) => a.since - b.since);
+function byChange(show: Show, active: ActiveScenes, time: number): ActiveScene[] {
+  return show.layers
+    .flatMap((layer) => settle(active[layer.id], time) ?? [])
+    .sort((a, b) => a.since - b.since);
 }
 
 // The colour Fixtures show where no Rule sets one.
@@ -604,7 +740,7 @@ function layerLook(
   const target = scene ? sceneLook(patch, fixture, scene, beat, runs) : {};
   const p = progress(show, active, time);
   if (p === 1) return target;
-  const before = from ? layerLook(show, patch, fixture, from, since, beat, runs) : {};
+  const before = from ? fromLook(show, patch, fixture, from, since, beat, runs) : {};
   const look: Look = {};
   if (before.intensity !== undefined || target.intensity !== undefined) {
     look.intensity = lerp(before.intensity ?? 0, target.intensity ?? 0, p);
@@ -635,6 +771,34 @@ function layerLook(
       : effectColourFade;
   }
   return look;
+}
+
+// What the Layer showed at `time`, when a Scene took over: `from`, a release
+// still fading out included, which fades to what it returns to, or to nothing.
+function fromLook(
+  show: Show,
+  patch: VenuePatch,
+  fixture: PatchedFixture,
+  from: ActiveScene,
+  time: number,
+  beat: number,
+  runs: EffectRuns,
+): Look {
+  const look = layerLook(show, patch, fixture, from, time, beat, runs);
+  const { releasing } = from;
+  if (!releasing) return look;
+  const p = releaseProgress(releasing, time);
+  const to = releasing.to && layerLook(show, patch, fixture, releasing.to, time, beat, runs);
+  const out = stoppedLook(look);
+  const colour =
+    out.colour && to?.colour ? blend(out.colour, to.colour, p) : (to?.colour ?? out.colour);
+  return {
+    ...out,
+    ...(out.intensity !== undefined || to?.intensity !== undefined
+      ? { intensity: lerp(out.intensity ?? 0, to?.intensity ?? 0, p) }
+      : {}),
+    ...(colour && { colour }),
+  };
 }
 
 // What a Scene sets on a Fixture, its Effects at `beat` and its movement

@@ -56,6 +56,25 @@ describe('editing a Show', () => {
     ).toEqual({ errors: ['Scene "Verse": fade unit "bars" is not seconds or beats'] });
   });
 
+  it('sets a Scene fade-out, and refuses a bad one', () => {
+    const before = applied(emptyShow(), {
+      type: 'putScene',
+      scene: scene({ layer: 'layer-1' }),
+    });
+    const after = applied(before, {
+      type: 'putScene',
+      scene: scene({ layer: 'layer-1', fadeOut: 2, fadeOutUnit: 'beats' }),
+    });
+
+    expect(after.scenes[0]).toMatchObject({ fadeOut: 2, fadeOutUnit: 'beats' });
+    expect(
+      applyShowEdit(before, {
+        type: 'putScene',
+        scene: scene({ name: 'Verse', layer: 'layer-1', fadeOut: -1 }),
+      }),
+    ).toEqual({ errors: ['Scene "Verse": fade-out must be 0 seconds or more'] });
+  });
+
   it('refuses a Scene that makes the Show invalid', () => {
     expect(
       applyShowEdit(emptyShow(), {

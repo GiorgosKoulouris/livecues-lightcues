@@ -235,6 +235,10 @@ export interface Scene {
   // starts.
   fadeIn: number;
   fadeUnit?: FadeUnit;
+  // How long the Scene takes to fade to what is under it when its Layer is
+  // released or its Flash ends, in `fadeOutUnit`. Absent: it snaps.
+  fadeOut?: number;
+  fadeOutUnit?: FadeUnit;
   // Later Rules override earlier ones.
   rules: Rule[];
 }
@@ -408,7 +412,10 @@ export function validateShow(show: Show): string[] {
 }
 
 // Problems with a Scene, each starting with ': ' or ' Rule <n>: '.
-function sceneProblems(show: Show, { layer, fadeIn, fadeUnit, tags, rules }: Scene): string[] {
+function sceneProblems(
+  show: Show,
+  { layer, fadeIn, fadeUnit, fadeOut, fadeOutUnit, tags, rules }: Scene,
+): string[] {
   const problems: string[] = [];
   if (!show.layers.some((l) => l.id === layer)) {
     problems.push(`: Layer "${layer}" is not in the Show`);
@@ -418,6 +425,12 @@ function sceneProblems(show: Show, { layer, fadeIn, fadeUnit, tags, rules }: Sce
   }
   if (!Number.isFinite(fadeIn) || fadeIn < 0) {
     problems.push(`: fade-in must be 0 ${fadeUnit === 'beats' ? 'beats' : 'seconds'} or more`);
+  }
+  if (fadeOutUnit !== undefined && !FADE_UNITS.includes(fadeOutUnit)) {
+    problems.push(`: fade-out unit "${fadeOutUnit}" is not seconds or beats`);
+  }
+  if (fadeOut !== undefined && (!Number.isFinite(fadeOut) || fadeOut < 0)) {
+    problems.push(`: fade-out must be 0 ${fadeOutUnit === 'beats' ? 'beats' : 'seconds'} or more`);
   }
   for (const tag of tags) {
     if (tag === '') problems.push(': tag "" is empty');

@@ -23,11 +23,12 @@ import type { VenuePatch } from '../shared/venue-patch';
 import {
   activate,
   clamp,
-  clearLayer,
   focusCheckFrames,
   focusCheckLights,
   resolveFrames,
+  releaseLayer,
   resolveLights,
+  settleAll,
   type ActiveScene,
   type ActiveScenes,
   type EffectRuns,
@@ -122,7 +123,7 @@ export function createPlayback({ emit, now, beat, bpm, show, patch }: PlaybackOp
   function emitPlayback(): void {
     refresh();
     const scenes: ActiveByLayer = Object.fromEntries(
-      Object.entries(active).map(([id, a]) => [id, a.scene]),
+      Object.entries(live()).map(([id, a]) => [id, a.scene]),
     );
     emit({
       type: 'playback',
@@ -207,10 +208,24 @@ export function createPlayback({ emit, now, beat, bpm, show, patch }: PlaybackOp
   // The Scenes the Layers show, and those they still fade from.
   function shownScenes(): Set<string> {
     const ids = new Set<string>();
-    for (const entry of Object.values(active)) {
-      for (let e: ActiveScene | undefined = entry; e; e = e.from) ids.add(e.scene);
-    }
+    const add = (entry: ActiveScene | undefined): void => {
+      for (let e = entry; e; e = e.from) {
+        ids.add(e.scene);
+        add(e.releasing?.to);
+      }
+    };
+    for (const entry of Object.values(active)) add(entry);
     return ids;
+  }
+
+  // The Layers that are not fading out after a release.
+  function live(): ActiveScenes {
+    return Object.fromEntries(Object.entries(active).filter(([, a]) => !a.releasing));
+  }
+
+  // Releases a Layer, over its Scene's fade-out, back to `to` if given.
+  function release(layer: string, to?: ActiveScene): void {
+    active = releaseLayer(active, show(), layer, seconds(), bpm(), to);
   }
 
   // The Grand Master as resolved, Blackout included.
@@ -257,7 +272,7 @@ export function createPlayback({ emit, now, beat, bpm, show, patch }: PlaybackOp
         }
         case 'clearLayer':
           flashes.delete(command.layerId);
-          active = clearLayer(active, command.layerId);
+          release(command.layerId);
           break;
         case 'goBaseLook': {
           const { baseLook } = show();
@@ -297,7 +312,7 @@ export function createPlayback({ emit, now, beat, bpm, show, patch }: PlaybackOp
     // The live look for an engine restart, without the Tempo. A held Flash
     // counts as its Scene.
     snapshot(): LiveLook {
-      const order = Object.entries(active).sort(([, a], [, b]) => a.since - b.since);
+      const order = Object.entries(live()).sort(([, a], [, b]) => a.since - b.since);
       return {
         active: order.map(([layer, { scene }]) => ({ layer, scene })),
         mode,
@@ -333,7 +348,7 @@ export function createPlayback({ emit, now, beat, bpm, show, patch }: PlaybackOp
       if (layer === undefined) return;
       const previous = flashes.get(layer)?.previous ?? active[layer];
       flashes.delete(layer);
-      if (mode === 'release') active = clearLayer(active, layer);
+      if (mode === 'release') release(layer);
       else active = go(active, scene);
       if (mode === 'flash') {
         flashes.set(layer, { scene, held: { channel, note }, ...(previous ? { previous } : {}) });
@@ -347,8 +362,7 @@ export function createPlayback({ emit, now, beat, bpm, show, patch }: PlaybackOp
       if (!entry) return;
       const [layer, { previous }] = entry;
       flashes.delete(layer);
-      active = clearLayer(active, layer);
-      if (previous) active = { ...active, [layer]: previous };
+      release(layer, previous);
       emitPlayback();
     },
     // Stops active Scenes that are no longer in the Show or not in their
@@ -380,6 +394,7 @@ export function createPlayback({ emit, now, beat, bpm, show, patch }: PlaybackOp
     },
     // The frames to send now, one per Universe. Resolved once per call.
     frames(): Map<number, Uint8Array> {
+      active = settleAll(active, seconds());
       if (refresh()) emitPlayback();
       if (mode === 'monitor') {
         sent = resolveFrames(

@@ -139,8 +139,8 @@ describe('.lcshow file', () => {
   it('rejects a file of an unknown version', () => {
     const saved = JSON.parse(saveShowFile(show));
 
-    expect(() => loadShowFile(JSON.stringify({ ...saved, version: 11 }))).toThrow(
-      'Unsupported Show version: 11',
+    expect(() => loadShowFile(JSON.stringify({ ...saved, version: 12 }))).toThrow(
+      'Unsupported Show version: 12',
     );
     expect(() => loadShowFile(JSON.stringify({ ...show }))).toThrow(
       'Unsupported Show version: undefined',
@@ -252,6 +252,22 @@ describe('.lcshow file', () => {
     expect(loadShowFile(JSON.stringify({ version: 8, ...show }))).toEqual(show);
     expect(() => loadShowFile(JSON.stringify({ version: 8, ...beats }))).toThrow(
       'unknown field "scenes[0].fadeUnit"',
+    );
+  });
+
+  it('saves version 11 with a Scene fade-out, and loads older files with none', () => {
+    const [first, ...others] = show.scenes;
+    const faded: Show = {
+      ...show,
+      scenes: [{ ...first!, fadeOut: 2, fadeOutUnit: 'beats' }, ...others],
+    };
+    const saved = saveShowFile(faded);
+
+    expect(JSON.parse(saved).version).toBe(11);
+    expect(loadShowFile(saved)).toEqual(faded);
+    expect(JSON.parse(saveShowFile(show)).version).toBe(8);
+    expect(() => loadShowFile(JSON.stringify({ version: 9, ...faded }))).toThrow(
+      'unknown field "scenes[0].fadeOut"',
     );
   });
 

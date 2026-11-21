@@ -15,9 +15,11 @@ import { validateShow, type Colour, type Rule, type Show } from '../shared/show'
 // Scene sets one, and older files load as seconds. Version 10 added the kelvin
 // Colour: a Show saves as version 10 only when it uses one, and an older file
 // that has one is rejected as an unknown field.
+// Version 11 added a Scene's `fadeOut` and `fadeOutUnit`: a Show saves as
+// version 11 only when a Scene sets a fade-out, and older files load with none.
 
-const VERSION = 10;
-const VERSIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, VERSION];
+const VERSION = 11;
+const VERSIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, VERSION];
 
 interface ShowFile extends Show {
   version: number;
@@ -28,7 +30,10 @@ export function saveShowFile(show: Show): string {
   throwIfInvalid(validateShow(show));
   const usesFadeUnit = show.scenes.some((scene) => scene.fadeUnit !== undefined);
   const usesKelvin = JSON.stringify(show).includes('"kelvin":');
-  const version = usesKelvin ? 10 : usesFadeUnit ? 9 : 8;
+  const usesFadeOut = show.scenes.some(
+    (scene) => scene.fadeOut !== undefined || scene.fadeOutUnit !== undefined,
+  );
+  const version = usesFadeOut ? 11 : usesKelvin ? 10 : usesFadeUnit ? 9 : 8;
   const file: ShowFile = { version, ...show };
   return JSON.stringify(file);
 }
@@ -128,6 +133,7 @@ function unknownFields(file: ShowFile): string[] {
     [], // 8: none; it dropped panelScenes.
     [], // 9: none at the top level; a Scene's fadeUnit is allowed below.
     [], // 10: none at the top level; kelvin Colours are allowed below.
+    [], // 11: none at the top level; a Scene's fadeOut and fadeOutUnit are allowed below.
   ];
   const top = added.slice(0, file.version).flat();
   // Versions 1–7 may carry the retired panelScenes, which is dropped on load.
@@ -152,7 +158,9 @@ function unknownFields(file: ShowFile): string[] {
   file.layers.forEach((layer, i) => allow(layer, ['id', 'name'], `layers[${i}].`));
   file.scenes.forEach((scene, i) => {
     const fadeUnit = file.version >= 9 ? ['fadeUnit'] : [];
-    allow(scene, ['id', 'name', 'tags', 'layer', 'fadeIn', ...fadeUnit, 'rules'], `scenes[${i}].`);
+    const fadeOut = file.version >= 11 ? ['fadeOut', 'fadeOutUnit'] : [];
+    const fields = ['id', 'name', 'tags', 'layer', 'fadeIn', ...fadeUnit, ...fadeOut, 'rules'];
+    allow(scene, fields, `scenes[${i}].`);
     scene.rules.forEach(({ target, colour, ...rest }, j) => {
       const at = `scenes[${i}].rules[${j}].`;
       allow(rest, ruleFields, at);

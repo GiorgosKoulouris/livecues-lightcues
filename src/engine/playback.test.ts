@@ -115,6 +115,7 @@ const show: Show = {
       direction: 'Cross',
       movementEffect: fast({ spread: 'Left→Right' }),
     }),
+    { ...scene('fading', { intensity: 1 }), fadeOut: 2, fadeOutUnit: 'beats' },
     scene('strobe', { intensity: 1, strobe: 0.25 }),
     scene('prism', { intensity: 1, prism: 'Rotate fast' }),
     scene('ramp', {
@@ -196,6 +197,43 @@ describe('playback', () => {
     p.noteOff(flash);
 
     expect(aim()).toEqual(before);
+  });
+
+  it('fades a released Layer out over its fade-out in beats', () => {
+    const { p, at, intensity } = playback();
+    p.handle({ type: 'goScene', sceneId: 'fading' });
+    at(10);
+    p.handle({ type: 'clearLayer', layerId: 'l1' });
+
+    // 2 beats at 120 BPM: 1 s.
+    at(10.5);
+    expect(intensity()).toBeCloseTo(0.5);
+    at(11);
+    expect(intensity()).toBe(0);
+    expect(p.snapshot().active).toEqual([]);
+  });
+
+  it('reports a released Layer as clear while it fades', () => {
+    const { p, at } = playback();
+    p.handle({ type: 'goScene', sceneId: 'fading' });
+    at(10);
+    p.handle({ type: 'clearLayer', layerId: 'l1' });
+
+    expect(p.snapshot().active).toEqual([]);
+  });
+
+  it('fades a Flash out to what its Layer held before', () => {
+    const { p, at, intensity } = playback();
+    const flash = { channel: 1, note: 36 };
+    p.handle({ type: 'goScene', sceneId: 'cross' });
+    at(10);
+    p.fire({ ...flash, scene: 'fading', mode: 'flash' });
+    p.noteOff(flash);
+    at(10.5);
+
+    expect(intensity()).toBe(1);
+    p.handle({ type: 'goScene', sceneId: 'cross' });
+    expect(p.snapshot().active).toEqual([{ layer: 'l1', scene: 'cross' }]);
   });
 
   it('runs movement Effects to the Tempo, in the Outputs and the preview', () => {

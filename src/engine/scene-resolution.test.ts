@@ -21,8 +21,10 @@ import type { PatchedFixture, VenuePatch } from '../shared/venue-patch';
 import {
   activate,
   clearLayer,
+  releaseLayer,
   resolveFrames,
   resolveLights,
+  settleAll,
   type ActiveScenes,
 } from './scene-resolution';
 
@@ -419,6 +421,79 @@ describe('resolveFrames', () => {
 
         expect(slower[0]).toBe(128);
         expect(faster[0]).toBe(128);
+      });
+    });
+
+    describe('fade-out', () => {
+      const out = show(
+        scene('low', [{ target: {}, intensity: 0.5, colour: { swatch: 'Red' } }]),
+        scene('flash', [{ target: {}, intensity: 1, colour: { swatch: 'Blue' } }], {
+          layer: 'l2',
+          fadeOut: 2,
+          fadeOutUnit: 'beats',
+        }),
+        scene('main', [{ target: {}, intensity: 1, colour: { swatch: 'Blue' } }], {
+          fadeOut: 2,
+          fadeOutUnit: 'beats',
+        }),
+        scene('snap', [{ target: {}, intensity: 1, colour: { swatch: 'Blue' } }]),
+        scene('takeover', [{ target: {}, intensity: 1, colour: { swatch: 'Red' } }], { fadeIn: 1 }),
+        scene('pulse', [{ target: {}, intensity: 1, strobe: 'Fast' }], { fadeOut: 2 }),
+      );
+      const rig = patch([fixture({ profileId: rgb.id })], [rgb]);
+      const at = (active: ActiveScenes, time: number) =>
+        channels(resolveFrames(out, rig, active, time), 4);
+      const go = (active: ActiveScenes, id: string, time: number) =>
+        activate(active, out, rig, id, time);
+
+      it('crossfades to the lower Layers over 2 beats', () => {
+        const base = go({}, 'low', 0);
+        const active = releaseLayer(go(base, 'flash', 10), out, 'l2', 20, 120);
+
+        expect(at(active, 20)).toEqual([255, 0, 0, 255]);
+        expect(at(active, 20.5)).toEqual([191, 128, 0, 128]);
+        expect(at(active, 21)).toEqual([128, 255, 0, 0]);
+        expect(at(active, 22)).toEqual([128, 255, 0, 0]);
+      });
+
+      it('fades a lone Layer to dark over its beats at the Tempo', () => {
+        const active = releaseLayer(go({}, 'main', 10), out, 'l1', 20, 60);
+
+        expect(at(active, 21)).toEqual([128, 0, 0, 255]);
+        expect(at(active, 22)[0]).toBe(0);
+        expect(settleAll(active, 22)).toEqual({});
+      });
+
+      it('snaps with no fade-out', () => {
+        const active = releaseLayer(go({}, 'snap', 10), out, 'l1', 20);
+
+        expect(active).toEqual({});
+      });
+
+      it('goes back to what the Layer held, for a Flash', () => {
+        const before = go({}, 'low', 0);
+        const flashed = go(before, 'main', 10);
+        const active = releaseLayer(flashed, out, 'l1', 20, 120, before.l1);
+
+        expect(at(active, 20.5)).toEqual([191, 128, 0, 128]);
+        expect(at(active, 21)).toEqual(at(before, 21));
+        expect(settleAll(active, 21).l1).toEqual(before.l1);
+      });
+
+      it('stops strobe at release', () => {
+        const active = releaseLayer(go({}, 'pulse', 10), out, 'l1', 20, 120);
+        const frames = resolveLights(out, rig, active, 21);
+
+        expect(frames.f1!.strobe).toBeUndefined();
+        expect(frames.f1!.intensity).toBeCloseTo(0.5);
+      });
+
+      it('lets a Go take over from the current output without a jump', () => {
+        const active = releaseLayer(go({}, 'main', 10), out, 'l1', 20, 120);
+        const taken = go(active, 'takeover', 20.5);
+
+        expect(at(taken, 20.5)).toEqual(at(active, 20.5));
+        expect(at(taken, 21.5)).toEqual([255, 255, 0, 0]);
       });
     });
 
