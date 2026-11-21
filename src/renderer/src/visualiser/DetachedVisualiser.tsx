@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { DETACHED_VISUALISER_TITLE } from '../../../shared/protocol';
 import { useVenuePatch } from '../venue/useVenuePatch';
-import { acceptHandover } from './handover';
+import { takeHandover } from './handover';
 import { VisualiserView } from './VisualiserView';
 import styles from './VisualiserView.module.css';
 
@@ -15,11 +15,7 @@ export function DetachedVisualiser() {
   const [ready, setReady] = useState(false);
   useEffect(() => {
     let live = true;
-    void window.visualiserWindow.getState().then((state) => {
-      if (!live) return;
-      acceptHandover(state);
-      setReady(true);
-    });
+    void takeHandover(() => !live).then((taken) => taken && setReady(true));
     return () => {
       live = false;
     };

@@ -21,3 +21,14 @@ export function acceptHandover(handover: VisualiserHandover | undefined): void {
   if (handover.camera) rememberCamera(handover.camera.pose, handover.camera.stage);
   haze = handover.haze;
 }
+
+// Asks main for the other window's camera and override, then accepts them
+// unless `stale()` says the answer came too late. A read that fails hands
+// nothing over: the Visualiser carries on with defaults. Resolves to whether
+// the answer is still wanted.
+export async function takeHandover(stale: () => boolean): Promise<boolean> {
+  const state = await window.visualiserWindow.getState().catch(() => undefined);
+  if (stale()) return false;
+  acceptHandover(state);
+  return true;
+}

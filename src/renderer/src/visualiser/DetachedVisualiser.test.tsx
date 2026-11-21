@@ -109,6 +109,18 @@ describe('DetachedVisualiser', () => {
     expect(await screen.findByText('Off')).toBeInTheDocument();
   });
 
+  it('still shows the Visualiser, on defaults, when the hand-over cannot be read', async () => {
+    const handover = windowBridge.deferNext('getState');
+    render(
+      <UiProvider>
+        <DetachedVisualiser />
+      </UiProvider>,
+    );
+    open();
+    await handover.reject(new Error('main is gone'));
+    expect(await screen.findByRole('button', { name: 'FOH' })).toBeInTheDocument();
+  });
+
   it('sends main its camera and haze override as they change, for a close with the X', async () => {
     render(
       <UiProvider>

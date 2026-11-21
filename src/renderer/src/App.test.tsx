@@ -621,6 +621,49 @@ describe('Detached Visualiser', () => {
     expect(await screen.findByRole('button', { name: 'Reattach' })).toBeInTheDocument();
   });
 
+  it('keeps the placeholder when the first isDetached answer comes after a newer detach event', async () => {
+    const first = visualiserWindow.deferNext('isDetached');
+    await renderApp();
+    visualiserWindow.set(true);
+    await first.resolve(false);
+    await userEvent.keyboard('{Control>}5{/Control}');
+    expect(await screen.findByRole('button', { name: 'Reattach' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'FOH' })).not.toBeInTheDocument();
+  });
+
+  it('keeps the placeholder when a reattach hand-over arrives after a newer detach', async () => {
+    await renderApp();
+    await userEvent.keyboard('{Control>}5{/Control}');
+    await userEvent.click(await screen.findByRole('button', { name: 'Detach' }));
+    await screen.findByRole('button', { name: 'Reattach' });
+    const handover = visualiserWindow.deferNext('getState');
+    visualiserWindow.set(false);
+    visualiserWindow.set(true);
+    await handover.resolve(undefined);
+    expect(screen.getByRole('button', { name: 'Reattach' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'FOH' })).not.toBeInTheDocument();
+  });
+
+  it('brings the View back on reattach when the hand-over cannot be read', async () => {
+    await renderApp();
+    await userEvent.keyboard('{Control>}5{/Control}');
+    await userEvent.click(await screen.findByRole('button', { name: 'Detach' }));
+    await screen.findByRole('button', { name: 'Reattach' });
+    const handover = visualiserWindow.deferNext('getState');
+    visualiserWindow.set(false);
+    await handover.reject(new Error('main is gone'));
+    expect(await screen.findByRole('button', { name: 'FOH' })).toBeInTheDocument();
+  });
+
+  it('treats a failed isDetached as attached', async () => {
+    const first = visualiserWindow.deferNext('isDetached');
+    await renderApp();
+    await first.reject(new Error('main is gone'));
+    await userEvent.keyboard('{Control>}5{/Control}');
+    expect(await screen.findByRole('button', { name: 'FOH' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reattach' })).not.toBeInTheDocument();
+  });
+
   it('does not change the view when it detaches, so Perform stays', async () => {
     await renderApp();
     await userEvent.keyboard('{Control>}4{/Control}');
