@@ -223,6 +223,13 @@ export function createPlayback({ emit, now, beat, bpm, show, patch }: PlaybackOp
     return Object.fromEntries(Object.entries(active).filter(([, a]) => !a.releasing));
   }
 
+  // What a Layer holds now, for a Flash to put back. A Layer fading out holds
+  // what it returns to, not the release.
+  function layerHolds(layer: string): ActiveScene | undefined {
+    const entry = settleAll(active, seconds())[layer];
+    return entry?.releasing ? entry.releasing.to : entry;
+  }
+
   // Releases a Layer, over its Scene's fade-out, back to `to` if given.
   function release(layer: string, to?: ActiveScene): void {
     active = releaseLayer(active, show(), layer, seconds(), bpm(), to);
@@ -346,7 +353,7 @@ export function createPlayback({ emit, now, beat, bpm, show, patch }: PlaybackOp
     fire({ scene, mode, channel, note }: Trigger): void {
       const layer = layerOf(scene);
       if (layer === undefined) return;
-      const previous = flashes.get(layer)?.previous ?? active[layer];
+      const previous = flashes.get(layer)?.previous ?? layerHolds(layer);
       flashes.delete(layer);
       if (mode === 'release') release(layer);
       else active = go(active, scene);

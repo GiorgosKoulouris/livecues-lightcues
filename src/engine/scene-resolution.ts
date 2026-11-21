@@ -173,8 +173,11 @@ export function releaseLayer(
     const cleared = clearLayer(active, layerId);
     return to ? { ...cleared, [layerId]: to } : cleared;
   }
-  // A release already fading out runs on.
-  if (entry.releasing) return { ...active, [layerId]: entry };
+  // A release already fading out runs on, to the new `to` if given.
+  if (entry.releasing) {
+    const kept = to ? { ...entry, releasing: { ...entry.releasing, to } } : entry;
+    return { ...active, [layerId]: kept };
+  }
   const releasing = { since: time, fade, ...(to ? { to } : {}) };
   return { ...active, [layerId]: { ...entry, releasing } };
 }
@@ -338,22 +341,9 @@ function fixtureOutput(
   bpm: number,
   runs: EffectRuns,
 ): { channels: Channel[]; output: FixtureOutput } {
-  let state: Combined = { intensity: 0, snap: {} };
   const entries = byChange(show, active, time);
-  for (const entry of entries) {
-    const look = layerLook(show, patch, fixture, entry, time, beat, runs);
-    const { releasing } = entry;
-    if (!releasing) {
-      state = combineLook(show, state, look);
-      continue;
-    }
-    // Fading out: intensity and colour fade to what is under, Effects and
-    // strobe stop at once.
-    const to = releasing.to && layerLook(show, patch, fixture, releasing.to, time, beat, runs);
-    const under = to ? combineLook(show, state, to) : state;
-    const over = combineLook(show, state, stoppedLook(look));
-    state = mixCombined(show, over, under, releaseProgress(releasing, time));
-  }
+  const items = entries.map((entry) => ({ entry, layer: layerIndex(show, entry) }));
+  const state = stackLooks(show, patch, fixture, items, time, beat, runs);
   const { intensity, colour, effectColour, direction, turn, scale, snap } = state;
   const shown =
     effectColour === undefined || effectColour === NO_EFFECT
@@ -376,6 +366,69 @@ function fixtureOutput(
     output.aim = fixtureAim(show, patch, fixture, channels, output.direction, entries, time, turn);
   }
   return { channels, output };
+}
+
+// An active Scene and the index of its Layer, lowest first. `stopped` keeps
+// only what a fading-out Layer keeps of its look.
+interface Item {
+  entry: ActiveScene;
+  layer: number;
+  stopped?: boolean;
+}
+
+function layerIndex(show: Show, entry: ActiveScene): number {
+  const layer = findScene(show, entry.scene)?.layer;
+  return show.layers.findIndex((l) => l.id === layer);
+}
+
+// The `items` combined in order, later ones over earlier. A Layer fading out
+// fades from the Layers as they are now to what is under it by Layer order: the
+// Layers below it, then what it returns to. Layers below it fired after it
+// show in both, so its fade has no jump at release and ends on them.
+function stackLooks(
+  show: Show,
+  patch: VenuePatch,
+  fixture: PatchedFixture,
+  items: Item[],
+  time: number,
+  beat: number,
+  runs: EffectRuns,
+): Combined {
+  let state: Combined = { intensity: 0, snap: {} };
+  const skipped = new Set<Item>();
+  items.forEach((item, i) => {
+    if (skipped.has(item)) return;
+    const { entry } = item;
+    const look = layerLook(show, patch, fixture, entry, time, beat, runs);
+    const { releasing } = entry;
+    if (item.stopped) {
+      state = combineLook(show, state, stoppedLook(look));
+      return;
+    }
+    if (!releasing) {
+      state = combineLook(show, state, look);
+      return;
+    }
+    // Fading out: intensity and colour fade to what is under, Effects and
+    // strobe stop at once.
+    const earlier = items.slice(0, i);
+    const below = items.slice(i + 1).filter((o) => o.layer < item.layer && !skipped.has(o));
+    for (const o of below) skipped.add(o);
+    const to = releasing.to && layerLook(show, patch, fixture, releasing.to, time, beat, runs);
+    const base = stackLooks(show, patch, fixture, [...earlier, ...below], time, beat, runs);
+    const under = to ? combineLook(show, base, to) : base;
+    const over = stackLooks(
+      show,
+      patch,
+      fixture,
+      [...earlier, { ...item, stopped: true }, ...below],
+      time,
+      beat,
+      runs,
+    );
+    state = mixCombined(show, over, under, releaseProgress(releasing, time));
+  });
+  return state;
 }
 
 // What the Layers combined so far set on a Fixture.

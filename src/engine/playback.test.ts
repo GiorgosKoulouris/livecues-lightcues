@@ -236,6 +236,21 @@ describe('playback', () => {
     expect(p.snapshot().active).toEqual([{ layer: 'l1', scene: 'cross' }]);
   });
 
+  it('puts back nothing after a Flash over a Layer that was fading out', () => {
+    const { p, at, intensity } = playback();
+    const flash = { channel: 1, note: 36 };
+    p.handle({ type: 'goScene', sceneId: 'fading' });
+    at(10);
+    p.handle({ type: 'clearLayer', layerId: 'l1' });
+    at(10.2);
+    p.fire({ ...flash, scene: 'cross', mode: 'flash' });
+    at(10.5);
+    p.noteOff(flash);
+
+    expect(p.snapshot().active).toEqual([]);
+    expect(intensity()).toBe(0);
+  });
+
   it('runs movement Effects to the Tempo, in the Outputs and the preview', () => {
     const { p, at, aim, pan } = playback();
     p.handle({ type: 'goScene', sceneId: 'sweep' });

@@ -456,6 +456,23 @@ describe('resolveFrames', () => {
         expect(at(active, 22)).toEqual([128, 255, 0, 0]);
       });
 
+      it('fades an upper Layer to a lower Layer fired after it, with no jump at release', () => {
+        const flashed = go(go({}, 'flash', 0), 'low', 10);
+        const active = releaseLayer(flashed, out, 'l2', 20, 120);
+
+        expect(at(active, 20)).toEqual(at(flashed, 20));
+        expect(at(active, 20.5)).toEqual([191, 255, 0, 0]);
+        expect(at(active, 21)).toEqual([128, 255, 0, 0]);
+      });
+
+      it('takes a new `to` when a release already fading out is released again', () => {
+        const before = go({}, 'low', 0);
+        const first = releaseLayer(go(before, 'main', 10), out, 'l1', 20, 120);
+        const active = releaseLayer(first, out, 'l1', 20.5, 120, before.l1);
+
+        expect(settleAll(active, 21).l1).toEqual(before.l1);
+      });
+
       it('fades a lone Layer to dark over its beats at the Tempo', () => {
         const active = releaseLayer(go({}, 'main', 10), out, 'l1', 20, 60);
 
