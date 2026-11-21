@@ -9,12 +9,25 @@ import { takeHandover } from './handover';
 import { VisualiserView } from './VisualiserView';
 import styles from './VisualiserView.module.css';
 
+// Whether the window is shown: not minimized or fully hidden.
+function useShown(): boolean {
+  const [shown, setShown] = useState(document.visibilityState !== 'hidden');
+  useEffect(() => {
+    const change = () => setShown(document.visibilityState !== 'hidden');
+    document.addEventListener('visibilitychange', change);
+    return () => document.removeEventListener('visibilitychange', change);
+  }, []);
+  return shown;
+}
+
 // The page of the Detached Visualiser's window: only the Visualiser, live,
 // with a Reattach button in its toolbar. It stays read-only, apart from the
-// Fallback Panel keys.
+// Fallback Panel keys. While the window is minimized or hidden it leaves the
+// preview feed and draws nothing.
 export function DetachedVisualiser() {
   const { venue } = useVenuePatch();
   const playback = usePlayback();
+  const shown = useShown();
   // The Fallback Panel keys, and only those, work while this window has focus.
   usePanelKeys(useShow().show?.show, playback);
   // The page's title is the window's.
@@ -34,6 +47,7 @@ export function DetachedVisualiser() {
         <VisualiserView
           patch={venue?.patch}
           blind={playback?.mode === 'blind'}
+          paused={!shown}
           windowButton={{ label: 'Reattach', onClick: () => window.visualiserWindow.reattach() }}
         />
       )}

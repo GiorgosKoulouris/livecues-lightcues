@@ -264,4 +264,47 @@ describe('DetachedVisualiser', () => {
     );
     expect(await screen.findByRole('alert')).toHaveTextContent('main window');
   });
+
+  describe('while its window is hidden', () => {
+    const setVisibility = (state: 'hidden' | 'visible') => {
+      vi.spyOn(document, 'visibilityState', 'get').mockReturnValue(state);
+      act(() => void document.dispatchEvent(new Event('visibilitychange')));
+    };
+    const sent = (type: string) => engine.sent.filter((c) => c.type === type).length;
+
+    it('leaves the preview feed when minimized and draws the current look when restored', async () => {
+      render(
+        <UiProvider>
+          <DetachedVisualiser />
+        </UiProvider>,
+      );
+      open();
+      await screen.findByRole('button', { name: 'FOH' });
+      expect(sent('startPreview')).toBe(1);
+      expect(sent('stopPreview')).toBe(0);
+      setVisibility('hidden');
+      expect(sent('stopPreview')).toBe(1);
+      const drawing = vi.mocked(createSceneRenderer).mock.results[0]!.value as SceneRenderer;
+      vi.mocked(drawing.setLooks).mockClear();
+      setVisibility('visible');
+      expect(sent('startPreview')).toBe(2);
+      // The engine answers a start with the current look.
+      engine.emit({ type: 'preview', lights: {}, haze: 0.5, house: undefined });
+      expect(drawing.setLooks).toHaveBeenCalled();
+      expect(drawing.setHaze).toHaveBeenLastCalledWith(0.5);
+    });
+
+    it('keeps its renderer across a hide', async () => {
+      render(
+        <UiProvider>
+          <DetachedVisualiser />
+        </UiProvider>,
+      );
+      open();
+      await screen.findByRole('button', { name: 'FOH' });
+      setVisibility('hidden');
+      setVisibility('visible');
+      expect(createSceneRenderer).toHaveBeenCalledOnce();
+    });
+  });
 });

@@ -27,14 +27,17 @@ const PRESETS: { id: CameraPresetName | 'reset'; label: string }[] = [
 export function VisualiserView({
   patch,
   blind = false,
+  paused = false,
   windowButton,
 }: {
   patch: VenuePatch | undefined;
   blind?: boolean;
+  // Leaves the preview feed, so nothing is drawn, until it is false again.
+  paused?: boolean;
   windowButton?: WindowButton;
 }) {
   if (!patch) return <p className={styles.empty}>Open a Venue Patch to see it here.</p>;
-  return <Stage patch={patch} blind={blind} windowButton={windowButton} />;
+  return <Stage patch={patch} blind={blind} paused={paused} windowButton={windowButton} />;
 }
 
 // The toolbar's button that moves the Visualiser between its View and its own
@@ -47,13 +50,17 @@ export interface WindowButton {
 function Stage({
   patch,
   blind,
+  paused,
   windowButton,
 }: {
   patch: VenuePatch;
   blind: boolean;
+  paused: boolean;
   windowButton: WindowButton | undefined;
 }) {
   const renderer = useRef<SceneRenderer>(undefined);
+  // The same renderer as state, so the preview feed follows it coming and going.
+  const [live, setLive] = useState<SceneRenderer>();
   const model = useMemo(() => buildScene(patch), [patch]);
   const [failed, setFailed] = useState(false);
   // View-only, not saved: the Assume haze (none follows the Hazers) and the
@@ -104,20 +111,28 @@ function Stage({
       publish();
       applied.current = { model: drawn.current, patch: latest.current.patch };
       renderer.current = created;
-      const unsubscribe = subscribePreview((lights, haze, house) => {
-        latest.current.lights = lights;
-        created.setHaze(haze);
-        created.setHouse(house);
-        created.setLooks(fixtureLooks(latest.current.patch, lights));
-      });
+      setLive(created);
       return () => {
-        unsubscribe();
         created.dispose();
         renderer.current = undefined;
+        setLive(undefined);
       };
     },
     [publish],
   );
+
+  // In the preview feed while not paused and drawing. Joining sends the current
+  // look at once, so it draws when it is shown again.
+  useEffect(() => {
+    if (paused || !live) return;
+    return subscribePreview((lights, haze, house) => {
+      latest.current.lights = lights;
+      const drawing = renderer.current;
+      drawing?.setHaze(haze);
+      drawing?.setHouse(house);
+      drawing?.setLooks(fixtureLooks(latest.current.patch, lights));
+    });
+  }, [paused, live]);
 
   useEffect(() => {
     drawn.current = model;
