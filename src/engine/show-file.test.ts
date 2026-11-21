@@ -325,6 +325,13 @@ describe('.lcshow file', () => {
     }
   });
 
+  it('does not take a kelvin Colour from a name that looks like one', () => {
+    const [first, ...others] = show.scenes;
+    const named: Show = { ...show, scenes: [{ ...first!, name: '"kelvin":' }, ...others] };
+
+    expect(JSON.parse(saveShowFile(named)).version).toBe(8);
+  });
+
   it('allows an intensity Effect width from version 7 on', () => {
     const [first, ...others] = show.scenes;
     const [rule] = first!.rules;

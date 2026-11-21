@@ -29,13 +29,25 @@ interface ShowFile extends Show {
 export function saveShowFile(show: Show): string {
   throwIfInvalid(validateShow(show));
   const usesFadeUnit = show.scenes.some((scene) => scene.fadeUnit !== undefined);
-  const usesKelvin = JSON.stringify(show).includes('"kelvin":');
+  const usesKelvin = showColours(show).some((colour) => 'kelvin' in colour);
   const usesFadeOut = show.scenes.some(
     (scene) => scene.fadeOut !== undefined || scene.fadeOutUnit !== undefined,
   );
   const version = usesFadeOut ? 11 : usesKelvin ? 10 : usesFadeUnit ? 9 : 8;
   const file: ShowFile = { version, ...show };
   return JSON.stringify(file);
+}
+
+// Every Colour the Show sets: its default, its Rules' colours and colour Effects'.
+function showColours(show: Show): Colour[] {
+  const rules = show.scenes.flatMap((scene) => scene.rules);
+  return [
+    ...(show.defaultColour ? [show.defaultColour] : []),
+    ...rules.flatMap(({ colour }) => colour ?? []),
+    ...rules.flatMap(({ colourEffect }) =>
+      typeof colourEffect === 'object' && 'colours' in colourEffect ? colourEffect.colours : [],
+    ),
+  ];
 }
 
 // Throws when the file is of an unknown version, malformed, has fields the
