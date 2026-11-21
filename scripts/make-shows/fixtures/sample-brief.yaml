@@ -1,0 +1,17 @@
+# A made-up sample brief. The venue next to it is invented, not a real Venue Patch.
+band: Neon Harbour
+genre: indie rock
+mood: upbeat
+colours: [Amber, Blue]
+songs:
+  - name: Opener
+    bpm: 128
+  - name: Slow Tide
+    bpm: 96
+    colours: [Blue, Lavender, White]
+  - name: Last Train
+    bpm: 154
+    plan: plans/last-train.yaml
+venue: sample-venue.lcvenue
+front: pale
+strobe: capped

@@ -22,3 +22,6 @@ temp/
 
 # Local issues and specs
 .scratch/
+
+# Show Generator briefs and their output (bands/<Band>/).
+bands/

@@ -1,0 +1,417 @@
+{
+  "version": 5,
+  "stage": {
+    "width": 8,
+    "depth": 6
+  },
+  "universes": [
+    {
+      "number": 1,
+      "output": "virtual"
+    }
+  ],
+  "fixtures": [
+    {
+      "id": "front-1",
+      "name": "Front Wash 1",
+      "profileId": "sample/wash",
+      "mode": "Basic",
+      "universe": 1,
+      "address": 1,
+      "x": -3,
+      "y": -1,
+      "height": 4
+    },
+    {
+      "id": "front-2",
+      "name": "Front Wash 2",
+      "profileId": "sample/wash",
+      "mode": "Basic",
+      "universe": 1,
+      "address": 5,
+      "x": -1,
+      "y": -1,
+      "height": 4
+    },
+    {
+      "id": "front-3",
+      "name": "Front Wash 3",
+      "profileId": "sample/wash",
+      "mode": "Basic",
+      "universe": 1,
+      "address": 9,
+      "x": 1,
+      "y": -1,
+      "height": 4
+    },
+    {
+      "id": "front-4",
+      "name": "Front Wash 4",
+      "profileId": "sample/wash",
+      "mode": "Basic",
+      "universe": 1,
+      "address": 13,
+      "x": 3,
+      "y": -1,
+      "height": 4
+    },
+    {
+      "id": "front-mover-1",
+      "name": "Front Mover 1",
+      "profileId": "sample/moving-wash",
+      "mode": "Basic",
+      "universe": 1,
+      "address": 17,
+      "x": -2,
+      "y": -1.5,
+      "height": 4
+    },
+    {
+      "id": "front-mover-2",
+      "name": "Front Mover 2",
+      "profileId": "sample/moving-wash",
+      "mode": "Basic",
+      "universe": 1,
+      "address": 23,
+      "x": 2,
+      "y": -1.5,
+      "height": 4
+    },
+    {
+      "id": "back-1",
+      "name": "Back Wash 1",
+      "profileId": "sample/wash",
+      "mode": "Basic",
+      "universe": 1,
+      "address": 29,
+      "x": -3,
+      "y": 5,
+      "height": 5
+    },
+    {
+      "id": "back-2",
+      "name": "Back Wash 2",
+      "profileId": "sample/wash",
+      "mode": "Basic",
+      "universe": 1,
+      "address": 33,
+      "x": -1,
+      "y": 5,
+      "height": 5
+    },
+    {
+      "id": "back-3",
+      "name": "Back Wash 3",
+      "profileId": "sample/wash",
+      "mode": "Basic",
+      "universe": 1,
+      "address": 37,
+      "x": 1,
+      "y": 5,
+      "height": 5
+    },
+    {
+      "id": "back-4",
+      "name": "Back Wash 4",
+      "profileId": "sample/wash",
+      "mode": "Basic",
+      "universe": 1,
+      "address": 41,
+      "x": 3,
+      "y": 5,
+      "height": 5
+    },
+    {
+      "id": "beam-1",
+      "name": "Beam 1",
+      "profileId": "sample/beam",
+      "mode": "Basic",
+      "universe": 1,
+      "address": 45,
+      "x": -2,
+      "y": 5,
+      "height": 5
+    },
+    {
+      "id": "beam-2",
+      "name": "Beam 2",
+      "profileId": "sample/beam",
+      "mode": "Basic",
+      "universe": 1,
+      "address": 48,
+      "x": 2,
+      "y": 5,
+      "height": 5
+    },
+    {
+      "id": "floor-1",
+      "name": "Floor Wash 1",
+      "profileId": "sample/wash",
+      "mode": "Basic",
+      "universe": 1,
+      "address": 51,
+      "x": -3,
+      "y": 3,
+      "height": 0.3
+    },
+    {
+      "id": "floor-2",
+      "name": "Floor Wash 2",
+      "profileId": "sample/wash",
+      "mode": "Basic",
+      "universe": 1,
+      "address": 55,
+      "x": 3,
+      "y": 3,
+      "height": 0.3
+    }
+  ],
+  "profiles": [
+    {
+      "id": "sample/wash",
+      "manufacturer": "Sample",
+      "model": "Sample Wash",
+      "defaultRole": "Wash",
+      "beamAngle": 25,
+      "modes": [
+        {
+          "name": "Basic",
+          "channels": [
+            {
+              "kind": "control",
+              "name": "Dimmer",
+              "defaultValue": 0,
+              "ranges": [
+                {
+                  "from": 0,
+                  "to": 255,
+                  "capability": {
+                    "type": "intensity"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "control",
+              "name": "Red",
+              "defaultValue": 0,
+              "ranges": [
+                {
+                  "from": 0,
+                  "to": 255,
+                  "capability": {
+                    "type": "emitter",
+                    "emitter": "red"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "control",
+              "name": "Green",
+              "defaultValue": 0,
+              "ranges": [
+                {
+                  "from": 0,
+                  "to": 255,
+                  "capability": {
+                    "type": "emitter",
+                    "emitter": "green"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "control",
+              "name": "Blue",
+              "defaultValue": 0,
+              "ranges": [
+                {
+                  "from": 0,
+                  "to": 255,
+                  "capability": {
+                    "type": "emitter",
+                    "emitter": "blue"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sample/moving-wash",
+      "manufacturer": "Sample",
+      "model": "Sample Moving Wash",
+      "defaultRole": "Wash",
+      "beamAngle": 20,
+      "modes": [
+        {
+          "name": "Basic",
+          "channels": [
+            {
+              "kind": "control",
+              "name": "Pan",
+              "defaultValue": 128,
+              "ranges": [
+                {
+                  "from": 0,
+                  "to": 255,
+                  "capability": {
+                    "type": "pan",
+                    "degrees": [
+                      -270,
+                      270
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "control",
+              "name": "Tilt",
+              "defaultValue": 128,
+              "ranges": [
+                {
+                  "from": 0,
+                  "to": 255,
+                  "capability": {
+                    "type": "tilt",
+                    "degrees": [
+                      -135,
+                      135
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "control",
+              "name": "Dimmer",
+              "defaultValue": 0,
+              "ranges": [
+                {
+                  "from": 0,
+                  "to": 255,
+                  "capability": {
+                    "type": "intensity"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "control",
+              "name": "Red",
+              "defaultValue": 0,
+              "ranges": [
+                {
+                  "from": 0,
+                  "to": 255,
+                  "capability": {
+                    "type": "emitter",
+                    "emitter": "red"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "control",
+              "name": "Green",
+              "defaultValue": 0,
+              "ranges": [
+                {
+                  "from": 0,
+                  "to": 255,
+                  "capability": {
+                    "type": "emitter",
+                    "emitter": "green"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "control",
+              "name": "Blue",
+              "defaultValue": 0,
+              "ranges": [
+                {
+                  "from": 0,
+                  "to": 255,
+                  "capability": {
+                    "type": "emitter",
+                    "emitter": "blue"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sample/beam",
+      "manufacturer": "Sample",
+      "model": "Sample Beam",
+      "defaultRole": "Spot/Beam",
+      "beamAngle": 4,
+      "modes": [
+        {
+          "name": "Basic",
+          "channels": [
+            {
+              "kind": "control",
+              "name": "Pan",
+              "defaultValue": 128,
+              "ranges": [
+                {
+                  "from": 0,
+                  "to": 255,
+                  "capability": {
+                    "type": "pan",
+                    "degrees": [
+                      -270,
+                      270
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "control",
+              "name": "Tilt",
+              "defaultValue": 128,
+              "ranges": [
+                {
+                  "from": 0,
+                  "to": 255,
+                  "capability": {
+                    "type": "tilt",
+                    "degrees": [
+                      -135,
+                      135
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "control",
+              "name": "Dimmer",
+              "defaultValue": 0,
+              "ranges": [
+                {
+                  "from": 0,
+                  "to": 255,
+                  "capability": {
+                    "type": "intensity"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

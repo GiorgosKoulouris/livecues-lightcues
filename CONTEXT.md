@@ -106,6 +106,10 @@ _Avoid_: Project (ambiguous: a Show alone or a Show + Venue Patch)
 A reusable look or effect that targets Zones rather than specific Fixtures. Several Scenes can be active at once and are combined. Its fade-in is in seconds or in beats; a beat fade is resolved against the Tempo when the Scene starts, so a Tempo change during the fade does not re-time it. It may also have a fade-out, in seconds or beats: when its Layer is released or its Flash ends, it fades to what is under it over that time (to what the Layer held before, for a Flash), and with none it snaps. Only its intensity and colour fade: its Effects, strobe, prism and gobo stop at release. A Scene started on the Layer during the fade-out takes over at once, fading in from the current output.
 _Avoid_: Cue, preset
 
+**Brief**:
+The file `bands/<Band>/brief.yaml` that tells the Show generator what to build: the band, genre and mood, band colours, each song's name and BPM (with an optional Plan and Colour Set override), the venue, the front-wash policy (pale or colour) and the strobe cap. `bands/` is not committed. The Brief points at a Venue Patch for its Roles, Zones and movers but never copies it; with no venue the generator assumes a default rig. Not a Plan's `brief:` key, which is notes for the lighting designer.
+_Avoid_: Spec, config
+
 **Cue Sheet**:
 A generated, human-readable companion to a built Show: the Scene names and notes per MIDI channel, and how its Layers combine. Read only, and rebuilt with the Show. A Plan picks Scenes by the names on it.
 _Avoid_: Note map, cheat sheet
