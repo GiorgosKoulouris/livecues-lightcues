@@ -41,6 +41,10 @@ A release is a `vX.Y.Z` tag on `main` that equals `v` + the `package.json` versi
 
 The Palette and Energy Shows and their Cue Sheets are generated into `shows/` and committed. Never edit them by hand: edit `scripts/make-shows/`, rerun `npm run show:palette` or `npm run show:energy`, and commit both. See `docs/agents/shows.md`.
 
+### Make show
+
+The `make-show` skill turns a band's Brief into a Show, lints it, renders its key Scenes with `npm run show:shots` and scores the Shot rubric items. It never commits `bands/` or a Venue Patch. See `docs/agents/make-show.md`.
+
 ### Security scan
 
 When asked to "run the security scan", run `npm run security:scan`, triage its outputs, review the code and write a report to `reports/security/`. Report-only: change and commit nothing. Follow `docs/agents/security-scan.md`.

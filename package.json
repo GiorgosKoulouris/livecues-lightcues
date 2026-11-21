@@ -35,6 +35,7 @@
     "show:energy": "node scripts/make-energy.mjs",
     "show:lint": "node scripts/show-lint.mjs",
     "show:generate": "node scripts/make-show.mjs",
+    "show:shots": "npm run build && node scripts/show-shots.mjs",
     "lights:song": "node scripts/lights-song.mjs"
   },
   "engines": {
