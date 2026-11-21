@@ -33,6 +33,8 @@ export type ShowEdit =
   | { type: 'setDefaultColour'; colour?: Colour }
   // Without a Direction, the default is Down.
   | { type: 'setDefaultDirection'; direction?: Direction }
+  // Sets the Strobe cap in Hz; undefined removes it.
+  | { type: 'setStrobeCap'; hz?: number }
   // Replaces the Trigger on the same channel and note.
   | { type: 'putTrigger'; trigger: Trigger }
   | { type: 'removeTrigger'; note: MidiNote }
@@ -75,6 +77,8 @@ export function applyShowEdit(show: Show, edit: ShowEdit): ShowResult {
       return setBaseLook(show, edit.sceneId);
     case 'setDefaultColour':
       return setDefaultColour(show, edit.colour);
+    case 'setStrobeCap':
+      return setStrobeCap(show, edit.hz);
     case 'setDefaultDirection':
       return setDefaultDirection(show, edit.direction);
     case 'putTrigger':
@@ -171,6 +175,13 @@ function setDefaultColour(show: Show, colour: Colour | undefined): ShowResult {
 function setDefaultDirection(show: Show, direction: Direction | undefined): ShowResult {
   const next = { ...show, defaultDirection: direction };
   if (direction === undefined) delete next.defaultDirection;
+  return validated(next);
+}
+
+// Sets the most Hz a Go-fired strobe may run at; undefined leaves it uncapped.
+function setStrobeCap(show: Show, hz: number | undefined): ShowResult {
+  const next = { ...show, strobeCap: hz };
+  if (hz === undefined) delete next.strobeCap;
   return validated(next);
 }
 

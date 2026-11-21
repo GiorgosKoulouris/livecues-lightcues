@@ -14,9 +14,11 @@ export interface SnapSettings {
   strobe?: StrobeRate;
   prism?: PrismSetting;
   gobo?: GoboSetting;
+  // The strobe was set by a Scene held by Flash, which the Strobe cap spares.
+  strobeFlash?: true;
 }
 
-type SnapKey = keyof SnapSettings;
+type SnapKey = 'strobe' | 'prism' | 'gobo';
 
 const KEYS: SnapKey[] = ['strobe', 'prism', 'gobo'];
 
@@ -38,6 +40,10 @@ export function sceneSnap(patch: VenuePatch, fixture: PatchedFixture, scene: Sce
 export function mergeSnap(below: SnapSettings, above: SnapSettings): SnapSettings {
   const merged: Record<string, unknown> = { ...below };
   for (const key of KEYS) if (above[key] !== undefined) merged[key] = above[key];
+  if (above.strobe !== undefined) {
+    delete merged.strobeFlash;
+    if (above.strobeFlash) merged.strobeFlash = true;
+  }
   return merged as SnapSettings;
 }
 

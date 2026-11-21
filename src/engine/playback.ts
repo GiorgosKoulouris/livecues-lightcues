@@ -362,6 +362,8 @@ export function createPlayback({ emit, now, beat, bpm, show, patch, slots }: Pla
       if (mode === 'release') release(layer);
       else active = go(active, scene);
       if (mode === 'flash') {
+        const entry = active[layer];
+        if (entry) active = { ...active, [layer]: { ...entry, flash: true } };
         flashes.set(layer, { scene, held: { channel, note }, ...(previous ? { previous } : {}) });
       }
       emitPlayback();

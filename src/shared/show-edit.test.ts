@@ -226,6 +226,19 @@ describe('editing a Show', () => {
   });
 });
 
+describe('Strobe cap', () => {
+  it('sets the Strobe cap, or none without one', () => {
+    const before = emptyShow();
+    const set = applied(before, { type: 'setStrobeCap', hz: 4 });
+
+    expect(set.strobeCap).toBe(4);
+    expect(applyShowEdit(set, { type: 'setStrobeCap' })).toEqual({ show: before });
+    expect(applyShowEdit(before, { type: 'setStrobeCap', hz: 0 })).toEqual({
+      errors: ['Strobe cap: must be more than 0 Hz'],
+    });
+  });
+});
+
 describe('House Presets', () => {
   const dim: HousePreset = { id: 'dim', name: 'Dim', fade: 3 };
   const up: HousePreset = { id: 'up', name: 'Up', fade: 5, note: { channel: 2, note: 10 } };

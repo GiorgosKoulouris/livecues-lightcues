@@ -64,6 +64,8 @@ import {
 export interface ActiveScene {
   scene: string;
   since: number;
+  // Set when a Flash holds the Scene: the Strobe cap does not apply to it.
+  flash?: true;
   // The fade-in in seconds, resolved against the Tempo at activation. Absent
   // for a restored Scene, whose fade is long over.
   fade?: number;
@@ -332,6 +334,11 @@ function previewPrism(channels: Channel[], output: FixtureOutput): Pick<FixtureL
   return preview && hasPrism(channels) ? { prism: preview } : {};
 }
 
+// A strobe rate under the Show's Strobe cap, if any. A Flash is not capped.
+function cappedHz(hz: number, { strobeCap }: Show, flash: boolean | undefined): number {
+  return strobeCap === undefined || flash ? hz : Math.min(hz, strobeCap);
+}
+
 // What a Fixture is set to once the Layers are combined, and the channels of
 // its mode. A movement Effect turns a moving Fixture from its aim; an
 // intensity Effect scales the intensity, before the Grand Master; a colour
@@ -362,7 +369,7 @@ function fixtureOutput(
   const { channels } = fixtureMode(patch, fixture);
   const output = levelOutput(channels, intensity * (scale ?? STEADY) * grandMaster, shown);
   const { strobe, prism, gobo } = snap;
-  const hz = strobe === undefined ? 0 : strobeHz(strobe, bpm);
+  const hz = strobe === undefined ? 0 : cappedHz(strobeHz(strobe, bpm), show, snap.strobeFlash);
   if (hz > 0 && output.intensity > 0) {
     const drives = strobeDrives(channels);
     if (drives.size > 0) output.strobe = { hz, drives };
@@ -805,6 +812,7 @@ function layerLook(
   const { scene: id, since, from } = active;
   const scene = findScene(show, id);
   const target = scene ? sceneLook(patch, fixture, scene, beat, runs, slots) : {};
+  if (active.flash && target.snap?.strobe !== undefined) target.snap.strobeFlash = true;
   const p = progress(show, active, time);
   if (p === 1) return target;
   const before = from ? fromLook(show, patch, fixture, from, since, beat, runs, slots) : {};

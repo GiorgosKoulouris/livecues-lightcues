@@ -139,8 +139,8 @@ describe('.lcshow file', () => {
   it('rejects a file of an unknown version', () => {
     const saved = JSON.parse(saveShowFile(show));
 
-    expect(() => loadShowFile(JSON.stringify({ ...saved, version: 13 }))).toThrow(
-      'Unsupported Show version: 13',
+    expect(() => loadShowFile(JSON.stringify({ ...saved, version: 14 }))).toThrow(
+      'Unsupported Show version: 14',
     );
     expect(() => loadShowFile(JSON.stringify({ ...show }))).toThrow(
       'Unsupported Show version: undefined',
@@ -319,6 +319,22 @@ describe('.lcshow file', () => {
     );
     expect(() => loadShowFile(JSON.stringify({ version: 11, ...slotted }))).toThrow(
       'unknown field "scenes[0].rules[0].colour.slot"',
+    );
+  });
+
+  it('saves version 13 only with a Strobe cap, and it round-trips', () => {
+    expect(JSON.parse(saveShowFile(show)).version).toBeLessThan(13);
+
+    const saved = saveShowFile({ ...show, strobeCap: 4 });
+
+    expect(JSON.parse(saved).version).toBe(13);
+    expect(loadShowFile(saved).strobeCap).toBe(4);
+    expect(loadShowFile(saveShowFile(show)).strobeCap).toBeUndefined();
+    expect(() => loadShowFile(JSON.stringify({ version: 12, ...show, strobeCap: 4 }))).toThrow(
+      'unknown field "strobeCap"',
+    );
+    expect(() => loadShowFile(JSON.stringify({ version: 13, ...show, strobeCap: 'x' }))).toThrow(
+      'Strobe cap',
     );
   });
 

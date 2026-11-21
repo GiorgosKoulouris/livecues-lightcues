@@ -335,6 +335,9 @@ export interface Show {
   // In order, at most `MAX_COLOUR_SETS`. None when absent. The first holds at
   // launch and when the Show is opened.
   colourSets?: ColourSet[];
+  // The most Hz a strobe rate may be, for a Scene fired by Go (not Flash).
+  // No cap when absent.
+  strobeCap?: number;
 }
 
 // The House Preset slots.
@@ -455,6 +458,9 @@ export function validateShow(show: Show): string[] {
     for (const problem of directionProblems(show.defaultDirection)) {
       errors.push(`Default Direction: ${problem}`);
     }
+  }
+  if (show.strobeCap !== undefined && !(Number.isFinite(show.strobeCap) && show.strobeCap > 0)) {
+    errors.push('Strobe cap: must be more than 0 Hz');
   }
   errors.push(...housePresetErrors(show));
   errors.push(...hazePresetErrors(show));

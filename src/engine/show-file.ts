@@ -28,10 +28,12 @@ import {
 // Version 12 added Colour Sets and slot colours (`{ slot }`) in Rules and in
 // Step and Fade colour Effects: a Show saves as version 12 only when it has a
 // Colour Set or uses a slot, and an older file that has one is rejected as an
-// unknown field.
+// unknown field. Version 13 added the Strobe cap (`strobeCap`): a Show saves as
+// version 13 only when it sets one, and an older file that has it is rejected
+// as an unknown field.
 
-const VERSION = 12;
-const VERSIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, VERSION];
+const VERSION = 13;
+const VERSIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, VERSION];
 
 interface ShowFile extends Show {
   version: number;
@@ -47,7 +49,18 @@ export function saveShowFile(show: Show): string {
   );
   const usesColourSets =
     showColourSets(show).length > 0 || ruleColours(show).some((colour) => isSlotRef(colour));
-  const version = usesColourSets ? 12 : usesFadeOut ? 11 : usesKelvin ? 10 : usesFadeUnit ? 9 : 8;
+  const version =
+    show.strobeCap !== undefined
+      ? 13
+      : usesColourSets
+        ? 12
+        : usesFadeOut
+          ? 11
+          : usesKelvin
+            ? 10
+            : usesFadeUnit
+              ? 9
+              : 8;
   const file: ShowFile = { version, ...show };
   return JSON.stringify(file);
 }
@@ -177,6 +190,7 @@ function unknownFields(file: ShowFile): string[] {
     [], // 10: none at the top level; kelvin Colours are allowed below.
     [], // 11: none at the top level; a Scene's fadeOut and fadeOutUnit are allowed below.
     ['colourSets'],
+    ['strobeCap'], // 13
   ];
   const top = added.slice(0, file.version).flat();
   // Versions 1–7 may carry the retired panelScenes, which is dropped on load.

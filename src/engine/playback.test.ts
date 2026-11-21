@@ -117,6 +117,8 @@ const show: Show = {
     }),
     { ...scene('fading', { intensity: 1 }), fadeOut: 2, fadeOutUnit: 'beats' },
     scene('strobe', { intensity: 1, strobe: 0.25 }),
+    scene('fast strobe', { intensity: 1, strobe: 'Fast' }),
+    scene('half strobe', { intensity: 1, strobe: 0.5 }),
     scene('prism', { intensity: 1, prism: 'Rotate fast' }),
     scene('ramp', {
       intensity: 1,
@@ -137,7 +139,7 @@ const show: Show = {
 
 describe('playback', () => {
   // Runs to a real Tempo, at 120 BPM until tapped.
-  function playback() {
+  function playback(shown: Show = show) {
     let ms = 0;
     const now = () => ms;
     const tempo = createTempo({ now, emit: () => {} });
@@ -146,7 +148,7 @@ describe('playback', () => {
       now,
       beat: tempo.beat,
       bpm: tempo.bpm,
-      show: () => show,
+      show: () => shown,
       patch: () => rig,
     });
     return {
@@ -168,6 +170,49 @@ describe('playback', () => {
       strobe: () => [p.frames().get(1)![3], p.lights().mover!.strobe],
     };
   }
+
+  describe('Strobe cap', () => {
+    const capped: Show = { ...show, strobeCap: 4 };
+    // 4 Hz is 3/24 of the way across 1-25 Hz; 6 Hz is 5/24, 12 Hz 11/24.
+    const at4 = [32, 4];
+
+    it('clamps a named rate sent by Go to the cap', () => {
+      const { p, at, strobe } = playback(capped);
+      p.handle({ type: 'goScene', sceneId: 'fast strobe' });
+      at(1);
+      expect(strobe()).toEqual(at4);
+    });
+
+    it('clamps a beat rate at the current Tempo on Go, but not on Flash', () => {
+      const { p, tempo, at, strobe } = playback(capped);
+      // Taps 1/3 s apart: 180 BPM, so a 1/2 beat is 6 Hz.
+      at(0);
+      tempo.tap();
+      at(1 / 3);
+      tempo.tap();
+      at(2 / 3);
+      tempo.tap();
+      p.handle({ type: 'goScene', sceneId: 'half strobe' });
+      expect(strobe()[1]).toBe(4);
+
+      const flash = { channel: 1, note: 36 };
+      p.fire({ ...flash, scene: 'half strobe', mode: 'flash' });
+      expect(strobe()[1]).toBeCloseTo(6, 5);
+      p.noteOff(flash);
+    });
+
+    it('leaves a rate under the cap, and every rate without a cap', () => {
+      const slow = playback({ ...show, strobeCap: 20 });
+      slow.p.handle({ type: 'goScene', sceneId: 'fast strobe' });
+      slow.at(1);
+      expect(slow.strobe()[1]).toBe(12);
+
+      const none = playback();
+      none.p.handle({ type: 'goScene', sceneId: 'fast strobe' });
+      none.at(1);
+      expect(none.strobe()[1]).toBe(12);
+    });
+  });
 
   it('moves from the aim shown, to the pan nearest it', () => {
     const { p, at, aim } = playback();

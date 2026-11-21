@@ -122,7 +122,10 @@ The fastest a movement Effect may turn a moving Fixture: 300°/s, on pan and on 
 _Avoid_: Speed cap, max speed
 
 **Strobe**:
-A Rule setting that makes the targeted Fixtures with a strobe channel flash: Off, Slow (2 Hz), Medium (6 Hz), Fast (12 Hz), or once per 1, 1/2 or 1/4 beat of the Tempo. Only the rate is sent; each Fixture times its own flashes, so they are not locked to the beat. Off stops strobe from earlier Rules and lower Layers. It snaps on and off at Scene start, and Freeze does not stop it. Not an Effect.
+A Rule setting that makes the targeted Fixtures with a strobe channel flash: Off, Slow (2 Hz), Medium (6 Hz), Fast (12 Hz), or once per 1, 1/2 or 1/4 beat of the Tempo. Only the rate is sent; each Fixture times its own flashes, so they are not locked to the beat. Off stops strobe from earlier Rules and lower Layers. It snaps on and off at Scene start, and Freeze does not stop it. A Strobe cap, if the Show sets one, limits the rate a Scene fired by Go sends. Not an Effect.
+
+**Strobe cap**:
+An optional Show setting, in Hz, edited in Show settings. While set, the Strobe rate of every Scene fired by Go is clamped to it, whether a named rate or a beat rate at the current Tempo. A Scene held by Flash is not capped. Only the rate sent changes: each Fixture still times its own flashes (ADR 0014). With no cap, Strobe is as programmed.
 _Avoid_: Flash (a Trigger mode), shutter
 
 **Prism**:
