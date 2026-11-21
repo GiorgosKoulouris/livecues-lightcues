@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { emptyShow } from '../../../shared/show';
@@ -15,12 +15,25 @@ vi.mock('./sceneRenderer', () => ({ createSceneRenderer: vi.fn() }));
 
 let engine: FakeEngine;
 let windowBridge: FakeVisualiserWindow;
+let engineDown: boolean;
+const downListeners = new Set<() => void>();
 
 beforeEach(() => {
   forgetCamera();
   setHandedOverHaze(undefined);
   engine = installFakeEngine();
   windowBridge = installFakeVisualiserWindow(true);
+  engineDown = false;
+  downListeners.clear();
+  vi.stubGlobal('engineRecovery', {
+    onRestarted: () => () => {},
+    onDown: (listener: () => void) => {
+      downListeners.add(listener);
+      return () => void downListeners.delete(listener);
+    },
+    isDown: async () => engineDown,
+    saveFromSnapshot: vi.fn(),
+  });
   vi.mocked(createSceneRenderer).mockReturnValue({
     setModel: vi.fn(),
     setLooks: vi.fn(),
@@ -201,5 +214,54 @@ describe('DetachedVisualiser', () => {
       await userEvent.keyboard('{Control>}s{/Control}{Control>}z{/Control}{Control>}2{/Control}');
       expect(engine.sent).toEqual([]);
     });
+  });
+
+  const playback = (mode: 'monitor' | 'blind') =>
+    engine.emit({
+      type: 'playback',
+      active: {},
+      mode,
+      grandMaster: 1,
+      blackout: false,
+      freeze: false,
+    });
+
+  it('shows the Blind badge while the mode is Blind, and hides it again', async () => {
+    render(
+      <UiProvider>
+        <DetachedVisualiser />
+      </UiProvider>,
+    );
+    open();
+    await screen.findByRole('button', { name: 'FOH' });
+    expect(screen.queryByText('Blind')).not.toBeInTheDocument();
+    playback('blind');
+    expect(await screen.findByText('Blind')).toBeInTheDocument();
+    playback('monitor');
+    expect(screen.queryByText('Blind')).not.toBeInTheDocument();
+  });
+
+  it('shows a notice that points to the main window when the engine goes down, with no save controls', async () => {
+    render(
+      <UiProvider>
+        <DetachedVisualiser />
+      </UiProvider>,
+    );
+    open();
+    await screen.findByRole('button', { name: 'FOH' });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    act(() => downListeners.forEach((l) => l()));
+    expect(screen.getByRole('alert')).toHaveTextContent('main window');
+    expect(screen.queryByRole('button', { name: /Save/ })).not.toBeInTheDocument();
+  });
+
+  it('shows the notice at once when the engine was already down', async () => {
+    engineDown = true;
+    render(
+      <UiProvider>
+        <DetachedVisualiser />
+      </UiProvider>,
+    );
+    expect(await screen.findByRole('alert')).toHaveTextContent('main window');
   });
 });
