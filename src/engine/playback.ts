@@ -240,6 +240,7 @@ export function createPlayback({ emit, now, beat, bpm, show, patch }: PlaybackOp
       resolvedGrandMaster(),
       effectBeat(),
       runs,
+      bpm(),
     );
   }
 

@@ -83,6 +83,16 @@ describe('header', () => {
     expect(latest.fadeIn).toBe(1.5);
   });
 
+  it('sets and shows the fade unit', async () => {
+    const { user } = setup();
+    expect(screen.getByLabelText('Fade unit')).toHaveValue('seconds');
+    await user.selectOptions(screen.getByLabelText('Fade unit'), 'Beats');
+    expect(latest.fadeUnit).toBe('beats');
+    expect(screen.getByLabelText('Fade-in (beats)')).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText('Fade unit'), 'Seconds');
+    expect(latest).not.toHaveProperty('fadeUnit');
+  });
+
   it('rejects an empty name', async () => {
     const { user } = setup();
     await user.clear(screen.getByLabelText('Name'));

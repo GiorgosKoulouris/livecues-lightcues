@@ -380,6 +380,48 @@ describe('resolveFrames', () => {
       expect(at(active, 12)).toEqual([0, 255, 255, 255]);
     });
 
+    describe('in beats', () => {
+      const beats = show(
+        scene('beat', [{ target: {}, intensity: 1, colour: { swatch: 'Blue' } }], {
+          fadeIn: 4,
+          fadeUnit: 'beats',
+        }),
+      );
+      // Activated at `bpm`, read at `time` seconds after 10, at any Tempo.
+      const level = (bpm: number, time: number) =>
+        channels(
+          resolveFrames(
+            beats,
+            rig,
+            activate({}, beats, rig, 'beat', 10, 1, 0, {}, bpm),
+            10 + time,
+            1,
+            0,
+            bpm,
+          ),
+          4,
+        )[0];
+
+      it('fades 4 beats in 2 s at 120 BPM', () => {
+        expect(level(120, 1)).toBe(128);
+        expect(level(120, 2)).toBe(255);
+      });
+
+      it('fades 4 beats in 4 s at 60 BPM', () => {
+        expect(level(60, 2)).toBe(128);
+        expect(level(60, 4)).toBe(255);
+      });
+
+      it('keeps its length when the Tempo changes mid-fade', () => {
+        const active = activate({}, beats, rig, 'beat', 10, 1, 0, {}, 120);
+        const slower = channels(resolveFrames(beats, rig, active, 11, 1, 0, 60), 4);
+        const faster = channels(resolveFrames(beats, rig, active, 11, 1, 0, 240), 4);
+
+        expect(slower[0]).toBe(128);
+        expect(faster[0]).toBe(128);
+      });
+    });
+
     it('clears a Layer at once, even mid-fade', () => {
       const active = clearLayer(play(s, ['dim', 0], ['full', 10]), 'l1');
 

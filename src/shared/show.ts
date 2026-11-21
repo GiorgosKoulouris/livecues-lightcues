@@ -220,6 +220,10 @@ export interface Layer {
   name: string;
 }
 
+// What a Scene's fade-in is counted in. Seconds when a Scene has no unit.
+export const FADE_UNITS = ['seconds', 'beats'] as const;
+export type FadeUnit = (typeof FADE_UNITS)[number];
+
 export interface Scene {
   // Unique in the Show.
   id: string;
@@ -227,8 +231,10 @@ export interface Scene {
   tags: string[];
   // A Layer id.
   layer: string;
-  // Seconds.
+  // In `fadeUnit`. A beat fade is resolved against the Tempo when the Scene
+  // starts.
   fadeIn: number;
+  fadeUnit?: FadeUnit;
   // Later Rules override earlier ones.
   rules: Rule[];
 }
@@ -402,12 +408,17 @@ export function validateShow(show: Show): string[] {
 }
 
 // Problems with a Scene, each starting with ': ' or ' Rule <n>: '.
-function sceneProblems(show: Show, { layer, fadeIn, tags, rules }: Scene): string[] {
+function sceneProblems(show: Show, { layer, fadeIn, fadeUnit, tags, rules }: Scene): string[] {
   const problems: string[] = [];
   if (!show.layers.some((l) => l.id === layer)) {
     problems.push(`: Layer "${layer}" is not in the Show`);
   }
-  if (!Number.isFinite(fadeIn) || fadeIn < 0) problems.push(': fade-in must be 0 seconds or more');
+  if (fadeUnit !== undefined && !FADE_UNITS.includes(fadeUnit)) {
+    problems.push(`: fade unit "${fadeUnit}" is not seconds or beats`);
+  }
+  if (!Number.isFinite(fadeIn) || fadeIn < 0) {
+    problems.push(`: fade-in must be 0 ${fadeUnit === 'beats' ? 'beats' : 'seconds'} or more`);
+  }
   for (const tag of tags) {
     if (tag === '') problems.push(': tag "" is empty');
     else if (tag.trim() !== tag) problems.push(`: tag "${tag}" has surrounding spaces`);

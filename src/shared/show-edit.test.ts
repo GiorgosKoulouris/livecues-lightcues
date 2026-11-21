@@ -37,6 +37,25 @@ describe('editing a Show', () => {
     });
   });
 
+  it('sets a Scene fade unit, and refuses an unknown one', () => {
+    const before = applied(emptyShow(), {
+      type: 'putScene',
+      scene: scene({ layer: 'layer-1', fadeIn: 4 }),
+    });
+    const after = applied(before, {
+      type: 'putScene',
+      scene: scene({ layer: 'layer-1', fadeIn: 4, fadeUnit: 'beats' }),
+    });
+
+    expect(after.scenes[0]).toMatchObject({ fadeIn: 4, fadeUnit: 'beats' });
+    expect(
+      applyShowEdit(before, {
+        type: 'putScene',
+        scene: scene({ name: 'Verse', layer: 'layer-1', fadeUnit: 'bars' as 'beats' }),
+      }),
+    ).toEqual({ errors: ['Scene "Verse": fade unit "bars" is not seconds or beats'] });
+  });
+
   it('refuses a Scene that makes the Show invalid', () => {
     expect(
       applyShowEdit(emptyShow(), {

@@ -4,6 +4,7 @@ import { ROLES, type Role } from '../../../shared/fixture-profile';
 import {
   beatsText,
   DIRECTIONS,
+  FADE_UNITS,
   GOBO_SETTINGS,
   PRISM_SETTINGS,
   STROBE_HZ,
@@ -12,6 +13,7 @@ import {
   type ColourEffect,
   type Direction,
   type EffectSlot,
+  type FadeUnit,
   type Rule,
   type Scene,
   type Show,
@@ -31,8 +33,10 @@ import styles from './SceneEditor.module.css';
 import { parseTags } from './scenes';
 import { ZonePicker } from './ZonePicker';
 
-// Arrow Up/Down step of the fade-in, in seconds.
+// Arrow Up/Down step of the fade-in, in its unit.
 const FADE_STEP = 0.5;
+
+const FADE_UNIT_LABELS: Record<FadeUnit, string> = { seconds: 'Seconds', beats: 'Beats' };
 
 // The Strobe picker's options; '' leaves strobe to earlier Rules.
 const STROBE_OPTIONS = [
@@ -99,12 +103,23 @@ export function SceneEditor({ scene, show, patch, bpm, onPut, onGo, onRemove }: 
           onChange={(layer) => onPut({ ...scene, layer })}
         />
         <NumberField
-          label="Fade-in (s)"
+          label={scene.fadeUnit === 'beats' ? 'Fade-in (beats)' : 'Fade-in (s)'}
           value={scene.fadeIn}
           min={0}
           integer={false}
           step={FADE_STEP}
           onCommit={(fadeIn) => onPut({ ...scene, fadeIn })}
+        />
+        <Select
+          label="Fade unit"
+          value={scene.fadeUnit ?? 'seconds'}
+          options={FADE_UNITS.map((unit) => ({ value: unit, label: FADE_UNIT_LABELS[unit] }))}
+          onChange={(unit) => {
+            // Seconds is the default, so it is left out of the Scene.
+            const next: Scene = { ...scene, fadeUnit: unit };
+            if (unit === 'seconds') delete next.fadeUnit;
+            onPut(next);
+          }}
         />
         <div className={styles.actions}>
           <Button variant="primary" icon={<Play />} onClick={onGo}>

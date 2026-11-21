@@ -139,8 +139,8 @@ describe('.lcshow file', () => {
   it('rejects a file of an unknown version', () => {
     const saved = JSON.parse(saveShowFile(show));
 
-    expect(() => loadShowFile(JSON.stringify({ ...saved, version: 9 }))).toThrow(
-      'Unsupported Show version: 9',
+    expect(() => loadShowFile(JSON.stringify({ ...saved, version: 10 }))).toThrow(
+      'Unsupported Show version: 10',
     );
     expect(() => loadShowFile(JSON.stringify({ ...show }))).toThrow(
       'Unsupported Show version: undefined',
@@ -239,6 +239,20 @@ describe('.lcshow file', () => {
     const saved = JSON.parse(saveShowFile(random));
     expect(saved.version).toBe(8);
     expect(loadShowFile(JSON.stringify(saved))).toEqual(random);
+  });
+
+  it('saves version 9 with a Scene fade unit, and loads older files as seconds', () => {
+    const [first, ...others] = show.scenes;
+    const beats: Show = { ...show, scenes: [{ ...first!, fadeUnit: 'beats' }, ...others] };
+    const saved = saveShowFile(beats);
+
+    expect(JSON.parse(saved).version).toBe(9);
+    expect(loadShowFile(saved)).toEqual(beats);
+    expect(JSON.parse(saveShowFile(show)).version).toBe(8);
+    expect(loadShowFile(JSON.stringify({ version: 8, ...show }))).toEqual(show);
+    expect(() => loadShowFile(JSON.stringify({ version: 8, ...beats }))).toThrow(
+      'unknown field "scenes[0].fadeUnit"',
+    );
   });
 
   it('keeps a Rule prism and gobo from version 7 on', () => {

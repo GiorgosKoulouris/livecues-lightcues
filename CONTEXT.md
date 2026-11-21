@@ -93,7 +93,7 @@ The venue-independent part of a project: Scenes, triggers and mappings. Combined
 _Avoid_: Project (ambiguous: a Show alone or a Show + Venue Patch)
 
 **Scene**:
-A reusable look or effect that targets Zones rather than specific Fixtures. Several Scenes can be active at once and are combined.
+A reusable look or effect that targets Zones rather than specific Fixtures. Several Scenes can be active at once and are combined. Its fade-in is in seconds or in beats; a beat fade is resolved against the Tempo when the Scene starts, so a Tempo change during the fade does not re-time it.
 _Avoid_: Cue, preset
 
 **Cue Sheet**:

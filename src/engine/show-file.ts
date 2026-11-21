@@ -10,10 +10,12 @@ import { validateShow, type Colour, type Rule, type Show } from '../shared/show'
 // width (Chase and Random): versions 1–6 load as they are, but may not have a
 // width. Version 7 also added a Rule's prism and gobo. Version 8 dropped
 // `panelScenes`: versions 1–7 still load, the field ignored and dropped, and a
-// version-8 file that has it is rejected as an unknown field.
+// version-8 file that has it is rejected as an unknown field. Version 9 added a
+// Scene's `fadeUnit` (seconds or beats): a Show saves as version 9 only when a
+// Scene sets one, and older files load as seconds.
 
-const VERSION = 8;
-const VERSIONS = [1, 2, 3, 4, 5, 6, 7, VERSION];
+const VERSION = 9;
+const VERSIONS = [1, 2, 3, 4, 5, 6, 7, 8, VERSION];
 
 interface ShowFile extends Show {
   version: number;
@@ -22,7 +24,8 @@ interface ShowFile extends Show {
 // Throws when the Show is invalid, so every saved file loads.
 export function saveShowFile(show: Show): string {
   throwIfInvalid(validateShow(show));
-  const file: ShowFile = { version: VERSION, ...show };
+  const usesFadeUnit = show.scenes.some((scene) => scene.fadeUnit !== undefined);
+  const file: ShowFile = { version: usesFadeUnit ? VERSION : VERSION - 1, ...show };
   return JSON.stringify(file);
 }
 
@@ -111,6 +114,7 @@ function unknownFields(file: ShowFile): string[] {
     ['hazePresets'],
     [], // 7: none at the top level; Effect fields are allowed below.
     [], // 8: none; it dropped panelScenes.
+    [], // 9: none at the top level; a Scene's fadeUnit is allowed below.
   ];
   const top = added.slice(0, file.version).flat();
   // Versions 1–7 may carry the retired panelScenes, which is dropped on load.
@@ -134,7 +138,8 @@ function unknownFields(file: ShowFile): string[] {
   }
   file.layers.forEach((layer, i) => allow(layer, ['id', 'name'], `layers[${i}].`));
   file.scenes.forEach((scene, i) => {
-    allow(scene, ['id', 'name', 'tags', 'layer', 'fadeIn', 'rules'], `scenes[${i}].`);
+    const fadeUnit = file.version >= 9 ? ['fadeUnit'] : [];
+    allow(scene, ['id', 'name', 'tags', 'layer', 'fadeIn', ...fadeUnit, 'rules'], `scenes[${i}].`);
     scene.rules.forEach(({ target, colour, ...rest }, j) => {
       const at = `scenes[${i}].rules[${j}].`;
       allow(rest, ruleFields, at);

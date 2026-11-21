@@ -59,6 +59,9 @@ import {
 export interface ActiveScene {
   scene: string;
   since: number;
+  // The fade-in in seconds, resolved against the Tempo at activation. Absent
+  // for a restored Scene, whose fade is long over.
+  fade?: number;
   from?: ActiveScene;
   shown?: Record<string, ShownAim>;
 }
@@ -80,7 +83,8 @@ export type EffectRuns = Record<string, Record<number, { length: EffectLength; s
 
 // Activates a Scene at `time`, replacing the active Scene in its Layer. It
 // keeps what each moving Fixture in the Venue Patch shows then, under the
-// Grand Master and at `beat` of the Tempo, its movement Effects at `runs`.
+// Grand Master and at `beat` of the Tempo, its movement Effects at `runs`. A
+// beat fade-in is resolved at `bpm` and keeps that length if the Tempo changes.
 export function activate(
   active: ActiveScenes,
   show: Show,
@@ -90,6 +94,7 @@ export function activate(
   grandMaster = 1,
   beat = 0,
   runs: EffectRuns = {},
+  bpm = DEFAULT_BPM,
 ): ActiveScenes {
   const scene = findScene(show, sceneId);
   if (!scene) return active;
@@ -97,6 +102,7 @@ export function activate(
   const entry: ActiveScene = {
     scene: sceneId,
     since: time,
+    fade: fadeSeconds(scene, bpm),
     shown: shownAims(show, patch, active, time, grandMaster, beat, runs),
   };
   // A finished fade no longer needs what it faded from.
@@ -140,14 +146,20 @@ export function clearLayer(active: ActiveScenes, layerId: string): ActiveScenes 
 }
 
 // Whether a Layer is still crossfading at `time`.
-function fading(show: Show, { scene, since, from }: ActiveScene, time: number): boolean {
-  return from !== undefined && progress(show, scene, since, time) < 1;
+function fading(show: Show, active: ActiveScene, time: number): boolean {
+  return active.from !== undefined && progress(show, active, time) < 1;
 }
 
-// How far into its fade-in a Scene activated at `since` is, 0–1.
-function progress(show: Show, sceneId: string, since: number, time: number): number {
-  const fadeIn = findScene(show, sceneId)?.fadeIn ?? 0;
-  return fadeIn > 0 ? clamp((time - since) / fadeIn) : 1;
+// A Scene's fade-in in seconds, its beats taken at `bpm`.
+function fadeSeconds(scene: Scene | undefined, bpm: number): number {
+  if (!scene) return 0;
+  return scene.fadeUnit === 'beats' ? (scene.fadeIn * 60) / bpm : scene.fadeIn;
+}
+
+// How far into its fade-in an active Scene is, 0–1.
+function progress(show: Show, active: ActiveScene, time: number): number {
+  const fade = active.fade ?? fadeSeconds(findScene(show, active.scene), DEFAULT_BPM);
+  return fade > 0 ? clamp((time - active.since) / fade) : 1;
 }
 
 function findScene(show: Show, id: string): Scene | undefined {
@@ -420,7 +432,7 @@ function fixtureAim(
   if (!aimed) return undefined;
   const aim = turnAim(channels, mounting, aimed, turn ?? STILL);
   if (!movedBy || !shown || shown.dark) return aim;
-  const p = progress(show, movedBy.scene, movedBy.since, time);
+  const p = progress(show, movedBy, time);
   const move = (from?: number, to?: number) =>
     from === undefined || to === undefined ? to : lerp(from, to, p);
   return { pan: move(shown.pan, aim.pan), tilt: move(shown.tilt, aim.tilt) };
@@ -570,14 +582,15 @@ function layerLook(
   show: Show,
   patch: VenuePatch,
   fixture: PatchedFixture,
-  { scene: id, since, from }: ActiveScene,
+  active: ActiveScene,
   time: number,
   beat: number,
   runs: EffectRuns,
 ): Look {
+  const { scene: id, since, from } = active;
   const scene = findScene(show, id);
   const target = scene ? sceneLook(patch, fixture, scene, beat, runs) : {};
-  const p = progress(show, id, since, time);
+  const p = progress(show, active, time);
   if (p === 1) return target;
   const before = from ? layerLook(show, patch, fixture, from, since, beat, runs) : {};
   const look: Look = {};
