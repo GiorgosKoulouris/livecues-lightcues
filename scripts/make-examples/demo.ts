@@ -328,7 +328,6 @@ export function demoShow(): Show {
       trigger(62, 'outro', 'go'), // D4
     ],
     baseLook: 'base-look',
-    panelScenes: ['intro', 'verse', 'chorus', 'blinder-hit', 'circle', 'outro'],
     hazePresets: [
       { id: 'light-haze', name: 'Light haze', level: 0.3, fade: 2, note: { channel: 1, note: 36 } }, // C2
     ],

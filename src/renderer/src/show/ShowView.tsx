@@ -219,7 +219,6 @@ function removedSceneMessage(show: Show, { id, name }: Scene): string {
   const also = [
     triggers > 0 && `its ${plural(triggers, 'Trigger')}`,
     show.baseLook === id && 'the Base Look',
-    show.panelScenes?.includes(id) && 'its Fallback Panel button',
   ].filter((part) => typeof part === 'string');
   return removedMessage(name, also);
 }

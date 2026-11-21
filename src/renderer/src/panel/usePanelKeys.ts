@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
-import { showHousePresets, type Show } from '../../../shared/show';
-import { pressScene } from '../show/scenes';
+import type { Show } from '../../../shared/show';
 import type { PlaybackState } from '../show/usePlayback';
 import { isTextEntry, panelAction, type PanelAction } from './shortcuts';
 
 // Runs the Fallback Panel's keys from any view, except while typing in a text
-// field. Separate from the strip, so they still work while it is hidden.
+// field. Separate from the Fallback Panel, so they still work while it is
+// hidden in Perform.
 export function usePanelKeys(show: Show | undefined, playback: PlaybackState | undefined): void {
   useEffect(() => {
     if (!show || !playback) return;
@@ -36,17 +36,6 @@ export function runPanelAction(action: PanelAction, show: Show, playback: Playba
     case 'freeze':
       window.engine.send({ type: 'setFreeze', on: !playback.freeze });
       break;
-    case 'scene': {
-      const sceneId = show.panelScenes?.[action.index];
-      const scene = show.scenes.find((s) => s.id === sceneId);
-      if (scene) window.engine.send(pressScene(playback.active, scene));
-      break;
-    }
-    case 'housePreset': {
-      const preset = showHousePresets(show)[action.index];
-      if (preset) window.engine.send({ type: 'fireHousePreset', id: preset.id });
-      break;
-    }
     case 'grandMaster': {
       // Rounded, so steps land on whole percentages.
       const level = Math.round((playback.grandMaster + action.step) * 100) / 100;

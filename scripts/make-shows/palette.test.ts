@@ -1,7 +1,8 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { loadShowFile } from '../../src/engine/show-file';
-import { MAX_PANEL_SCENES, validateShow } from '../../src/shared/show';
-import { noteName, paletteEntries, paletteFiles, paletteShow } from './palette';
+import { validateShow } from '../../src/shared/show';
+import { noteName, paletteEntries, paletteFiles, paletteShow, SHOW_NAME } from './palette';
 
 const show = paletteShow();
 const scenesIn = (tag: string) => show.scenes.filter((s) => s.tags.includes(tag));
@@ -47,9 +48,9 @@ describe('the Palette Show', () => {
     }
   });
 
-  it('has a Base Look and a full Fallback Panel', () => {
+  it('has a Base Look and no Fallback Panel Scenes', () => {
     expect(show.baseLook).toBe('base');
-    expect(show.panelScenes).toHaveLength(MAX_PANEL_SCENES);
+    expect(show).not.toHaveProperty('panelScenes');
   });
 
   it('names notes the app’s way', () => {
@@ -59,5 +60,16 @@ describe('the Palette Show', () => {
       'C4',
       'C#4',
     ]);
+  });
+});
+
+describe('the committed Palette Show', () => {
+  it('is what scripts/make-shows writes (run npm run show:palette)', () => {
+    const read = (name: string) =>
+      readFileSync(new URL(`../../shows/${name}`, import.meta.url), 'utf8');
+    expect(paletteFiles()).toEqual({
+      show: read(`${SHOW_NAME}.lcshow`),
+      cueSheet: read(`${SHOW_NAME} cue sheet.md`),
+    });
   });
 });

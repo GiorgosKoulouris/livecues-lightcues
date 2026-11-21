@@ -1,4 +1,4 @@
-// Scene logic for the Show view, Perform and the Fallback Panel. Pure, so it
+// Scene logic for the Show view, Perform and the Base Look button. Pure, so it
 // is testable without a DOM.
 import type { ActiveByLayer, EngineCommand } from '../../../shared/protocol';
 import type { Scene, Show } from '../../../shared/show';

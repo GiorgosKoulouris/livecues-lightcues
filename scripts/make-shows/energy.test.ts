@@ -1,14 +1,8 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { loadShowFile } from '../../src/engine/show-file';
-import { loadVenueFile } from '../../src/engine/venue-file';
-import { MAX_PANEL_SCENES, validateShow } from '../../src/shared/show';
-import {
-  approximatedAims,
-  approximatedStrobes,
-  fixtureUnsupportedGoboPrisms,
-} from '../../src/shared/venue-check';
-import { energyEntries, energyFiles, energyShow, noteName } from './energy';
+import { validateShow } from '../../src/shared/show';
+import { energyEntries, energyFiles, energyShow, noteName, SHOW_NAME } from './energy';
 
 const show = energyShow();
 const scenesIn = (tag: string) => show.scenes.filter((s) => s.tags.includes(tag));
@@ -102,30 +96,14 @@ describe('the Energy Show', () => {
     }
   });
 
-  it('has a Base Look and a Fallback Panel of the agreed Scenes', () => {
+  it('has a Base Look and no Fallback Panel Scenes', () => {
     expect(show.baseLook).toBe('base');
-    const panel = show.panelScenes ?? [];
-    expect(panel.length).toBeLessThanOrEqual(MAX_PANEL_SCENES);
-    expect(panel.map((id) => show.scenes.find((s) => s.id === id)?.name)).toEqual([
-      'Base: warm white',
-      'Chill: Candle',
-      'Groove: Purple',
-      'Drive: Red + white',
-      'Peak: Crowd light',
-      'Chill: Down',
-      'Hit: Blinder',
-      'Hit: Strobe',
-    ]);
+    expect(show).not.toHaveProperty('panelScenes');
   });
 
   it('writes a cue sheet with a note map per channel', () => {
     const sheet = energyFiles().cueSheet;
-    for (const heading of [
-      'Tier guide',
-      'How the Layers combine',
-      'Fallback Panel',
-      'House and Haze',
-    ]) {
+    for (const heading of ['Tier guide', 'How the Layers combine', 'House and Haze']) {
       expect(sheet).toContain(heading);
     }
     for (const channel of [1, 2, 3, 4, 5, 6]) expect(sheet).toContain(`### Channel ${channel}:`);
@@ -141,28 +119,13 @@ describe('the Energy Show', () => {
   });
 });
 
-// The venue Venue Patch is a local file, not in the repo.
-const venuePath = new URL('../../temp/venue/The venue.lcvenue', import.meta.url);
-describe.skipIf(!existsSync(venuePath))('the Energy Show in the venue', () => {
-  const patch = loadVenueFile(readFileSync(venuePath, 'utf8'));
-
-  it('lists only expected approximations in the Venue Check', () => {
-    expect(patch.fixtures.length).toBeGreaterThan(0);
-    // The venue has no Blinder Fixtures: hits fall back to the front Quads.
-    expect(patch.fixtures.some((f) => /blinder/i.test(f.id))).toBe(false);
-    // The Quads are moving washes with no known range, so their aims assume one.
-    const aims = approximatedAims(show, patch);
-    expect(aims.length).toBeGreaterThan(0);
-    for (const aim of aims) {
-      expect(aim.fixtureId).toMatch(/^quad-/);
-      expect(aim.approximations.every((a) => a.startsWith('assumed'))).toBe(true);
-    }
-    // Strobe hits assume a Hz span on Fixtures that strobe without one.
-    for (const strobe of approximatedStrobes(show, patch)) {
-      expect(strobe.approximation).toBe('assumedHzSpan');
-      expect(strobe.scenes.every((id) => id.startsWith('hit-'))).toBe(true);
-    }
-    // Every Fixture the Show sets Prism or Gobo on has the hardware.
-    expect(patch.fixtures.flatMap((f) => fixtureUnsupportedGoboPrisms(show, patch, f))).toEqual([]);
+describe('the committed Energy Show', () => {
+  it('is what scripts/make-shows writes (run npm run show:energy)', () => {
+    const read = (name: string) =>
+      readFileSync(new URL(`../../shows/${name}`, import.meta.url), 'utf8');
+    expect(energyFiles()).toEqual({
+      show: read(`${SHOW_NAME}.lcshow`),
+      cueSheet: read(`${SHOW_NAME} cue sheet.md`),
+    });
   });
 });

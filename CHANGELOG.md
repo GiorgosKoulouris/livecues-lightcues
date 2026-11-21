@@ -4,12 +4,26 @@ What changed in each LightCues release. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-21
+
 ### Added
 
 - Hazers: patch a haze machine in the Venue Patch's **House** tab with a Profile that has a haze channel, a Universe, an address, a max output and a fan level. It has no stage position. Scenes, Blackout, the Grand Master, Freeze and Blind never reach it. Hazers are off at launch and when a Show or Venue Patch opens, and hold their output if the MIDI Input is lost.
 - Haze Presets: up to 8 named slots per Show with a level (0–100%), a fade and an optional MIDI note (Go only). Every Hazer fades to the level times its max output, and sends its fan level while the output is above 0. **Haze Off** is built in and goes to 0 at once. Fire them from their note, from the Haze section in Perform (shown while the Venue Patch has Hazers) or from the Fallback Panel. They have no keys. The Venue Check lists Haze Presets when the Venue Patch has no Hazer.
 - Open Fixture Library and GDTF fog output and fan speed channels now import as haze and fan capabilities. Re-import a hazer's Profile to pick this up.
 - The Palette Show has four Haze Presets on notes E0–G0: Light, Medium, Heavy and Clear. The demo example has one on C2.
+- Visualiser: a 3D View of the rig with the stage, a back wall, an audience floor, truss and a body per Fixture. It shows live light: glow, aim, beam cones, floor pools, strobe and a Blind badge. The mouse orbits, zooms and pans, with FOH, Top and Side camera presets. Beams scatter by haze density. **Assume haze** sets the density for rigs with no Hazer, and a quality toggle is included. The House Lights tint the room.
+- Beam angle: an optional Fixture Profile field, imported from Open Fixture Library and GDTF and editable in the Profile Editor. A Profile without one uses its Role's default. The Visualiser draws it.
+- Spreads Front→Back, Back→Front, Right→Left, Edges→Centre and Random.
+- Chase width (1/4, 1/3 or 1/2) and a Random intensity Effect.
+- Fan and Figure-8 movement Effects.
+- Gobo slot, prism and prism rotation capabilities now import from Open Fixture Library and GDTF. Prism and Gobo are Rule settings. The Venue Patch can pick a Fixture's gobo slot, and the Venue Check lists Fixtures that lack one. The Visualiser draws a prism as split beams.
+- The Energy Show: 5 Layers on channels 1–5, 4 tiers, 156 Scenes and a cue sheet. The Palette Show gets a cue sheet too. Both are in `shows/`.
+
+### Changed
+
+- The Fallback Panel is now in the top bar. Its Scene and House Preset buttons and keys, and the Show settings section for them, are gone. Shows save as version 8.
+- The Energy Show colour uses seven metalcore palettes. Green, magenta and rainbow are gone.
 
 ## [0.1.2] - 2026-11-12
 

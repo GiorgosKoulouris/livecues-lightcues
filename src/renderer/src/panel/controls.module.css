@@ -140,3 +140,17 @@ button.freeze[aria-pressed='true']:hover:not(:disabled) {
 .grandMaster .key {
   margin-left: 0;
 }
+
+/* The top bar's slim fader: its label is only in the tooltip and the name. */
+.compactFader input {
+  width: 120px;
+}
+
+.compactFader .label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

@@ -156,9 +156,9 @@ export function loadShow(json: string): ShowMap {
   return new ShowMap(raw);
 }
 
-export const DEFAULT_SHOW = 'temp/venue/Energy.lcshow';
+export const DEFAULT_SHOW = 'shows/Energy.lcshow';
 
-/** The Show a plan names (default `temp/venue/Energy.lcshow`), found from the cwd or the plan's folder. */
+/** The Show a plan names (default `shows/Energy.lcshow`), found from the cwd or the plan's folder. */
 export function loadShowFor(plan: Plan, planPath: string): ShowMap {
   const showRel = plan.show ?? DEFAULT_SHOW;
   const showPath = [resolve(showRel), resolve(dirname(planPath), showRel)].find(existsSync);

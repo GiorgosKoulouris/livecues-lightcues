@@ -93,8 +93,35 @@ const depth = (rows: ZoneRow[]): RuleTarget => ({
 });
 
 const swatch = (name: Swatch): Colour => ({ swatch: name });
-const set = (t: RuleTarget, intensity: number, colour?: Swatch): Rule =>
-  colour ? { target: t, intensity, colour: swatch(colour) } : { target: t, intensity };
+// A swatch name or a custom hue and saturation.
+type Tint = Swatch | Colour;
+const tint = (c: Tint): Colour => (typeof c === 'string' ? swatch(c) : c);
+const tintText = (c: Tint): string =>
+  typeof c === 'string'
+    ? c
+    : 'swatch' in c
+      ? c.swatch
+      : (TINT_NAMES.get(`${c.hue}/${c.saturation}`) ?? `${c.hue}°`);
+const set = (t: RuleTarget, intensity: number, colour?: Tint): Rule =>
+  colour ? { target: t, intensity, colour: tint(colour) } : { target: t, intensity };
+
+// The palette's custom colours. Beams cannot make these, so they use swatches.
+const PETROL: Colour = { hue: 192, saturation: 1 };
+const PETROL_DEEP: Colour = { hue: 194, saturation: 1 };
+const PETROL_PALE: Colour = { hue: 186, saturation: 0.72 };
+const CRIMSON: Colour = { hue: 352, saturation: 1 };
+const RUST: Colour = { hue: 18, saturation: 0.85 };
+const BRASS: Colour = { hue: 30, saturation: 0.9 };
+const RUST_ORANGE: Colour = { hue: 22, saturation: 0.9 };
+const TINT_NAMES = new Map<string, string>([
+  ['192/1', 'petrol'],
+  ['194/1', 'deep petrol'],
+  ['186/0.72', 'pale petrol'],
+  ['352/1', 'crimson'],
+  ['18/0.85', 'rust'],
+  ['30/0.9', 'brass'],
+  ['22/0.9', 'rust orange'],
+]);
 const off = (t: RuleTarget): Rule => ({ target: t, intensity: 0 });
 
 // ---------------------------------------------------------------- tiers
@@ -134,7 +161,7 @@ const WIDTH_TEXT = new Map<EffectWidth, string>([
 
 // ---------------------------------------------------------------- Looks
 
-type LookRule = [Part, number, Swatch];
+type LookRule = [Part, number, Tint];
 interface LookSpec {
   id: string;
   name: string;
@@ -144,306 +171,110 @@ interface LookSpec {
 const lookRule = ([part, intensity, colour]: LookRule): Rule =>
   set(PARTS[part].target, intensity, colour);
 const lookAbout = (rules: LookRule[]): string =>
-  rules.map(([part, i, colour]) => `${PARTS[part].label} ${colour} ${pct(i)}`).join(', ');
+  rules.map(([part, i, colour]) => `${PARTS[part].label} ${tintText(colour)} ${pct(i)}`).join(', ');
 
-// Seven Looks a tier. Beams use colours their colour wheel has, so nothing is
-// approximated. Good Palette Looks carry over.
-const LOOKS: Record<TierId, { fadeIn: number; looks: LookSpec[] }> = {
-  chill: {
-    fadeIn: 3,
-    looks: [
-      {
-        id: 'candle',
-        name: 'Candle',
-        rules: [
-          ['quads', 0.5, 'Warm White'],
-          ['floor', 0.4, 'Amber'],
-        ],
-      },
-      {
-        id: 'glow',
-        name: 'Glow',
-        rules: [
-          ['quads', 0.6, 'Amber'],
-          ['floor', 0.5, 'Orange'],
-          ['beams', 0.4, 'Warm White'],
-        ],
-      },
-      {
-        id: 'sunset',
-        name: 'Sunset',
-        rules: [
-          ['quads', 0.6, 'Orange'],
-          ['floor', 0.6, 'Red'],
-          ['beams', 0.5, 'Amber'],
-        ],
-      },
-      {
-        id: 'moon',
-        name: 'Moon',
-        rules: [
-          ['quads', 0.4, 'Blue'],
-          ['front', 0.5, 'Lavender'],
-          ['beams', 0.4, 'White'],
-        ],
-      },
-      {
-        id: 'ocean',
-        name: 'Ocean',
-        rules: [
-          ['quads', 0.5, 'Cyan'],
-          ['floor', 0.6, 'Blue'],
-          ['beams', 0.5, 'Blue'],
-        ],
-      },
-      {
-        id: 'rose',
-        name: 'Rose',
-        rules: [
-          ['quads', 0.5, 'Pink'],
-          ['floor', 0.5, 'Amber'],
-          ['beams', 0.4, 'Cyan'],
-        ],
-      },
-      {
-        id: 'teal',
-        name: 'Teal',
-        rules: [
-          ['quads', 0.5, 'Cyan'],
-          ['floor', 0.5, 'Green'],
-          ['beams', 0.5, 'White'],
-        ],
-      },
+// Seven palettes, one Look each per tier. Washes, floor and Dekkers use the
+// palette's own colours, petrol and rust included. Beams use swatches their
+// colour wheel has, so nothing is approximated. The numbers are the intensity
+// at Peak; the tier scales them.
+const PALETTES: LookSpec[] = [
+  {
+    id: 'red-wall',
+    name: 'Red Wall',
+    rules: [
+      ['quads', 0.95, 'Red'],
+      ['floor', 0.9, CRIMSON],
+      ['beams', 1, 'Red'],
+      ['fx', 0.9, 'Red'],
     ],
   },
-  groove: {
-    fadeIn: 1,
-    looks: [
-      {
-        id: 'purple',
-        name: 'Purple',
-        rules: [
-          ['quads', 0.7, 'Magenta'],
-          ['floor', 0.7, 'Blue'],
-          ['beams', 0.7, 'Magenta'],
-          ['fx', 0.6, 'Blue'],
-        ],
-      },
-      {
-        id: 'tropic',
-        name: 'Tropic',
-        rules: [
-          ['quads', 0.7, 'Cyan'],
-          ['floor', 0.7, 'Amber'],
-          ['beams', 0.7, 'Amber'],
-          ['fx', 0.6, 'Cyan'],
-        ],
-      },
-      {
-        id: 'forest',
-        name: 'Forest',
-        rules: [
-          ['quads', 0.7, 'Green'],
-          ['floor', 0.7, 'Blue'],
-          ['beams', 0.7, 'Cyan'],
-          ['fx', 0.6, 'Green'],
-        ],
-      },
-      {
-        id: 'dusk',
-        name: 'Dusk',
-        rules: [
-          ['quads', 0.7, 'Orange'],
-          ['floor', 0.7, 'Blue'],
-          ['beams', 0.7, 'Blue'],
-          ['fx', 0.6, 'Orange'],
-        ],
-      },
-      {
-        id: 'twilight',
-        name: 'Twilight',
-        rules: [
-          ['quads', 0.7, 'Lavender'],
-          ['floor', 0.7, 'Magenta'],
-          ['beams', 0.7, 'Cyan'],
-          ['fx', 0.6, 'Lavender'],
-        ],
-      },
-      {
-        id: 'candy',
-        name: 'Candy',
-        rules: [
-          ['quads', 0.7, 'Pink'],
-          ['floor', 0.7, 'Cyan'],
-          ['beams', 0.7, 'White'],
-          ['fx', 0.6, 'Pink'],
-        ],
-      },
-      {
-        id: 'brass',
-        name: 'Brass',
-        rules: [
-          ['quads', 0.7, 'Amber'],
-          ['floor', 0.7, 'Red'],
-          ['beams', 0.7, 'Warm White'],
-          ['fx', 0.6, 'Amber'],
-        ],
-      },
+  {
+    id: 'red-pop',
+    name: 'Red Pop',
+    rules: [
+      ['quads', 1, 'Red'],
+      ['floor', 1, 'Amber'],
+      ['beams', 1, 'Amber'],
+      ['fx', 1, 'Amber'],
     ],
   },
-  drive: {
-    fadeIn: 0.5,
-    looks: [
-      {
-        id: 'red-white',
-        name: 'Red + white',
-        rules: [
-          ['quads', 1, 'Red'],
-          ['floor', 1, 'Red'],
-          ['beams', 1, 'White'],
-          ['fx', 1, 'White'],
-        ],
-      },
-      {
-        id: 'split',
-        name: 'Split',
-        rules: [
-          ['quads', 1, 'Magenta'],
-          ['quadsSR', 1, 'Cyan'],
-          ['floor', 1, 'Magenta'],
-          ['floorSR', 1, 'Cyan'],
-          ['beams', 1, 'White'],
-          ['fx', 1, 'Magenta'],
-        ],
-      },
-      {
-        id: 'neon',
-        name: 'Neon',
-        rules: [
-          ['quads', 1, 'Green'],
-          ['floor', 1, 'Magenta'],
-          ['beams', 1, 'Cyan'],
-          ['fx', 1, 'Green'],
-        ],
-      },
-      {
-        id: 'ice',
-        name: 'Ice',
-        rules: [
-          ['quads', 0.9, 'Cyan'],
-          ['floor', 0.9, 'Blue'],
-          ['beams', 1, 'White'],
-          ['fx', 1, 'White'],
-        ],
-      },
-      {
-        id: 'fire',
-        name: 'Fire',
-        rules: [
-          ['quads', 1, 'Orange'],
-          ['floor', 1, 'Red'],
-          ['beams', 1, 'Amber'],
-          ['fx', 1, 'Red'],
-        ],
-      },
-      {
-        id: 'storm',
-        name: 'Storm',
-        rules: [
-          ['quads', 0.9, 'Blue'],
-          ['floor', 0.9, 'Magenta'],
-          ['beams', 1, 'White'],
-          ['fx', 1, 'Blue'],
-        ],
-      },
-      {
-        id: 'gold',
-        name: 'Gold',
-        rules: [
-          ['quads', 1, 'Amber'],
-          ['floor', 1, 'Orange'],
-          ['beams', 1, 'Warm White'],
-          ['fx', 1, 'Amber'],
-        ],
-      },
+  {
+    id: 'rust',
+    name: 'Rust',
+    rules: [
+      ['quads', 0.8, RUST],
+      ['floor', 0.75, BRASS],
+      ['beams', 1, 'Warm White'],
+      ['fx', 0.75, RUST_ORANGE],
     ],
   },
-  peak: {
-    fadeIn: 0,
-    looks: [
-      {
-        id: 'crowd',
-        name: 'Crowd light',
-        rules: [
-          ['quads', 1, 'Warm White'],
-          ['front', 1, 'White'],
-          ['floor', 0.8, 'Warm White'],
-          ['beams', 1, 'White'],
-        ],
-      },
-      {
-        id: 'open-white',
-        name: 'Open white',
-        rules: [
-          ['quads', 1, 'White'],
-          ['floor', 1, 'White'],
-          ['beams', 1, 'White'],
-          ['fx', 1, 'White'],
-        ],
-      },
-      {
-        id: 'red',
-        name: 'Red',
-        rules: [
-          ['quads', 1, 'Red'],
-          ['floor', 1, 'Red'],
-          ['beams', 1, 'Red'],
-          ['fx', 1, 'Red'],
-        ],
-      },
-      {
-        id: 'blue',
-        name: 'Blue',
-        rules: [
-          ['quads', 1, 'Blue'],
-          ['floor', 1, 'Blue'],
-          ['beams', 1, 'Blue'],
-          ['fx', 1, 'Blue'],
-        ],
-      },
-      {
-        id: 'magenta',
-        name: 'Magenta',
-        rules: [
-          ['quads', 1, 'Magenta'],
-          ['floor', 1, 'Magenta'],
-          ['beams', 1, 'Magenta'],
-          ['fx', 1, 'Magenta'],
-        ],
-      },
-      {
-        id: 'blast',
-        name: 'Blast',
-        rules: [
-          ['quads', 1, 'White'],
-          ['floor', 1, 'White'],
-          ['beams', 1, 'White'],
-          ['fx', 1, 'White'],
-        ],
-      },
-      {
-        id: 'rave',
-        name: 'Rave',
-        rules: [
-          ['quads', 1, 'UV'],
-          ['floor', 1, 'Blue'],
-          ['beams', 1, 'Magenta'],
-          ['fx', 1, 'UV'],
-        ],
-      },
+  {
+    id: 'petrol-amber',
+    name: 'Petrol and Amber',
+    rules: [
+      ['quads', 0.8, PETROL],
+      ['floor', 0.8, 'Amber'],
+      ['beams', 1, 'Amber'],
+      ['fx', 0.75, 'Orange'],
     ],
   },
-};
+  {
+    id: 'two-tone',
+    name: 'Two Tone',
+    rules: [
+      ['quads', 0.9, PETROL],
+      ['floor', 0.95, 'Red'],
+      ['beams', 1, 'Red'],
+      ['fx', 0.9, PETROL],
+    ],
+  },
+  {
+    id: 'silhouette',
+    name: 'Silhouette',
+    rules: [
+      ['back', 0.7, PETROL],
+      ['floor', 0.2, PETROL_DEEP],
+      ['beams', 0.8, 'White'],
+      ['fx', 0.5, PETROL],
+    ],
+  },
+  {
+    id: 'breakdown',
+    name: 'Breakdown',
+    rules: [
+      ['quads', 0.35, PETROL_DEEP],
+      ['floor', 0.25, PETROL_DEEP],
+      ['beams', 0.9, 'White'],
+      ['fx', 0.4, 'Red'],
+    ],
+  },
+];
+
+const LOOKS: Record<TierId, { fadeIn: number; scale: number; looks: LookSpec[] }> =
+  Object.fromEntries(
+    (
+      [
+        ['chill', 3, 0.45],
+        ['groove', 1, 0.7],
+        ['drive', 0.5, 0.9],
+        ['peak', 0, 1],
+      ] as const
+    ).map(([tier, fadeIn, scale]) => [
+      tier,
+      {
+        fadeIn,
+        scale,
+        looks: PALETTES.map((look) => ({
+          ...look,
+          rules: look.rules.map(([part, i, colour]): LookRule => [
+            part,
+            Math.round(i * scale * 100) / 100,
+            colour,
+          ]),
+        })),
+      },
+    ]),
+  ) as Record<TierId, { fadeIn: number; scale: number; looks: LookSpec[] }>;
 
 // Looks to use between the tiers: the Base Look, Intro/Outro, Breakdown and
 // Dark, on notes 12–23 of the Look channel.
@@ -954,7 +785,8 @@ function pulseEntries(): Entry[] {
 
 // ---------------------------------------------------------------- Colour FX
 
-// Colour Effects replace the colour of what they target. Six a tier. A Look
+// Colour Effects replace the colour of what they target. Six a tier, from the
+// palettes' colours. A Look
 // fired later stops them, so fire Colour FX after the Look.
 type ColourFxSpec = [
   id: string,
@@ -963,49 +795,49 @@ type ColourFxSpec = [
   shape: 'Step' | 'Fade' | 'Rainbow',
   length: EffectLength,
   spread: Spread,
-  colours?: Swatch[],
+  colours?: Tint[],
 ];
 
 const COLOUR_FX: Record<TierId, ColourFxSpec[]> = {
   chill: [
-    ['drift-warm', 'Drift warm', 'washes', 'Fade', 16, 'Left→Right', ['Amber', 'Orange', 'Pink']],
-    ['drift-cool', 'Drift cool', 'quads', 'Fade', 16, 'Front→Back', ['Blue', 'Cyan', 'Lavender']],
-    ['floor-drift', 'Floor drift', 'floor', 'Fade', 16, 'Mirrored', ['Amber', 'Red']],
-    ['beam-drift', 'Beam drift', 'beams', 'Fade', 16, 'Left→Right', ['Blue', 'Cyan']],
+    ['drift-rust', 'Drift rust', 'washes', 'Fade', 16, 'Left→Right', [RUST, 'Amber', 'Orange']],
+    [
+      'drift-petrol',
+      'Drift petrol',
+      'quads',
+      'Fade',
+      16,
+      'Front→Back',
+      [PETROL, PETROL_PALE, 'Blue'],
+    ],
+    ['floor-drift', 'Floor drift', 'floor', 'Fade', 16, 'Mirrored', ['Amber', CRIMSON]],
+    ['beam-drift', 'Beam drift', 'beams', 'Fade', 16, 'Left→Right', ['Cyan', 'White']],
     ['dekker-glow', 'Dekker glow', 'fx', 'Fade', 8, 'Alternate', ['Amber', 'Orange']],
-    ['rainbow-slow', 'Rainbow slow', 'washes', 'Rainbow', 16, 'Left→Right'],
+    ['ember-fade', 'Ember fade', 'washes', 'Fade', 16, 'Left→Right', ['Red', RUST]],
   ],
   groove: [
-    [
-      'step-blue-magenta',
-      'Step blue/magenta',
-      'washes',
-      'Step',
-      1,
-      'Alternate',
-      ['Blue', 'Magenta'],
-    ],
-    ['quads-fade', 'Quads cyan/magenta', 'quads', 'Fade', 8, 'Front→Back', ['Cyan', 'Magenta']],
-    ['floor-step', 'Floor amber/blue', 'floor', 'Step', 2, 'Alternate', ['Amber', 'Blue']],
-    ['beams-step', 'Beams cyan/magenta', 'beams', 'Step', 2, 'Left→Right', ['Cyan', 'Magenta']],
-    ['dekker-step', 'Dekker blue/green', 'fx', 'Step', 1, 'Alternate', ['Blue', 'Green']],
-    ['rainbow', 'Rainbow 8b', 'washes', 'Rainbow', 8, 'Left→Right'],
+    ['step-petrol-red', 'Step petrol/red', 'washes', 'Step', 1, 'Alternate', [PETROL, 'Red']],
+    ['quads-fade', 'Quads petrol/amber', 'quads', 'Fade', 8, 'Front→Back', [PETROL, 'Amber']],
+    ['floor-step', 'Floor amber/red', 'floor', 'Step', 2, 'Alternate', ['Amber', 'Red']],
+    ['beams-step', 'Beams red/amber', 'beams', 'Step', 2, 'Left→Right', ['Red', 'Amber']],
+    ['dekker-step', 'Dekker petrol/orange', 'fx', 'Step', 1, 'Alternate', [PETROL, 'Orange']],
+    ['ember-fade', 'Ember fade', 'washes', 'Fade', 8, 'Left→Right', ['Red', RUST, 'Orange']],
   ],
   drive: [
     ['step-red-white', 'Step red/white', 'washes', 'Step', 1, 'Alternate', ['Red', 'White']],
-    ['quads-step', 'Quads magenta/cyan', 'quads', 'Step', 0.5, 'Alternate', ['Magenta', 'Cyan']],
-    ['floor-step', 'Floor blue/amber', 'floor', 'Step', 0.5, 'Random', ['Blue', 'Amber']],
-    ['beams-step', 'Beams red/blue', 'beams', 'Step', 1, 'Mirrored', ['Red', 'Blue']],
-    ['dekker-step', 'Dekker green/magenta', 'fx', 'Step', 0.5, 'Alternate', ['Green', 'Magenta']],
-    ['rainbow', 'Rainbow 4b', 'washes', 'Rainbow', 4, 'Back→Front'],
+    ['quads-step', 'Quads petrol/red', 'quads', 'Step', 0.5, 'Alternate', [PETROL, 'Red']],
+    ['floor-step', 'Floor amber/red', 'floor', 'Step', 0.5, 'Random', ['Amber', 'Red']],
+    ['beams-step', 'Beams red/amber', 'beams', 'Step', 1, 'Mirrored', ['Red', 'Amber']],
+    ['dekker-step', 'Dekker orange/petrol', 'fx', 'Step', 0.5, 'Alternate', ['Orange', PETROL]],
+    ['fire-fade', 'Fire fade', 'washes', 'Fade', 4, 'Back→Front', ['Red', 'Orange', 'Amber']],
   ],
   peak: [
     ['step-red-white', 'Step red/white', 'washes', 'Step', 0.5, 'Alternate', ['Red', 'White']],
-    ['quads-step', 'Quads white/blue', 'quads', 'Step', 0.5, 'Front→Back', ['White', 'Blue']],
-    ['floor-step', 'Floor magenta/cyan', 'floor', 'Step', 0.5, 'Alternate', ['Magenta', 'Cyan']],
+    ['quads-step', 'Quads white/petrol', 'quads', 'Step', 0.5, 'Front→Back', ['White', PETROL]],
+    ['floor-step', 'Floor red/orange', 'floor', 'Step', 0.5, 'Alternate', ['Red', 'Orange']],
     ['beams-step', 'Beams red/white', 'beams', 'Step', 0.5, 'Random', ['Red', 'White']],
-    ['dekker-step', 'Dekker UV/white', 'fx', 'Step', 0.25, 'Alternate', ['UV', 'White']],
-    ['rainbow', 'Rainbow 2b', 'washes', 'Rainbow', 2, 'Edges→Centre'],
+    ['dekker-step', 'Dekker red/white', 'fx', 'Step', 0.25, 'Alternate', ['Red', 'White']],
+    ['fire-flicker', 'Fire flicker', 'washes', 'Step', 0.25, 'Random', ['Red', 'Orange', 'Amber']],
   ],
 };
 
@@ -1024,7 +856,7 @@ function colourFxEntries(): Entry[] {
             colourEffect:
               shape === 'Rainbow'
                 ? { shape, length, spread }
-                : { shape, colours: (colours ?? []).map(swatch), length, spread },
+                : { shape, colours: (colours ?? []).map(tint), length, spread },
           },
         ],
       },
@@ -1033,7 +865,7 @@ function colourFxEntries(): Entry[] {
       mode: 'go' as const,
       about:
         `${PARTS[part].label}: ${shape} ${beatsText(length)}, ${spread}` +
-        (colours ? `, ${colours.join(' → ')}` : ''),
+        (colours ? `, ${colours.map(tintText).join(' → ')}` : ''),
     })),
   );
 }
@@ -1072,13 +904,15 @@ const punch = (id: string, name: string, part: Part): HitSpec =>
   hit(id, name, `${PARTS[part].label} white, full`, [set(PARTS[part].target, 1, 'White')]);
 const sideHit = (id: string, name: string, about: string, t: RuleTarget): HitSpec =>
   hit(id, name, `${about}, white, full`, [set(t, 1, 'White')]);
-const colourHit = (colour: Swatch): HitSpec =>
-  hit(
-    `colour-${colour.toLowerCase()}`,
-    `Colour ${colour.toLowerCase()}`,
-    `Everything ${colour}, full`,
+const colourHit = (colour: Tint): HitSpec => {
+  const name = tintText(colour);
+  return hit(
+    `colour-${name.toLowerCase().replace(/ /g, '-')}`,
+    `Colour ${name.toLowerCase()}`,
+    `Everything ${name}, full`,
     [set({}, 1, colour)],
   );
+};
 const strobe: Rule = { ...set({}, 1, 'White'), strobe: 'Fast' };
 
 const HIT_GROUPS: { name: string; base: number; hits: HitSpec[] }[] = [
@@ -1155,7 +989,7 @@ const HIT_GROUPS: { name: string; base: number; hits: HitSpec[] }[] = [
   {
     name: 'Colour',
     base: 72, // C5
-    hits: (['Amber', 'Orange', 'Magenta', 'Blue', 'Cyan', 'Green'] as const).map(colourHit),
+    hits: (['Amber', 'Orange', PETROL, 'Cyan', 'Warm White', 'Blue'] as const).map(colourHit),
   },
   {
     name: 'Prism and Gobo',
@@ -1256,21 +1090,10 @@ const RELEASES = [
   },
   {
     channel: CH.colourfx,
-    scene: 'chill-colourfx-rainbow-slow',
+    scene: 'chill-colourfx-ember-fade',
     about: 'Release Colour FX: colours return to the Look',
   },
   { channel: CH.hit, scene: 'hit-blinder', about: 'Release Hit: stop any held hit' },
-];
-
-const PANEL = [
-  'base',
-  'chill-look-candle',
-  'groove-look-purple',
-  'drive-look-red-white',
-  'peak-look-crowd',
-  'chill-move-down',
-  'hit-blinder',
-  'hit-strobe',
 ];
 
 export function energyEntries(): Entry[] {
@@ -1304,7 +1127,6 @@ export function energyShow(): Show {
       ...RELEASES.map((r) => trigger(r.channel, 0, r.scene, 'release')),
     ].sort((a, b) => a.channel - b.channel || a.note - b.note),
     baseLook: 'base',
-    panelScenes: PANEL,
     housePresets: HOUSE_PRESETS,
     hazePresets: HAZE_PRESETS,
   };
@@ -1354,9 +1176,6 @@ function cueSheet(show: Show): string {
   ];
   const layerSection = (channel: number, title: string, intro: string) =>
     `### Channel ${channel}: ${title}\n\n${intro}\n\n${channelTable(channel)}`;
-  const panel = (show.panelScenes ?? [])
-    .map((id, i) => `${i + 1}. ${show.scenes.find((s) => s.id === id)?.name ?? id}`)
-    .join('\n');
   const tiers = TIERS.map(
     ({ name, base }) =>
       `| ${name} | ${noteName(base)}–${noteName(base + 23)} | ${base}–${base + 23} |`,
@@ -1377,7 +1196,7 @@ ${tiers
   .split('\n')
   .map(
     (l, i) =>
-      `${l} ${['Quiet verses, intros and ballads: slow fades, warm and cool washes, gentle breathing.', 'Mid-energy verses and pre-choruses: steady beat, wave, fan and Figure-8.', 'Choruses and drops: saturated colour, fast chases, Random, fast Fan.', 'Last chorus, big moments and anthems: crowd light, open white, wide sweeps with Fan and Prism.'][i]} |`,
+      `${l} ${['Quiet verses, intros and ballads: the seven palettes at low level, slow fades, gentle breathing.', 'Mid-energy verses and pre-choruses: steady beat, wave, fan and Figure-8.', 'Choruses and drops: the palettes near full, fast chases, Random, fast Fan.', 'Last chorus, big moments and anthems: the palettes at full, wide sweeps with Fan and Prism.'][i]} |`,
   )
   .join('\n')}
 
@@ -1387,7 +1206,7 @@ Peak also holds the anthem material.
 
 Five Layers stack, one per MIDI channel. Each holds one Scene at a time, so a Look, a Movement, a Pulse and a Colour FX can all run together.
 
-- **Look** (ch 1) sets colour and intensity. **Movement** (ch 2) sets aim and a movement Effect, and the Move+FX combos add an intensity Effect on the beams. **Pulse** (ch 3) scales intensity with Effects: pulses, chases, builds, Random. **Colour FX** (ch 4) replaces colour with steps, fades or Rainbow. **Hit** (ch 5) is Flash only: on while the note is held.
+- **Look** (ch 1) sets colour and intensity. **Movement** (ch 2) sets aim and a movement Effect, and the Move+FX combos add an intensity Effect on the beams. **Pulse** (ch 3) scales intensity with Effects: pulses, chases, builds, Random. **Colour FX** (ch 4) replaces colour with steps or fades. **Hit** (ch 5) is Flash only: on while the note is held.
 - Intensity is the highest any Layer gives. Colour, aim and Effects come from the Scene fired last.
 - Fire Colour FX *after* the Look: a Look fired later stops it.
 - Hits restore what was under them on release. Blackout is a Flash on the Look Layer, so the Look returns on release.
@@ -1414,10 +1233,6 @@ Set the house look for each House Preset in the venue's Venue Patch, or the Venu
 
 ${header}
 ${presetTable.join('\n')}
-
-## Fallback Panel (keys 1–9)
-
-${panel}
 `;
 }
 

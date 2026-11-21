@@ -1,42 +1,17 @@
-.strip {
-  /* The Blackout button and the Grand Master fader. */
-  --wide-control: 140px;
+/* The top bar's cluster. It never shrinks, wraps or scrolls: the file names
+   and the MIDI chip give way first. */
+.cluster {
+  /* Blackout needs no minimum width here. */
+  --wide-control: 0px;
 
   display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-width: 0;
-  padding: var(--space-3) var(--space-4);
-  background: var(--bar);
-  border-top: 1px solid var(--line);
-}
-
-/* Caps a long Base Look name, so the Scene buttons keep room. */
-.baseLook {
-  max-width: 320px;
-}
-
-/* Scrolls sideways rather than wrapping, so the strip keeps its height. */
-.scenes,
-.presets {
-  display: flex;
-  gap: var(--space-2);
-  min-width: 0;
-  overflow-x: auto;
-}
-
-/* After the Scene buttons, set apart from them. */
-.presets {
-  padding-left: var(--space-3);
-  border-left: 1px solid var(--line);
-}
-
-.note {
-  color: var(--legend-dim);
-  font-size: var(--text-sm);
-}
-
-.scenes button,
-.presets button {
   flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+
+/* Caps a long Scene name; the full name is in the tooltip. */
+.baseLook {
+  max-width: 160px;
 }

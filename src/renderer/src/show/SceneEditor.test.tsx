@@ -17,7 +17,6 @@ const SHOW: Show = {
   scenes: [],
   triggers: [],
   baseLook: undefined,
-  panelScenes: [],
 } as unknown as Show;
 
 const scene = (rules: Rule[] = []): Scene => ({

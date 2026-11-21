@@ -75,7 +75,6 @@ const show: Show = {
   baseLook: 'verse',
   defaultColour: { hue: 30, saturation: 0.2 },
   defaultDirection: 'Centre',
-  panelScenes: ['hit', 'verse'],
   housePresets: [
     { id: 'dim', name: 'Dim', fade: 3 },
     { id: 'up', name: 'Up', fade: 5, note: { channel: 2, note: 10 } },
@@ -140,31 +139,43 @@ describe('.lcshow file', () => {
   it('rejects a file of an unknown version', () => {
     const saved = JSON.parse(saveShowFile(show));
 
-    expect(() => loadShowFile(JSON.stringify({ ...saved, version: 8 }))).toThrow(
-      'Unsupported Show version: 8',
+    expect(() => loadShowFile(JSON.stringify({ ...saved, version: 9 }))).toThrow(
+      'Unsupported Show version: 9',
     );
     expect(() => loadShowFile(JSON.stringify({ ...show }))).toThrow(
       'Unsupported Show version: undefined',
     );
   });
 
-  it('loads a version 1 file, which has no default colour or panel Scenes', () => {
-    const { defaultColour, panelScenes, ...v1 } = withoutDirections(show);
+  it('loads a version 1 file, which has no default colour', () => {
+    const { defaultColour, ...v1 } = withoutDirections(show);
     void defaultColour;
-    void panelScenes;
 
     expect(loadShowFile(JSON.stringify({ version: 1, ...v1 }))).toEqual(v1);
     expect(() => loadShowFile(JSON.stringify({ version: 1, ...withoutDirections(show) }))).toThrow(
-      'Invalid Show:\nunknown field "defaultColour"\nunknown field "panelScenes"',
+      'Invalid Show:\nunknown field "defaultColour"',
     );
   });
 
-  it('loads a version 2 file, which has no panel Scenes', () => {
-    const { panelScenes, ...v2 } = withoutDirections(show);
-    void panelScenes;
+  it('loads a version 1–7 file with panelScenes, ignoring and dropping them', () => {
+    const v3 = { version: 3, ...withoutDirections(show), panelScenes: ['verse', 'gone'] };
+    expect(loadShowFile(JSON.stringify(v3))).toEqual(withoutDirections(show));
+    const { defaultColour, ...plain } = withoutDirections(show);
+    void defaultColour;
+    expect(loadShowFile(JSON.stringify({ version: 1, ...plain, panelScenes: ['x'] }))).toEqual(
+      plain,
+    );
 
-    expect(loadShowFile(JSON.stringify({ version: 2, ...v2 }))).toEqual(v2);
-    expect(() => loadShowFile(JSON.stringify({ version: 2, ...withoutDirections(show) }))).toThrow(
+    const v7 = { version: 7, ...show, panelScenes: ['hit', 'verse'] };
+    const loaded = loadShowFile(JSON.stringify(v7));
+    expect(loaded).toEqual(show);
+    expect(JSON.parse(saveShowFile(loaded))).not.toHaveProperty('panelScenes');
+  });
+
+  it('rejects panelScenes in a version 8 file as an unknown field', () => {
+    const v8 = { version: 8, ...show, panelScenes: ['verse'] };
+
+    expect(() => loadShowFile(JSON.stringify(v8))).toThrow(
       'Invalid Show:\nunknown field "panelScenes"',
     );
   });
@@ -205,7 +216,7 @@ describe('.lcshow file', () => {
     );
   });
 
-  it('loads a version 6 file, and saves version 7 with the new Spreads', () => {
+  it('loads a version 6 file, and saves version 8 with the new Spreads', () => {
     const v6 = { version: 6, ...show };
     expect(loadShowFile(JSON.stringify(v6))).toEqual(show);
 
@@ -226,7 +237,7 @@ describe('.lcshow file', () => {
       ],
     };
     const saved = JSON.parse(saveShowFile(random));
-    expect(saved.version).toBe(7);
+    expect(saved.version).toBe(8);
     expect(loadShowFile(JSON.stringify(saved))).toEqual(random);
   });
 
@@ -240,7 +251,7 @@ describe('.lcshow file', () => {
       ],
     };
     const saved = saveShowFile(geared);
-    expect(JSON.parse(saved).version).toBe(7);
+    expect(JSON.parse(saved).version).toBe(8);
     expect(loadShowFile(saved)).toEqual(geared);
     expect(() => loadShowFile(JSON.stringify({ version: 6, ...geared }))).toThrow(
       'unknown field "scenes[0].rules[0].prism"',
@@ -313,7 +324,6 @@ describe('.lcshow file', () => {
     saved.layers.pop();
     saved.triggers[0].scene = 'chorus';
     saved.baseLook = 'outro';
-    saved.panelScenes = ['intro'];
 
     expect(() => loadShowFile(JSON.stringify(saved))).toThrow(
       [
@@ -321,7 +331,6 @@ describe('.lcshow file', () => {
         'Scene "Hit": Layer "accents" is not in the Show',
         'Trigger 1/60: Scene "chorus" is not in the Show',
         'Base Look: Scene "outro" is not in the Show',
-        'Fallback Panel: Scene "intro" is not in the Show',
       ].join('\n'),
     );
   });

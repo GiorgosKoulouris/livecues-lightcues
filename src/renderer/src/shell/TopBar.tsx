@@ -18,11 +18,14 @@ interface TopBarProps {
   venue: OpenFile | undefined;
   playback: PlaybackState | undefined;
   midiInput: MidiInputStatus | undefined;
+  // The Fallback Panel, left out in the Perform view.
+  panel?: ReactNode;
 }
 
-// The open files, Blind, the MIDI Input and the engine, visible from every
-// view.
-export function TopBar({ show, venue, playback, midiInput }: TopBarProps) {
+// The open files, the Fallback Panel, Blind, the MIDI Input and the engine,
+// visible from every view. The files ellipsize first when the bar is short,
+// then the MIDI chip; the Fallback Panel never shrinks.
+export function TopBar({ show, venue, playback, midiInput, panel }: TopBarProps) {
   return (
     <header className={styles.bar}>
       <h1 className={styles.title}>
@@ -31,6 +34,7 @@ export function TopBar({ show, venue, playback, midiInput }: TopBarProps) {
       <FileName kind="Show" file={show} />
       <FileName kind="Venue Patch" file={venue} />
       <span className={styles.spacer} />
+      {panel}
       {playback?.mode === 'blind' && (
         <Badge tone="warning" title="Nothing is sent to the rig, except Blackout">
           Blind
@@ -103,7 +107,7 @@ function StateChip({
 }) {
   return (
     <span className={cx(styles.chip, styles[state])} role={role} title={title}>
-      {children}
+      <span className={styles.chipText}>{children}</span>
     </span>
   );
 }

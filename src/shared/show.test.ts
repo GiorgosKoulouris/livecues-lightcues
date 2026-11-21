@@ -16,7 +16,6 @@ import {
   setBaseLook,
   setDefaultColour,
   setDefaultDirection,
-  setPanelScenes,
   findHazePresetOn,
   validateShow,
   type HazePreset,
@@ -306,7 +305,6 @@ describe('editing a Show', () => {
         { channel: 1, note: 61, scene: 'hit', mode: 'flash' },
       ],
       baseLook: 'verse',
-      panelScenes: ['verse'],
     };
 
     expect(removeScene(before, 'verse')).toEqual({
@@ -314,7 +312,7 @@ describe('editing a Show', () => {
       scenes: [hit],
       triggers: [{ channel: 1, note: 61, scene: 'hit', mode: 'flash' }],
     });
-    expect(removeScene(before, 'hit')).toMatchObject({ baseLook: 'verse', panelScenes: ['verse'] });
+    expect(removeScene(before, 'hit')).toMatchObject({ baseLook: 'verse' });
   });
 
   it('adds and renames Layers, keeping their order', () => {
@@ -378,28 +376,6 @@ describe('editing a Show', () => {
     expect(setBaseLook(designated.show, undefined)).toEqual({ show: before });
     expect(setBaseLook(before, 'outro')).toEqual({
       errors: ['Base Look: Scene "outro" is not in the Show'],
-    });
-  });
-
-  it('puts Scenes on the Fallback Panel in order, up to nine, or none', () => {
-    const ids = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'];
-    const before: Show = {
-      ...emptyShow(),
-      scenes: ids.map((id) => scene({ id, layer: 'layer-1' })),
-    };
-    const set = setPanelScenes(before, ['c', 'a']);
-    if ('errors' in set) throw new Error(set.errors.join('\n'));
-
-    expect(set.show.panelScenes).toEqual(['c', 'a']);
-    expect(setPanelScenes(set.show, [])).toEqual({ show: before });
-    expect(setPanelScenes(before, ['a', 'a', 'outro'])).toEqual({
-      errors: [
-        'Fallback Panel: Scene "outro" is not in the Show',
-        'Fallback Panel: Scene "a" is listed twice',
-      ],
-    });
-    expect(setPanelScenes(before, ids)).toEqual({
-      errors: ['Fallback Panel: at most 9 Scenes'],
     });
   });
 

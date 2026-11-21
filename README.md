@@ -14,7 +14,7 @@ Building from source: [docs/development.md](docs/development.md).
 - Your DAW or MIDI controller fires the lights. Each song's MIDI notes start Scenes, with no one at the desk.
 - You program the Show once. Scenes aim at parts of the stage (Zones) and kinds of light (Roles: Wash, Spot/Beam, Blinder, …), not at particular Fixtures.
 - A new venue means re-patching, not re-programming. Make a Venue Patch for the house rig, place the Fixtures on the stage plan, and the Show adapts.
-- If MIDI drops, the current look holds. The Fallback Panel is on screen in every view, and Perform has the same controls: Blackout, Base Look, Grand Master, Tap Tempo, Freeze and your chosen Scene buttons, each with a key.
+- If MIDI drops, the current look holds. The Fallback Panel is in the top bar in every view but Perform: Blackout, Base Look, Grand Master, Tap Tempo and Freeze, each with a key. Perform has the same controls, big, plus a button for every Scene.
 
 ## Requirements
 
@@ -91,7 +91,7 @@ In **Show**, on the **Triggers** tab:
 
 Open **Perform** at the gig. It shows Blackout, Base Look, Grand Master, Tap Tempo and Freeze along the top, a House section while the Venue Patch has House Lights, a Haze section while it has Hazers, every Scene button by Layer, and the Preview. The House section has **Startup** and a button per House Preset. Each fades the House Lights to its look; the last one fired stays lit. The Haze section has **Haze Off** and a button per Haze Preset, which fades every Hazer to its level. Blackout, Blind and Freeze do not affect haze. The top bar shows the MIDI Input. A red disc and "MIDI lost" mean it is lost, and Triggers do not fire until it returns.
 
-Fallback Panel keys: **B** Blackout, **0** Base Look, **1**–**9** Scene buttons, **-** / **+** Grand Master, **T** Tap Tempo, **F** Freeze, **Shift+1**–**8** House Presets. Haze Off and the Haze Presets are buttons with no keys. Pick the Base Look and the panel's Scene buttons in the Show settings.
+Fallback Panel keys, in every view: **B** Blackout, **0** Base Look, **-** / **+** Grand Master, **T** Tap Tempo, **F** Freeze. Scene, House Preset and Haze buttons have no keys. Pick the Base Look in the Show settings.
 
 ### 6. Visualiser
 

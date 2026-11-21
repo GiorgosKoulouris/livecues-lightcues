@@ -13,33 +13,17 @@ const press = (key: string, more: Partial<KeyPress> = {}): KeyPress => ({
 });
 
 describe('panelAction', () => {
-  it('maps B to Blackout, 0 to the Base Look and 1–9 to the Scene buttons', () => {
+  it('maps B to Blackout and 0 to the Base Look', () => {
     expect(panelAction(press('b'))).toEqual({ type: 'blackout' });
     expect(panelAction(press('B'))).toEqual({ type: 'blackout' });
     expect(panelAction(press('0'))).toEqual({ type: 'baseLook' });
-    expect(panelAction(press('1'))).toEqual({ type: 'scene', index: 0 });
-    expect(panelAction(press('9'))).toEqual({ type: 'scene', index: 8 });
   });
 
-  it('maps Shift+1–8 to the House Preset buttons by physical key, not while held', () => {
-    expect(panelAction(press('!', { code: 'Digit1', shiftKey: true }))).toEqual({
-      type: 'housePreset',
-      index: 0,
-    });
-    expect(panelAction(press('*', { code: 'Digit8', shiftKey: true }))).toEqual({
-      type: 'housePreset',
-      index: 7,
-    });
-    // A layout that types digits with Shift.
-    expect(panelAction(press('2', { code: 'Digit2', shiftKey: true }))).toEqual({
-      type: 'housePreset',
-      index: 1,
-    });
-    expect(panelAction(press('(', { code: 'Digit9', shiftKey: true }))).toBeUndefined();
-    expect(panelAction(press(')', { code: 'Digit0', shiftKey: true }))).toBeUndefined();
-    expect(
-      panelAction(press('!', { code: 'Digit1', shiftKey: true, repeat: true })),
-    ).toBeUndefined();
+  it('has no action for the digits 1–9, with or without Shift', () => {
+    for (const digit of '123456789') {
+      expect(panelAction(press(digit))).toBeUndefined();
+      expect(panelAction(press('!', { code: `Digit${digit}`, shiftKey: true }))).toBeUndefined();
+    }
   });
 
   it('keeps Shift for keys typed with it: Blackout and the Grand Master', () => {

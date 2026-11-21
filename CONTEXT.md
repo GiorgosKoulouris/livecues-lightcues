@@ -49,7 +49,7 @@ A named set of House Lights in the Venue Patch, such as Bar or Ceiling. Each Hou
 _Avoid_: Area, Zone
 
 **House Preset**:
-A named slot in the Show, with a fade and an optional MIDI note, that sets the House Lights to that slot's house look. Fired by its note (Go only) or its button in Perform and on the Fallback Panel. One holds at a time.
+A named slot in the Show, with a fade and an optional MIDI note, that sets the House Lights to that slot's house look. Fired by its note (Go only) or its button in Perform. One holds at a time.
 _Avoid_: House Scene, house cue
 
 **House look**:
@@ -65,7 +65,7 @@ A haze machine on a Universe the app drives. Patched in the Venue Patch with a P
 _Avoid_: Fogger, smoke machine, atmosphere
 
 **Haze Preset**:
-A named slot in the Show with a haze level (0–100%), a fade and an optional MIDI note, that takes every Hazer to that level. Fired by its note (Go only) or its button in Perform and on the Fallback Panel. One holds at a time. Haze Off, built into every Show, takes the Hazers to 0 at once.
+A named slot in the Show with a haze level (0–100%), a fade and an optional MIDI note, that takes every Hazer to that level. Fired by its note (Go only) or its button in Perform. One holds at a time. Haze Off, built into every Show, takes the Hazers to 0 at once.
 _Avoid_: Haze Scene, haze cue, fog preset
 
 ### Visualiser
@@ -91,6 +91,10 @@ _Avoid_: Project (ambiguous: a Show alone or a Show + Venue Patch)
 **Scene**:
 A reusable look or effect that targets Zones rather than specific Fixtures. Several Scenes can be active at once and are combined.
 _Avoid_: Cue, preset
+
+**Cue Sheet**:
+A generated, human-readable companion to a built Show: the Scene names and notes per MIDI channel, and how its Layers combine. Read only, and rebuilt with the Show. A Plan picks Scenes by the names on it.
+_Avoid_: Note map, cheat sheet
 
 **Rule**:
 One part of a Scene: a target (Zones × Roles) and the settings applied to it (intensity, colour, Direction, Effects, strobe, Prism, Gobo). Later Rules in a Scene override earlier ones.
@@ -152,7 +156,7 @@ A slot that holds at most one active Scene. Activating a Scene replaces the acti
 A mapping from an incoming MIDI message to a Scene action: Go (activate and stay), Flash (active while held) or Release (clear the Layer).
 
 **Scene button**:
-A manual control for one Scene, in Perform and on the Fallback Panel, with its key. Toggles: it activates the Scene, or clears its Layer if that Scene is already active. Unlike a Trigger, which only does the action it maps.
+A manual control for one Scene, in Perform. Toggles: it activates the Scene, or clears its Layer if that Scene is already active. Unlike a Trigger, which only does the action it maps.
 _Avoid_: Trigger button
 
 **MIDI Input**:
@@ -160,10 +164,10 @@ The MIDI port Triggers listen to, chosen per machine and kept between runs. When
 _Avoid_: MIDI device, controller
 
 **Base Look**:
-The Scene designated as the safe fallback look, available from the Fallback Panel at any time. Going to it clears every other Layer.
+The Scene designated as the safe fallback look, available from the Fallback Panel at any time, and in Perform. Going to it clears every other Layer.
 
 **Fallback Panel**:
-The always-visible manual controls that need no MIDI: Blackout, Base Look, Grand Master, Tap Tempo, Freeze, a few Scene buttons chosen per Show, and the House Preset buttons, each with a keyboard shortcut, plus Haze Off and the Haze Preset buttons, which have none. Also shows the MIDI Input status.
+The manual controls in the top bar that need no MIDI: Blackout, Base Look, Grand Master, Tap Tempo and Freeze, each with a keyboard shortcut. Hidden in Perform, which has its own controls; the keys still work there.
 _Avoid_: Manual panel, fader panel
 
 **Blackout**:

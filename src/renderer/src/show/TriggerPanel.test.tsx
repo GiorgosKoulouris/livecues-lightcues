@@ -26,7 +26,6 @@ const SHOW: Show = {
     { channel: 1, note: 60, scene: 'warm', mode: 'go' },
   ],
   baseLook: 'warm',
-  panelScenes: [],
   housePresets: [{ id: 'bar', name: 'Bar', fade: 1, note: { channel: 1, note: 72 } }],
 };
 

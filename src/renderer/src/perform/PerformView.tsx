@@ -10,7 +10,6 @@ import {
   HazeOffButton,
   HazePresetButton,
   HousePresetButton,
-  Key,
   SpeedLimitBadge,
   TapTempoButton,
 } from '../panel/controls';
@@ -43,8 +42,8 @@ interface PerformViewProps {
 // the House section while the Venue Patch has House Lights, the Haze section
 // while it has Hazers, every Scene as a button grouped by Layer, each Layer
 // with a small Clear, and the Preview with
-// Monitor/Blind. Nothing is edited here. It replaces the Fallback Panel strip,
-// whose keys still work.
+// Monitor/Blind. Nothing is edited here. It replaces the Fallback Panel in the
+// top bar, whose keys still work.
 export function PerformView({
   active,
   show,
@@ -130,11 +129,10 @@ function HouseSection({ show, fired }: { show: Show; fired: HouseFired | undefin
         >
           Startup
         </Button>
-        {presets.map((preset, i) => (
+        {presets.map((preset) => (
           <HousePresetButton
             key={preset.id}
             preset={preset}
-            index={i}
             fired={fired}
             className={styles.scene}
           />
@@ -192,7 +190,7 @@ function LayerSection({ group, playback }: { group: LayerGroup; playback: Playba
         <p className={styles.empty}>No Scenes on this Layer.</p>
       ) : (
         <div className={styles.scenes}>
-          {scenes.map(({ scene, key }) => (
+          {scenes.map(({ scene }) => (
             <Button
               key={scene.id}
               size="lg"
@@ -205,7 +203,6 @@ function LayerSection({ group, playback }: { group: LayerGroup; playback: Playba
                 {scene.name}
               </span>
               <SpeedLimitBadge scene={scene} playback={playback} />
-              {key !== undefined && <Key>{key}</Key>}
             </Button>
           ))}
         </div>

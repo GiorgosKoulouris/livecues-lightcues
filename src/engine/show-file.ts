@@ -1,17 +1,19 @@
 import { validateShow, type Colour, type Rule, type Show } from '../shared/show';
 
 // The .lcshow file: a Show as versioned JSON. Version 2 added the default
-// colour, version 3 the Fallback Panel's Scene buttons, version 4 Rule
+// colour, version 3 the Fallback Panel's Scene buttons (dropped in version 8), version 4 Rule
 // Directions, movement Effects and the Default Direction and version 5 House
 // Presets, strobe and Effect slots; older files load without them. Version 5
 // renamed a Rule's `effect` to `movementEffect`. Version 6 added Haze Presets.
 // Version 7 added the Spreads Right→Left, Edges→Centre, Front→Back, Back→Front
 // and Random, the movement shapes Fan and Figure-8, and an intensity Effect's
 // width (Chase and Random): versions 1–6 load as they are, but may not have a
-// width. Version 7 also added a Rule's prism and gobo.
+// width. Version 7 also added a Rule's prism and gobo. Version 8 dropped
+// `panelScenes`: versions 1–7 still load, the field ignored and dropped, and a
+// version-8 file that has it is rejected as an unknown field.
 
-const VERSION = 7;
-const VERSIONS = [1, 2, 3, 4, 5, 6, VERSION];
+const VERSION = 8;
+const VERSIONS = [1, 2, 3, 4, 5, 6, 7, VERSION];
 
 interface ShowFile extends Show {
   version: number;
@@ -40,10 +42,13 @@ export function loadShowFile(json: string): Show {
   if (show.hazePresets !== undefined && !Array.isArray(show.hazePresets)) {
     throw new Error('Invalid Show: hazePresets must be a list');
   }
-  let upgraded = show;
+  // Version 1–7 files may carry the retired Fallback Panel Scenes.
+  const { panelScenes, ...current } = show as Show & { panelScenes?: unknown };
+  void panelScenes;
+  let upgraded: Show = current;
   throwIfInvalid(
     checkMalformed(() => {
-      upgraded = version < 5 ? withMovementEffects(show) : show;
+      upgraded = version < 5 ? withMovementEffects(current) : current;
       return [...unknownFields(file as ShowFile), ...validateShow(upgraded)];
     }),
   );
@@ -100,13 +105,16 @@ function unknownFields(file: ShowFile): string[] {
   const added = [
     ['version', 'layers', 'scenes', 'triggers', 'baseLook'],
     ['defaultColour'],
-    ['panelScenes'],
+    [], // 3: panelScenes, handled below.
     ['defaultDirection'],
     ['housePresets'],
     ['hazePresets'],
     [], // 7: none at the top level; Effect fields are allowed below.
+    [], // 8: none; it dropped panelScenes.
   ];
-  allow(file, added.slice(0, file.version).flat(), '');
+  const top = added.slice(0, file.version).flat();
+  // Versions 1–7 may carry the retired panelScenes, which is dropped on load.
+  allow(file, file.version < 8 ? [...top, 'panelScenes'] : top, '');
   // The Rule fields of each version, besides the target and colour.
   const ruleFields =
     file.version >= 5

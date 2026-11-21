@@ -197,8 +197,6 @@ export type ShowEdit =
   | { type: 'setDefaultColour'; colour?: Colour }
   // Without a Direction, the default is Down.
   | { type: 'setDefaultDirection'; direction?: Direction }
-  // The Fallback Panel's Scene buttons, in order. Empty for none.
-  | { type: 'setPanelScenes'; sceneIds: string[] }
   // Replaces the Trigger on the same channel and note.
   | { type: 'putTrigger'; trigger: Trigger }
   | { type: 'removeTrigger'; note: MidiNote }

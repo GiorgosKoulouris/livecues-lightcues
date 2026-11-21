@@ -46,7 +46,6 @@ const SHOW: Show = {
   ],
   triggers: [{ channel: 1, note: 60, scene: 'warm', mode: 'go' }],
   baseLook: 'warm',
-  panelScenes: ['warm', 'blue'],
 };
 
 let engine: FakeEngine;
@@ -127,8 +126,6 @@ function applied(current: Show, edit: ShowEdit): Show {
       return { ...current, scenes: current.scenes.filter((s) => s.id !== edit.id) };
     case 'setBaseLook':
       return { ...current, baseLook: edit.sceneId };
-    case 'setPanelScenes':
-      return { ...current, panelScenes: edit.sceneIds };
     case 'putHousePreset': {
       const put = putHousePreset(current, edit.preset);
       return 'show' in put ? put.show : current;
@@ -230,7 +227,7 @@ describe('Scene list', () => {
     await userEvent.keyboard('{ArrowDown}{Delete}');
     expect(edits()).toEqual([{ type: 'removeScene', id: 'warm' }]);
     expect(await screen.findByRole('status')).toHaveTextContent(
-      'Removed Warm, its 1 Trigger, the Base Look and its Fallback Panel button',
+      'Removed Warm, its 1 Trigger and the Base Look',
     );
     await screen.findByRole('option', { name: /Blue/, selected: true });
   });
@@ -657,22 +654,10 @@ describe('Show settings', () => {
     expect(edits()).toEqual([{ type: 'setDefaultDirection', direction: 'Centre' }]);
   });
 
-  it('orders the Fallback Panel Scenes by drag, and adds and removes them', async () => {
+  it('has no Fallback Panel Scenes section', async () => {
     const settings = await openSettings();
-    within(settings).getByRole('button', { name: 'Move Blue' }).focus();
-    await userEvent.keyboard(' ');
-    await userEvent.keyboard('{ArrowUp}');
-    await userEvent.keyboard(' ');
-    await act(async () => {});
-    expect(edits().at(-1)).toEqual({ type: 'setPanelScenes', sceneIds: ['blue', 'warm'] });
-
-    await userEvent.selectOptions(within(settings).getByLabelText('Add a Scene'), 'Strobe hit');
-    expect(edits().at(-1)).toEqual({ type: 'setPanelScenes', sceneIds: ['blue', 'warm', 'hit'] });
-
-    await userEvent.click(
-      within(settings).getByRole('button', { name: 'Remove Warm from the panel' }),
-    );
-    expect(edits().at(-1)).toEqual({ type: 'setPanelScenes', sceneIds: ['blue', 'hit'] });
+    expect(within(settings).queryByText(/Fallback Panel/)).toBeNull();
+    expect(within(settings).queryByLabelText('Add a Scene')).toBeNull();
   });
 });
 

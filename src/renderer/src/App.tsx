@@ -26,8 +26,8 @@ import { useVenuePatch } from './venue/useVenuePatch';
 import { VenuePatchView } from './venue/VenuePatchView';
 import { VisualiserView } from './visualiser/VisualiserView';
 
-// The shell: sidebar, top bar, the current view and the Fallback Panel strip,
-// which the Perform view replaces. Blackout frames the window red, Blind amber.
+// The shell: sidebar, top bar with the Fallback Panel, which the Perform view
+// replaces, and the current view. Blackout frames the window red, Blind amber.
 // While nothing is open, a hint offers the example, except in Perform.
 export function App() {
   const [view, setView] = useState<View>('venue');
@@ -66,7 +66,17 @@ export function App() {
       />
       <div className={styles.main}>
         <div>
-          <TopBar show={show} venue={venue} playback={playback} midiInput={midiInput} />
+          <TopBar
+            show={show}
+            venue={venue}
+            playback={playback}
+            midiInput={midiInput}
+            panel={
+              view !== 'perform' && (
+                <FallbackPanel show={show?.show} playback={playback} tempo={tempo} />
+              )
+            }
+          />
           {view !== 'perform' && nothingOpen(show, venue) && (
             <ExampleHint onOpen={() => void openExample()} />
           )}
@@ -99,15 +109,6 @@ export function App() {
             )}
           </div>
         </main>
-        {view !== 'perform' && (
-          <FallbackPanel
-            show={show?.show}
-            playback={playback}
-            tempo={tempo}
-            house={house}
-            haze={haze}
-          />
-        )}
       </div>
       <EngineRecovery />
     </div>

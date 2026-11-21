@@ -6,3 +6,5 @@ package-lock.json
 *.md
 # Open Fixture Library files, kept as downloaded.
 scripts/make-examples/ofl/
+.impeccable/hook.cache.json
+.impeccable/hook.pending.json

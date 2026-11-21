@@ -22,34 +22,13 @@ const SHOW: Show = {
 };
 
 const summary = (show: Show) =>
-  layerGroups(show).map((g) => [g.layer.id, g.scenes.map((s) => [s.scene.id, s.key])]);
+  layerGroups(show).map((g) => [g.layer.id, g.scenes.map((s) => s.scene.id)]);
 
 describe('layerGroups', () => {
   it('groups every Scene by Layer, in Layer order then Show order, empty Layers included', () => {
     expect(summary(SHOW)).toEqual([
-      [
-        'base',
-        [
-          ['warm', undefined],
-          ['cold', undefined],
-        ],
-      ],
-      ['fx', [['strobe', undefined]]],
-      ['spare', []],
-    ]);
-  });
-
-  it("gives a Scene on the Fallback Panel its button's key", () => {
-    const show = { ...SHOW, panelScenes: ['cold', 'strobe'] };
-    expect(summary(show)).toEqual([
-      [
-        'base',
-        [
-          ['warm', undefined],
-          ['cold', 1],
-        ],
-      ],
-      ['fx', [['strobe', 2]]],
+      ['base', ['warm', 'cold']],
+      ['fx', ['strobe']],
       ['spare', []],
     ]);
   });

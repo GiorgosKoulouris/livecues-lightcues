@@ -1,5 +1,5 @@
 {
-  "version": 7,
+  "version": 8,
   "layers": [
     {
       "id": "looks",
@@ -414,14 +414,6 @@
     }
   ],
   "baseLook": "base-look",
-  "panelScenes": [
-    "intro",
-    "verse",
-    "chorus",
-    "blinder-hit",
-    "circle",
-    "outro"
-  ],
   "hazePresets": [
     {
       "id": "light-haze",

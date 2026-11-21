@@ -35,7 +35,7 @@ LightCues runs a band's lighting at live shows from a Windows laptop. The DAW or
 ## Capabilities and Constraints
 
 - Five views: Show, Venue Patch, Profile Library, Perform, Visualiser (Ctrl+1 to Ctrl+5).
-- The Fallback Panel is on screen in every view: Blackout, Base Look, Grand Master, Tap Tempo, Freeze, chosen Scene buttons and House Presets, each with a key (B, 0, 1–9, -/+, T, F, Shift+1–8), plus Haze Off and the Haze Presets, which have none. If MIDI drops, the current look holds.
+- The Fallback Panel is in the top bar in every view but Perform: Blackout, Base Look, Grand Master, Tap Tempo and Freeze, each with a key (B, 0, -/+, T, F). Perform has its own controls and the keys still work there. If MIDI drops, the current look holds.
 - Blind edits without changing the real lights. The Preview shows the stage from above and from the front.
 - Undo history lives in the engine. Edits commit instantly, with no Save-per-field (ADRs 0004, 0005).
 - The engine runs in a separate process from the UI (ADR 0002).

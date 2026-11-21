@@ -293,8 +293,6 @@ export interface Show {
   // The Direction moving Fixtures aim at where no Rule sets one. Down when
   // absent.
   defaultDirection?: Direction;
-  // The Scene ids on the Fallback Panel's buttons, in order. None when absent.
-  panelScenes?: string[];
   // In order, at most `MAX_HOUSE_PRESETS`. None when absent.
   housePresets?: HousePreset[];
   // In order, at most `MAX_HAZE_PRESETS`. None when absent. Haze Off is built
@@ -302,14 +300,11 @@ export interface Show {
   hazePresets?: HazePreset[];
 }
 
-// The Fallback Panel's Scene buttons, one per shortcut key 1–9.
-export const MAX_PANEL_SCENES = 9;
-
-// The House Preset slots, one per Fallback Panel shortcut Shift+1–8.
+// The House Preset slots.
 export const MAX_HOUSE_PRESETS = 8;
 
-// The most Haze Presets: it limits the width of the button row in Perform and
-// on the Fallback Panel. Haze has no keys.
+// The most Haze Presets: it limits the width of the button row in Perform. Haze
+// has no keys.
 export const MAX_HAZE_PRESETS = 8;
 
 export type ShowResult = { show: Show } | { errors: string[] };
@@ -333,17 +328,14 @@ export function putScene(show: Show, scene: Scene): ShowResult {
   return validated({ ...show, scenes: put(show.scenes, scene, (s) => s.id === scene.id) });
 }
 
-// Removes a Scene with the Triggers that fire it and its Fallback Panel
-// button. If it was the Base Look, the Show is left without one.
+// Removes a Scene with the Triggers that fire it. If it was the Base Look, the Show is left without one.
 export function removeScene(show: Show, id: string): Show {
-  const { baseLook, panelScenes, ...rest } = show;
-  const panel = panelScenes?.filter((s) => s !== id) ?? [];
+  const { baseLook, ...rest } = show;
   return {
     ...rest,
     scenes: show.scenes.filter((s) => s.id !== id),
     triggers: show.triggers.filter((t) => t.scene !== id),
     ...(baseLook !== undefined && baseLook !== id ? { baseLook } : {}),
-    ...(panel.length > 0 ? { panelScenes: panel } : {}),
   };
 }
 
@@ -478,14 +470,6 @@ export function setDefaultDirection(show: Show, direction: Direction | undefined
   return validated(next);
 }
 
-// Sets the Scenes on the Fallback Panel's buttons, in order; an empty list
-// leaves it without any.
-export function setPanelScenes(show: Show, sceneIds: string[]): ShowResult {
-  const next: Show = { ...show, panelScenes: sceneIds };
-  if (sceneIds.length === 0) delete next.panelScenes;
-  return validated(next);
-}
-
 // `items` with `item` in place of the one matching `same`, or appended.
 function put<T>(items: T[], item: T, same: (other: T) => boolean): T[] {
   return items.some(same) ? items.map((other) => (same(other) ? item : other)) : [...items, item];
@@ -531,9 +515,6 @@ export function validateShow(show: Show): string[] {
     for (const problem of directionProblems(show.defaultDirection)) {
       errors.push(`Default Direction: ${problem}`);
     }
-  }
-  for (const problem of panelProblems(show, show.panelScenes ?? [])) {
-    errors.push(`Fallback Panel: ${problem}`);
   }
   errors.push(...housePresetErrors(show));
   errors.push(...hazePresetErrors(show));
@@ -614,16 +595,6 @@ function hazePresetErrors(show: Show): string[] {
   }
   errors.push(...listProblems('Haze Preset', presets, MAX_HAZE_PRESETS));
   return errors;
-}
-
-function panelProblems(show: Show, sceneIds: string[]): string[] {
-  const problems: string[] = [];
-  for (const id of sceneIds) {
-    if (!hasScene(show, id)) problems.push(`Scene "${id}" is not in the Show`);
-  }
-  for (const id of duplicates(sceneIds)) problems.push(`Scene "${id}" is listed twice`);
-  if (sceneIds.length > MAX_PANEL_SCENES) problems.push(`at most ${MAX_PANEL_SCENES} Scenes`);
-  return problems;
 }
 
 function hasScene(show: Show, id: string): boolean {

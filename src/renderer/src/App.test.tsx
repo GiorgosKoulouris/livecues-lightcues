@@ -22,7 +22,7 @@ const SHOW: Show = {
   layers: [{ id: 'layer-1', name: 'Layer 1' }],
   scenes: [{ id: 'warm', name: 'Warm', tags: [], layer: 'layer-1', fadeIn: 0, rules: [] }],
   triggers: [],
-  panelScenes: ['warm'],
+  baseLook: 'warm',
   housePresets: [{ id: 'dim', name: 'Show dim', fade: 3 }],
   hazePresets: [{ id: 'light', name: 'Light haze', level: 0.3, fade: 5 }],
 };
@@ -143,7 +143,7 @@ async function renderApp() {
       <App />
     </UiProvider>,
   );
-  await screen.findByRole('button', { name: /Warm/ });
+  await screen.findByRole('button', { name: /Blackout/ });
 }
 
 const panelCommands = () =>
@@ -193,60 +193,45 @@ describe('App shortcuts', () => {
     expect(panelCommands()).toEqual([]);
   });
 
-  it('hides the Fallback Panel strip in Perform, and its keys still work', async () => {
+  it('puts the Fallback Panel in the top bar in every view but Perform, and its keys still work', async () => {
     await renderApp();
+    const bar = screen.getByRole('banner');
+    for (const keys of ['1', '2', '3']) {
+      await userEvent.keyboard(`{Control>}${keys}{/Control}`);
+      const panel = screen.getByRole('region', { name: 'Fallback Panel' });
+      expect(bar).toContainElement(panel);
+      expect(screen.getAllByRole('region', { name: 'Fallback Panel' })).toHaveLength(1);
+      expect(
+        within(panel)
+          .getAllByRole('button')
+          .map((b) => b.getAttribute('title') ?? b.textContent),
+      ).toEqual(['Blackout (B)', 'Base Look: Warm (0)', 'Tap Tempo (T)', 'Freeze (F)']);
+    }
     await userEvent.keyboard('{Control>}4{/Control}');
     expect(screen.queryByRole('region', { name: 'Fallback Panel' })).toBeNull();
     expect(screen.getByRole('region', { name: 'Layer 1' })).toBeInTheDocument();
-    await userEvent.keyboard('1b');
-    expect(panelCommands()).toEqual([
-      { type: 'goScene', sceneId: 'warm' },
-      { type: 'setBlackout', on: true },
-    ]);
-    await userEvent.keyboard('{Control>}1{/Control}');
-    expect(screen.getByRole('region', { name: 'Fallback Panel' })).toBeInTheDocument();
+    await userEvent.keyboard('b');
+    expect(panelCommands()).toEqual([{ type: 'setBlackout', on: true }]);
   });
 
-  it('fires a House Preset with Shift and its number, and presses the one the engine reports', async () => {
-    await renderApp();
-    const dim = screen.getByRole('button', { name: /Show dim/ });
-    expect(dim).toHaveAttribute('aria-pressed', 'false');
-
-    await userEvent.keyboard('{Shift>}1{/Shift}');
-    expect(engine.sent.at(-1)).toEqual({ type: 'fireHousePreset', id: 'dim' });
-    engine.emit({ type: 'house', fired: { type: 'preset', id: 'dim' } });
-
-    expect(dim).toHaveAttribute('aria-pressed', 'true');
-    expect(currentView()).toHaveTextContent('Venue Patch');
-    expect(panelCommands()).toEqual([]);
-  });
-
-  it('fires a Haze Preset from its button in any view, presses the one the engine reports, and has no Haze keys', async () => {
-    await renderApp();
-    const light = screen.getByRole('button', { name: /Light haze/ });
-    expect(screen.getByRole('button', { name: /Haze Off/ })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
-
-    await userEvent.keyboard('{Alt>}1{/Alt}');
-    await userEvent.keyboard('{Alt>}0{/Alt}');
-    expect(engine.sent.filter((c) => c.type === 'fireHazePreset' || c.type === 'hazeOff')).toEqual(
-      [],
-    );
-
-    await userEvent.click(light);
-    expect(engine.sent.at(-1)).toEqual({ type: 'fireHazePreset', id: 'light' });
-    engine.emit({ type: 'haze', fired: { type: 'preset', id: 'light' } });
-    expect(light).toHaveAttribute('aria-pressed', 'true');
-    expect(currentView()).toHaveTextContent('Venue Patch');
-  });
-
-  it('fires the Scene button on a bare digit without switching view', async () => {
+  it('leaves the Scene and House Preset keys unbound', async () => {
     await renderApp();
     await userEvent.keyboard('1');
+    await userEvent.keyboard('{Shift>}1{/Shift}');
     expect(currentView()).toHaveTextContent('Venue Patch');
-    expect(panelCommands()).toEqual([{ type: 'goScene', sceneId: 'warm' }]);
+    expect(engine.sent.filter((c) => c.type === 'goScene' || c.type === 'fireHousePreset')).toEqual(
+      [],
+    );
+  });
+
+  it('sets the Grand Master with - and +, and goes to the Base Look with 0, in any view', async () => {
+    await renderApp();
+    await userEvent.keyboard('{Control>}1{/Control}');
+    await userEvent.keyboard('-0');
+    expect(panelCommands()).toEqual([
+      { type: 'setGrandMaster', level: 0.9 },
+      { type: 'goBaseLook' },
+    ]);
   });
 
   it("saves the current view's file with Ctrl+S and Ctrl+Shift+S, and not on a bare S", async () => {

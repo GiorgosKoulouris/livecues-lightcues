@@ -17,6 +17,8 @@ temp/
 .github/hooks/impeccable.json
 # Impeccable per-developer settings. The rest of .impeccable/ is shared.
 .impeccable/config.local.json
+.impeccable/hook.cache.json
+.impeccable/hook.pending.json
 
 # Local issues and specs
 .scratch/

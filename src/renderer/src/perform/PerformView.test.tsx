@@ -31,7 +31,6 @@ const SHOW: Show = {
   ],
   triggers: [],
   baseLook: 'warm',
-  panelScenes: ['blue'],
 };
 
 const PLAYBACK: PlaybackState = {
@@ -96,9 +95,9 @@ beforeEach(() => {
 });
 
 describe('PerformView', () => {
-  it('shows every Scene grouped by Layer, the active one pressed, with its panel key', () => {
+  it('shows every Scene grouped by Layer, the active one pressed, with no key', () => {
     renderView();
-    expect(buttonNames(layer('Base'))).toEqual(['Clear', 'Warm', 'Blue1']);
+    expect(buttonNames(layer('Base'))).toEqual(['Clear', 'Warm', 'Blue']);
     expect(buttonNames(layer('Accents'))).toEqual(['Clear', 'Strobe hit']);
     expect(within(layer('Base')).getByRole('button', { name: /Blue/ })).toHaveAttribute(
       'aria-pressed',
@@ -225,7 +224,7 @@ describe('PerformView', () => {
   });
 
   it('says where to add Scenes when the Show has none', () => {
-    renderView({ ...SHOW, scenes: [], baseLook: undefined, panelScenes: undefined });
+    renderView({ ...SHOW, scenes: [], baseLook: undefined });
     expect(screen.getByText('No Scenes: add them in the Show view.')).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Base' })).toBeNull();
   });
@@ -241,14 +240,14 @@ describe('PerformView House', () => {
   };
   const house = () => screen.getByRole('region', { name: 'House' });
 
-  it('shows Startup and each House Preset with its Shift key, the last fired pressed', () => {
+  it('shows Startup and each House Preset, the last fired pressed', () => {
     renderView(HOUSE_SHOW, PLAYBACK, true, {
       patch: HOUSE_PATCH,
       house: { type: 'preset', id: 'dim' },
     });
 
     const buttons = within(house()).getAllByRole('button');
-    expect(buttons.map((b) => b.textContent)).toEqual(['Startup', 'Show dim ⇧1', 'House up ⇧2']);
+    expect(buttons.map((b) => b.textContent)).toEqual(['Startup', 'Show dim', 'House up']);
     expect(buttons.map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'true', 'false']);
   });
 

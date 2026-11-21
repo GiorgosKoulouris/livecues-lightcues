@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DMX_CHANNELS } from '../src/shared/venue-patch';
 
-// The real app, built in `out/`: Open example, fire a Fallback Panel Scene
+// The real app, built in `out/`: Open example, fire a Perform Scene
 // button and check the Virtual Output's frame in the channel monitor. Only
 // the UI is used, so the app has no test-only hooks. Open example needs no
 // file dialog: main grants the example paths itself (ADR 0010).
@@ -28,10 +28,13 @@ test('a Scene reaches the Virtual Output and Blackout clears it', async () => {
     const panel = page.getByRole('region', { name: 'Fallback Panel' });
 
     await sidebar.getByRole('button', { name: 'Open example' }).click();
-    await page.getByRole('button', { name: 'Channel monitor' }).click();
-    const chorus = panel.getByRole('button', { name: /Chorus: full red/ });
+    // The Scene buttons are in Perform; the monitor is in the Venue Patch view.
+    await sidebar.getByRole('button', { name: 'Perform' }).click();
+    const chorus = page.getByRole('button', { name: /Chorus: full red/ });
     await chorus.click();
     await expect(chorus).toHaveAttribute('aria-pressed', 'true');
+    await sidebar.getByRole('button', { name: 'Venue Patch' }).click();
+    await page.getByRole('button', { name: 'Channel monitor' }).click();
 
     await expect
       .poll(async () => (await frontParValues(page)).some((value) => value > 0), {
@@ -56,7 +59,7 @@ test('a Scene reaches the Virtual Output and Blackout clears it', async () => {
 });
 
 // The example's Hazer: Universe 1, haze at 61 and fan at 62. The Haze Preset
-// Light haze is the first Haze Preset button.
+// Light haze is the first Haze Preset button, in Perform.
 const HAZE_CHANNEL = 60;
 const FAN_CHANNEL = 61;
 
@@ -69,23 +72,26 @@ test('the Light haze button fires the haze and Haze Off turns it off', async () 
   try {
     const page = await app.firstWindow();
     const sidebar = page.getByRole('navigation', { name: 'Views' });
-    const panel = page.getByRole('region', { name: 'Fallback Panel' });
 
     await sidebar.getByRole('button', { name: 'Open example' }).click();
-    await page.getByRole('button', { name: 'Channel monitor' }).click();
-    const light = panel.getByRole('button', { name: /Light haze/ });
+    await sidebar.getByRole('button', { name: 'Perform' }).click();
+    const light = page.getByRole('button', { name: /Light haze/ });
     await expect(light).toHaveAttribute('aria-pressed', 'false');
 
     await light.click();
     await expect(light).toHaveAttribute('aria-pressed', 'true');
+    await sidebar.getByRole('button', { name: 'Venue Patch' }).click();
+    await page.getByRole('button', { name: 'Channel monitor' }).click();
     await expect
       .poll(async () => (await monitorValues(page))[HAZE_CHANNEL], { message: 'haze channel up' })
       .toBeGreaterThan(0);
     expect((await monitorValues(page))[FAN_CHANNEL]).toBeGreaterThan(0);
 
-    const off = panel.getByRole('button', { name: /Haze Off/ });
+    await sidebar.getByRole('button', { name: 'Perform' }).click();
+    const off = page.getByRole('button', { name: /Haze Off/ });
     await off.click();
     await expect(off).toHaveAttribute('aria-pressed', 'true');
+    await sidebar.getByRole('button', { name: 'Venue Patch' }).click();
     await expect
       .poll(async () => (await monitorValues(page)).slice(HAZE_CHANNEL, FAN_CHANNEL + 1), {
         message: 'haze and fan off',

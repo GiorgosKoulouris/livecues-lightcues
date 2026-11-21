@@ -19,7 +19,6 @@ import {
   setBaseLook,
   setDefaultColour,
   setDefaultDirection,
-  setPanelScenes,
   showHazePresets,
   showHousePresets,
   type Rule,
@@ -144,8 +143,6 @@ export function createShowSession({
         return setDefaultColour(show, change.colour);
       case 'setDefaultDirection':
         return setDefaultDirection(show, change.direction);
-      case 'setPanelScenes':
-        return setPanelScenes(show, change.sceneIds);
       case 'putTrigger':
         return putTrigger(show, change.trigger);
       case 'removeTrigger': {
