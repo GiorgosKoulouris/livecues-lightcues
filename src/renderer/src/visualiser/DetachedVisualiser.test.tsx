@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { emptyShow } from '../../../shared/show';
 import { emptyPatch } from '../../../shared/venue-patch';
 import { installFakeEngine, type FakeEngine } from '../test-engine';
+import { installFakeEngineRecovery, type FakeEngineRecovery } from '../test-engine-recovery';
 import { installFakeVisualiserWindow, type FakeVisualiserWindow } from '../test-visualiser-window';
 import { UiProvider } from '../ui/UiProvider';
 import { createSceneRenderer, type SceneRenderer } from './sceneRenderer';
@@ -15,25 +16,14 @@ vi.mock('./sceneRenderer', () => ({ createSceneRenderer: vi.fn() }));
 
 let engine: FakeEngine;
 let windowBridge: FakeVisualiserWindow;
-let engineDown: boolean;
-const downListeners = new Set<() => void>();
+let recovery: FakeEngineRecovery;
 
 beforeEach(() => {
   forgetCamera();
   setHandedOverHaze(undefined);
   engine = installFakeEngine();
   windowBridge = installFakeVisualiserWindow(true);
-  engineDown = false;
-  downListeners.clear();
-  vi.stubGlobal('engineRecovery', {
-    onRestarted: () => () => {},
-    onDown: (listener: () => void) => {
-      downListeners.add(listener);
-      return () => void downListeners.delete(listener);
-    },
-    isDown: async () => engineDown,
-    saveFromSnapshot: vi.fn(),
-  });
+  recovery = installFakeEngineRecovery();
   vi.mocked(createSceneRenderer).mockReturnValue({
     setModel: vi.fn(),
     setLooks: vi.fn(),
@@ -250,13 +240,13 @@ describe('DetachedVisualiser', () => {
     open();
     await screen.findByRole('button', { name: 'FOH' });
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    act(() => downListeners.forEach((l) => l()));
+    recovery.down();
     expect(screen.getByRole('alert')).toHaveTextContent('main window');
     expect(screen.queryByRole('button', { name: /Save/ })).not.toBeInTheDocument();
   });
 
   it('shows the notice at once when the engine was already down', async () => {
-    engineDown = true;
+    recovery.bridge.isDown.mockResolvedValue(true);
     render(
       <UiProvider>
         <DetachedVisualiser />

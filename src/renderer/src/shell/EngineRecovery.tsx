@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { DOCUMENTS, type EngineDocument, type RestoreResult } from '../../../shared/protocol';
 import { Button } from '../ui/Button';
 import { useToast } from '../ui/Toast';
+import { WarnPanel } from '../ui/WarnPanel';
 import styles from './EngineRecovery.module.css';
+import { useEngineDown } from './useEngineDown';
 
 // The toast after a restarted engine restored its snapshot.
 const RESTARTED: Record<RestoreResult, string> = {
@@ -16,21 +18,15 @@ const RESTARTED: Record<RestoreResult, string> = {
 // documents from main's snapshot.
 export function EngineRecovery() {
   const toast = useToast();
-  const [down, setDown] = useState(false);
+  const down = useEngineDown();
 
-  useEffect(() => {
-    let live = true;
-    void window.engineRecovery.isDown().then((isDown) => live && isDown && setDown(true));
-    const offRestarted = window.engineRecovery.onRestarted((result) =>
-      toast({ tone: result === 'restored' ? 'success' : 'info', message: RESTARTED[result] }),
-    );
-    const offDown = window.engineRecovery.onDown(() => setDown(true));
-    return () => {
-      live = false;
-      offRestarted();
-      offDown();
-    };
-  }, [toast]);
+  useEffect(
+    () =>
+      window.engineRecovery.onRestarted((result) =>
+        toast({ tone: result === 'restored' ? 'success' : 'info', message: RESTARTED[result] }),
+      ),
+    [toast],
+  );
 
   if (!down) return null;
 
@@ -47,13 +43,12 @@ export function EngineRecovery() {
   }
 
   return (
-    <div role="alert" className={styles.banner}>
-      <span className={styles.mark} aria-hidden />
+    <WarnPanel className={styles.banner}>
       <span className={styles.message}>
         The engine keeps crashing. Save your work and restart LightCues.
       </span>
       <Button onClick={() => void saveAs('show')}>Save Show as…</Button>
       <Button onClick={() => void saveAs('venue')}>Save Venue Patch as…</Button>
-    </div>
+    </WarnPanel>
   );
 }

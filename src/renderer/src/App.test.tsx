@@ -5,7 +5,6 @@ import type {
   AppInfo,
   EngineCommand,
   EngineEvent,
-  EngineRecoveryBridge,
   LicensesBridge,
   MidiInputStatus,
   RestoreResult,
@@ -16,6 +15,7 @@ import { emptyShow, type Show } from '../../shared/show';
 import { emptyPatch } from '../../shared/venue-patch';
 import { App } from './App';
 import { installFakeEngine, type FakeEngine } from './test-engine';
+import { installFakeEngineRecovery, type FakeEngineRecovery } from './test-engine-recovery';
 import { installFakeVisualiserWindow, type FakeVisualiserWindow } from './test-visualiser-window';
 import { UiProvider } from './ui/UiProvider';
 import { createSceneRenderer, type SceneRenderer } from './visualiser/sceneRenderer';
@@ -116,30 +116,7 @@ const APP_INFO: AppInfo = {
 let licenses: { open: ReturnType<typeof vi.fn<LicensesBridge['open']>> };
 let updates: { [K in keyof UpdatesBridge]: ReturnType<typeof vi.fn<UpdatesBridge[K]>> };
 
-// A fake `window.engineRecovery`: a test tells it the engine restarted or is
-// down, as main does.
-function fakeRecovery() {
-  const restarted = new Set<(result: RestoreResult) => void>();
-  const down = new Set<() => void>();
-  const bridge = {
-    onRestarted: (listener: (result: RestoreResult) => void) => {
-      restarted.add(listener);
-      return () => void restarted.delete(listener);
-    },
-    onDown: (listener: () => void) => {
-      down.add(listener);
-      return () => void down.delete(listener);
-    },
-    isDown: vi.fn(async () => false),
-    saveFromSnapshot: vi.fn<EngineRecoveryBridge['saveFromSnapshot']>(async () => undefined),
-  };
-  return {
-    bridge,
-    restart: (result: RestoreResult) => act(() => restarted.forEach((l) => l(result))),
-    down: () => act(() => down.forEach((l) => l())),
-  };
-}
-let recovery: ReturnType<typeof fakeRecovery>;
+let recovery: FakeEngineRecovery;
 let visualiserWindow: FakeVisualiserWindow;
 
 async function renderApp() {
@@ -175,9 +152,8 @@ beforeEach(() => {
   vi.stubGlobal('diagnostics', { appInfo: vi.fn(async () => APP_INFO) });
   licenses = { open: vi.fn(async () => true) };
   vi.stubGlobal('licenses', licenses);
-  recovery = fakeRecovery();
+  recovery = installFakeEngineRecovery();
   visualiserWindow = installFakeVisualiserWindow();
-  vi.stubGlobal('engineRecovery', recovery.bridge);
 });
 afterEach(() => {
   // Unmounts while the fake engine is still there.
