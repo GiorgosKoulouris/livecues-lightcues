@@ -3,11 +3,13 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { emptyPatch } from '../../../shared/venue-patch';
 import { installFakeEngine, type FakeEngine } from '../test-engine';
+import { installFakeVisualiserWindow, type FakeVisualiserWindow } from '../test-visualiser-window';
 import { UiProvider } from '../ui/UiProvider';
 import type { RendererCallbacks, SceneRenderer } from './sceneRenderer';
 import { createSceneRenderer } from './sceneRenderer';
 import { buildScene } from './sceneModel';
 import { forgetCamera } from './cameraMemory';
+import { acceptHandover } from './handover';
 import { VisualiserView } from './VisualiserView';
 
 vi.mock('./sceneRenderer', () => ({ createSceneRenderer: vi.fn() }));
@@ -18,10 +20,12 @@ const cameras = buildScene(PATCH).cameras;
 let renderer: { [K in keyof SceneRenderer]: ReturnType<typeof vi.fn> };
 let callbacks: RendererCallbacks;
 let engine: FakeEngine;
+let windowBridge: FakeVisualiserWindow;
 
 beforeEach(() => {
   forgetCamera();
   engine = installFakeEngine();
+  windowBridge = installFakeVisualiserWindow();
   renderer = {
     setModel: vi.fn(),
     setLooks: vi.fn(),
@@ -30,7 +34,7 @@ beforeEach(() => {
     setAssumedHaze: vi.fn(),
     setQuality: vi.fn(),
     setCamera: vi.fn(),
-    camera: vi.fn(),
+    camera: vi.fn(() => cameras.foh),
     dispose: vi.fn(),
   };
   vi.mocked(createSceneRenderer).mockImplementation((_host, _pose, given) => {
@@ -102,6 +106,62 @@ describe('VisualiserView', () => {
     const other = emptyPatch({ width: 20, depth: 8 });
     rerender(view(other));
     expect(renderer.setCamera).toHaveBeenCalledWith(buildScene(other).cameras.foh);
+  });
+
+  describe('hand-over to the Detached Visualiser', () => {
+    const moved = { position: { x: 1, y: -2, z: 3 }, target: { x: 0, y: 1, z: 0 } };
+    const stage = { width: 10, depth: 6 };
+
+    it('sends main its camera on mount and as it moves', () => {
+      show();
+      expect(windowBridge.held).toMatchObject({ camera: { pose: cameras.foh, stage } });
+      act(() => callbacks.onCamera(moved));
+      expect(windowBridge.held).toMatchObject({ camera: { pose: moved, stage } });
+    });
+
+    it('sends main its haze override as it is set, and cleared', async () => {
+      show();
+      expect(windowBridge.held?.haze).toBeUndefined();
+      fireEvent.change(screen.getByRole('slider', { name: 'Assume haze' }), {
+        target: { value: '70' },
+      });
+      expect(windowBridge.held?.haze).toBe(0.7);
+      await userEvent.click(screen.getByRole('button', { name: 'Clear' }));
+      expect(windowBridge.held?.haze).toBeUndefined();
+    });
+
+    it('never sends the override to the engine, so no Hazer gets it', () => {
+      show();
+      fireEvent.change(screen.getByRole('slider', { name: 'Assume haze' }), {
+        target: { value: '70' },
+      });
+      expect(engine.sent.filter((c) => /haze/i.test(c.type))).toEqual([]);
+    });
+
+    it('opens on the camera and haze override it was handed', () => {
+      acceptHandover({ camera: { pose: moved, stage }, haze: 0.4 });
+      show();
+      expect(vi.mocked(createSceneRenderer).mock.calls[0]?.[1]).toEqual(moved);
+      expect(renderer.setAssumedHaze).toHaveBeenLastCalledWith(0.4);
+      expect(screen.getByText('40%')).toBeInTheDocument();
+    });
+
+    it('a cleared override handed over stays cleared', () => {
+      acceptHandover({ camera: { pose: moved, stage }, haze: 0.4 });
+      cleanup();
+      acceptHandover({ camera: { pose: moved, stage } });
+      show();
+      expect(renderer.setAssumedHaze).toHaveBeenLastCalledWith(undefined);
+      expect(screen.getByText('Off')).toBeInTheDocument();
+    });
+
+    it('does not keep a handed-over override once the Visualiser is closed', () => {
+      acceptHandover({ haze: 0.4 });
+      show();
+      cleanup();
+      show();
+      expect(screen.getByText('Off')).toBeInTheDocument();
+    });
   });
 
   it('builds the scene once on mount', () => {

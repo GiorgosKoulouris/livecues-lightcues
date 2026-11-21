@@ -24,6 +24,8 @@ import {
   UPDATE_AVAILABLE_CHANNEL,
   UPDATE_ENABLED_CHANNEL,
   VISUALISER_DETACH_CHANNEL,
+  VISUALISER_GET_STATE_CHANNEL,
+  VISUALISER_SET_STATE_CHANNEL,
   VISUALISER_DETACHED_CHANNEL,
   VISUALISER_IS_DETACHED_CHANNEL,
   VISUALISER_REATTACH_CHANNEL,
@@ -282,6 +284,15 @@ describe('visualiser window', () => {
       [VISUALISER_REATTACH_CHANNEL],
     ]);
     expect(ipcRenderer.invoke.mock.calls).toEqual([[VISUALISER_IS_DETACHED_CHANNEL]]);
+  });
+
+  it('sends the camera and haze override to main, and asks for them', async () => {
+    const { visualiserWindow } = await load();
+    const state = { haze: 0.2 };
+    visualiserWindow.setState(state);
+    await visualiserWindow.getState();
+    expect(ipcRenderer.send.mock.calls).toEqual([[VISUALISER_SET_STATE_CHANNEL, state]]);
+    expect(ipcRenderer.invoke.mock.calls).toEqual([[VISUALISER_GET_STATE_CHANNEL]]);
   });
 
   it('tells a listener when main detaches or reattaches, until it unsubscribes', async () => {

@@ -13,6 +13,7 @@ import type {
   PrismSetting,
 } from './show';
 import type { HouseLook, VenuePatch } from './venue-patch';
+import type { VisualiserHandover } from './visualiser-handover';
 
 export type EngineCommand =
   | { type: 'ping'; id: number }
@@ -577,6 +578,11 @@ export const VISUALISER_DETACH_CHANNEL = 'visualiser:detach';
 export const VISUALISER_REATTACH_CHANNEL = 'visualiser:reattach';
 export const VISUALISER_IS_DETACHED_CHANNEL = 'visualiser:isDetached';
 export const VISUALISER_DETACHED_CHANNEL = 'visualiser:detached';
+// Whichever window renders the Visualiser sends its camera and haze override to
+// main as they change. The other window asks for them when it takes over, so
+// they survive the window closing on its own.
+export const VISUALISER_SET_STATE_CHANNEL = 'visualiser:setState';
+export const VISUALISER_GET_STATE_CHANNEL = 'visualiser:getState';
 
 // The hash of the page the Detached Visualiser's window loads. It mounts only
 // the Visualiser.
@@ -591,6 +597,10 @@ export interface VisualiserWindowBridge {
   detach(): void;
   reattach(): void;
   isDetached(): Promise<boolean>;
+  // The camera and haze override of the Visualiser that renders now.
+  setState(state: VisualiserHandover): void;
+  // The latest of them, for the Visualiser that takes over.
+  getState(): Promise<VisualiserHandover | undefined>;
   // Returns an unsubscribe function.
   onDetached(listener: (detached: boolean) => void): () => void;
 }

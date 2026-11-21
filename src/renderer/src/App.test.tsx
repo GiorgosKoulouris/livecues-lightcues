@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
@@ -568,7 +568,7 @@ describe('Detached Visualiser', () => {
       setAssumedHaze: vi.fn(),
       setQuality: vi.fn(),
       setCamera: vi.fn(),
-      camera: vi.fn(),
+      camera: vi.fn(() => ({ position: { x: 0, y: -9, z: 2 }, target: { x: 0, y: 3, z: 0 } })),
       dispose: vi.fn(),
     } as unknown as SceneRenderer);
   });
@@ -626,5 +626,46 @@ describe('Detached Visualiser', () => {
     await userEvent.keyboard('{Control>}4{/Control}');
     visualiserWindow.set(true);
     expect(currentView()).toHaveTextContent('Perform');
+  });
+
+  describe('camera and haze override', () => {
+    const moved = { position: { x: 4, y: -5, z: 6 }, target: { x: 0, y: 1, z: 0 } };
+    const stage = { width: 10, depth: 6 };
+
+    it('hands the View camera and haze override to the Detached Visualiser', async () => {
+      await renderApp();
+      await userEvent.keyboard('{Control>}5{/Control}');
+      const slider = await screen.findByRole('slider', { name: 'Assume haze' });
+      fireEvent.change(slider, { target: { value: '60' } });
+      const callbacks = vi.mocked(createSceneRenderer).mock.calls[0]?.[2];
+      act(() => callbacks?.onCamera(moved));
+      await userEvent.click(screen.getByRole('button', { name: 'Detach' }));
+      expect(visualiserWindow.held).toEqual({ camera: { pose: moved, stage }, haze: 0.6 });
+    });
+
+    it('the View takes over the detached camera and haze override on reattach', async () => {
+      await renderApp();
+      await userEvent.keyboard('{Control>}5{/Control}');
+      await userEvent.click(await screen.findByRole('button', { name: 'Detach' }));
+      await screen.findByRole('button', { name: 'Reattach' });
+      // The Detached Visualiser sent these to main.
+      visualiserWindow.held = { camera: { pose: moved, stage }, haze: 0.3 };
+      await userEvent.click(screen.getByRole('button', { name: 'Reattach' }));
+      expect(await screen.findByText('30%')).toBeInTheDocument();
+      expect(vi.mocked(createSceneRenderer).mock.calls[1]?.[1]).toEqual(moved);
+    });
+
+    it('a cleared override stays cleared on reattach', async () => {
+      await renderApp();
+      await userEvent.keyboard('{Control>}5{/Control}');
+      fireEvent.change(await screen.findByRole('slider', { name: 'Assume haze' }), {
+        target: { value: '60' },
+      });
+      await userEvent.click(screen.getByRole('button', { name: 'Detach' }));
+      await screen.findByRole('button', { name: 'Reattach' });
+      visualiserWindow.held = { camera: { pose: moved, stage } };
+      visualiserWindow.set(false);
+      expect(await screen.findByText('Off')).toBeInTheDocument();
+    });
   });
 });

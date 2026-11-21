@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { emptyPatch } from '../../../shared/venue-patch';
@@ -6,6 +6,8 @@ import { installFakeEngine, type FakeEngine } from '../test-engine';
 import { installFakeVisualiserWindow, type FakeVisualiserWindow } from '../test-visualiser-window';
 import { UiProvider } from '../ui/UiProvider';
 import { createSceneRenderer, type SceneRenderer } from './sceneRenderer';
+import { forgetCamera } from './cameraMemory';
+import { setHandedOverHaze } from './handover';
 import { DetachedVisualiser } from './DetachedVisualiser';
 
 vi.mock('./sceneRenderer', () => ({ createSceneRenderer: vi.fn() }));
@@ -14,6 +16,8 @@ let engine: FakeEngine;
 let windowBridge: FakeVisualiserWindow;
 
 beforeEach(() => {
+  forgetCamera();
+  setHandedOverHaze(undefined);
   engine = installFakeEngine();
   windowBridge = installFakeVisualiserWindow(true);
   vi.mocked(createSceneRenderer).mockReturnValue({
@@ -24,7 +28,7 @@ beforeEach(() => {
     setAssumedHaze: vi.fn(),
     setQuality: vi.fn(),
     setCamera: vi.fn(),
-    camera: vi.fn(),
+    camera: vi.fn(() => ({ position: { x: 0, y: 0, z: 0 }, target: { x: 0, y: 0, z: 0 } })),
     dispose: vi.fn(),
   } as unknown as SceneRenderer);
 });
@@ -47,7 +51,7 @@ const open = () =>
   });
 
 describe('DetachedVisualiser', () => {
-  it('asks the engine for the Venue Patch and draws it', () => {
+  it('asks the engine for the Venue Patch and draws it', async () => {
     render(
       <UiProvider>
         <DetachedVisualiser />
@@ -55,17 +59,19 @@ describe('DetachedVisualiser', () => {
     );
     expect(engine.sent.map((c) => c.type)).toContain('getVenue');
     open();
+    await screen.findByRole('button', { name: 'FOH' });
     expect(createSceneRenderer).toHaveBeenCalledOnce();
     expect(screen.getByRole('button', { name: 'FOH' })).toBeInTheDocument();
   });
 
-  it('shows the Visualiser and nothing else of the app', () => {
+  it('shows the Visualiser and nothing else of the app', async () => {
     render(
       <UiProvider>
         <DetachedVisualiser />
       </UiProvider>,
     );
     open();
+    await screen.findByRole('button', { name: 'FOH' });
     expect(screen.queryByRole('navigation', { name: 'Views' })).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Fallback Panel' })).not.toBeInTheDocument();
   });
@@ -79,6 +85,45 @@ describe('DetachedVisualiser', () => {
     expect(document.title).toBe('LightCues – Visualiser');
   });
 
+  it('opens on the camera and haze override the View handed over', async () => {
+    const pose = { position: { x: 1, y: -2, z: 3 }, target: { x: 0, y: 1, z: 0 } };
+    windowBridge.held = { camera: { pose, stage: { width: 10, depth: 6 } }, haze: 0.4 };
+    render(
+      <UiProvider>
+        <DetachedVisualiser />
+      </UiProvider>,
+    );
+    open();
+    expect(await screen.findByText('40%')).toBeInTheDocument();
+    expect(vi.mocked(createSceneRenderer).mock.calls[0]?.[1]).toEqual(pose);
+  });
+
+  it('opens with a cleared override when the View had none', async () => {
+    windowBridge.held = { haze: undefined };
+    render(
+      <UiProvider>
+        <DetachedVisualiser />
+      </UiProvider>,
+    );
+    open();
+    expect(await screen.findByText('Off')).toBeInTheDocument();
+  });
+
+  it('sends main its camera and haze override as they change, for a close with the X', async () => {
+    render(
+      <UiProvider>
+        <DetachedVisualiser />
+      </UiProvider>,
+    );
+    open();
+    await screen.findByRole('slider', { name: 'Assume haze' });
+    fireEvent.change(screen.getByRole('slider', { name: 'Assume haze' }), {
+      target: { value: '25' },
+    });
+    expect(windowBridge.held?.haze).toBe(0.25);
+    expect(windowBridge.held?.camera).toBeDefined();
+  });
+
   it('the Reattach button asks main to reattach', async () => {
     render(
       <UiProvider>
@@ -86,7 +131,7 @@ describe('DetachedVisualiser', () => {
       </UiProvider>,
     );
     open();
-    await userEvent.click(screen.getByRole('button', { name: 'Reattach' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Reattach' }));
     expect(windowBridge.reattach).toHaveBeenCalledOnce();
   });
 });

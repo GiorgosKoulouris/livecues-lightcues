@@ -153,6 +153,11 @@ test('the Detached Visualiser updates while Perform is shown, and closing it bri
     const canvas = detached.locator('canvas');
     await expect(canvas).toBeVisible();
 
+    // The haze override moves with the Visualiser, both ways.
+    const haze = detached.getByRole('slider', { name: 'Assume haze' });
+    await haze.fill('40');
+    await expect(detached.getByText('40%')).toBeVisible();
+
     await sidebar.getByRole('button', { name: 'Perform' }).click();
     const dark = await canvas.screenshot();
     const chorus = page.getByRole('button', { name: /Chorus: full red/ });
@@ -167,6 +172,7 @@ test('the Detached Visualiser updates while Perform is shown, and closing it bri
     await detached.close();
     await sidebar.getByRole('button', { name: 'Visualiser' }).click();
     await expect(page.locator('main canvas')).toBeVisible();
+    await expect(page.getByText('40%')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Reattach' })).toHaveCount(0);
     expect(app.windows()).toHaveLength(1);
   } finally {

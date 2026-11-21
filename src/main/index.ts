@@ -51,6 +51,8 @@ import {
   UPDATE_AVAILABLE_CHANNEL,
   UPDATE_ENABLED_CHANNEL,
   VISUALISER_DETACH_CHANNEL,
+  VISUALISER_GET_STATE_CHANNEL,
+  VISUALISER_SET_STATE_CHANNEL,
   VISUALISER_DETACHED_CHANNEL,
   VISUALISER_IS_DETACHED_CHANNEL,
   VISUALISER_REATTACH_CHANNEL,
@@ -68,6 +70,7 @@ import {
 } from '../shared/protocol';
 import { diskShowFiles, diskVenueFiles, fileStorage } from '../engine/file-storage';
 import { snapshotFile } from './engine-snapshot';
+import { parseHandover, type VisualiserHandover } from '../shared/visualiser-handover';
 import { centredBounds, createDetachedVisualiser } from './detached-visualiser';
 import { superviseEngine } from './engine-supervisor';
 import { createWindowRegistry } from './window-registry';
@@ -546,6 +549,13 @@ function handleDetachedVisualiser(
   });
   ipcMain.on(VISUALISER_REATTACH_CHANNEL, () => detached.reattach());
   ipcMain.handle(VISUALISER_IS_DETACHED_CHANNEL, () => detached.isDetached());
+  // The camera and haze override move with the Visualiser. Main holds the
+  // latest, in memory only, so a window closing on its own loses nothing.
+  let handover: VisualiserHandover | undefined;
+  ipcMain.on(VISUALISER_SET_STATE_CHANNEL, (_event, state: unknown) => {
+    handover = parseHandover(state) ?? handover;
+  });
+  ipcMain.handle(VISUALISER_GET_STATE_CHANNEL, () => handover);
   main.on('closed', () => detached.reattach());
 }
 

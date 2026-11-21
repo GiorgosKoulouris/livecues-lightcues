@@ -24,6 +24,8 @@ import {
   UPDATE_AVAILABLE_CHANNEL,
   UPDATE_ENABLED_CHANNEL,
   VISUALISER_DETACH_CHANNEL,
+  VISUALISER_GET_STATE_CHANNEL,
+  VISUALISER_SET_STATE_CHANNEL,
   VISUALISER_DETACHED_CHANNEL,
   VISUALISER_IS_DETACHED_CHANNEL,
   VISUALISER_REATTACH_CHANNEL,
@@ -150,6 +152,8 @@ const visualiserWindow: VisualiserWindowBridge = {
   detach: () => ipcRenderer.send(VISUALISER_DETACH_CHANNEL),
   reattach: () => ipcRenderer.send(VISUALISER_REATTACH_CHANNEL),
   isDetached: () => ipcRenderer.invoke(VISUALISER_IS_DETACHED_CHANNEL),
+  setState: (state) => ipcRenderer.send(VISUALISER_SET_STATE_CHANNEL, state),
+  getState: () => ipcRenderer.invoke(VISUALISER_GET_STATE_CHANNEL),
   onDetached(listener) {
     const onDetached = (_event: unknown, detached: boolean) => listener(detached);
     ipcRenderer.on(VISUALISER_DETACHED_CHANNEL, onDetached);

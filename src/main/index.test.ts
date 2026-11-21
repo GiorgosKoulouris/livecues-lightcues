@@ -25,6 +25,8 @@ import {
   UPDATE_AVAILABLE_CHANNEL,
   UPDATE_ENABLED_CHANNEL,
   VISUALISER_DETACH_CHANNEL,
+  VISUALISER_GET_STATE_CHANNEL,
+  VISUALISER_SET_STATE_CHANNEL,
   VISUALISER_DETACHED_CHANNEL,
   VISUALISER_IS_DETACHED_CHANNEL,
   VISUALISER_REATTACH_CHANNEL,
@@ -793,6 +795,46 @@ describe('Detached Visualiser', () => {
     send(VISUALISER_REATTACH_CHANNEL, detached().webContents);
     expect(detached().close).toHaveBeenCalled();
     expect(await invoke(VISUALISER_IS_DETACHED_CHANNEL)).toBe(false);
+  });
+
+  describe('hand-over of camera and haze override', () => {
+    const state = {
+      camera: {
+        pose: { position: { x: 1, y: 2, z: 3 }, target: { x: 0, y: 0, z: 0 } },
+        stage: { width: 10, depth: 6 },
+      },
+      haze: 0.5,
+    };
+
+    it('holds what the View sent, for the Detached Visualiser', async () => {
+      await boot();
+      send(VISUALISER_SET_STATE_CHANNEL, win().webContents, state);
+      detach();
+      expect(await invoke(VISUALISER_GET_STATE_CHANNEL)).toEqual(state);
+    });
+
+    it('holds what the Detached Visualiser sent after it closes on its own', async () => {
+      await boot();
+      send(VISUALISER_SET_STATE_CHANNEL, win().webContents, state);
+      detach();
+      const later = { camera: state.camera };
+      send(VISUALISER_SET_STATE_CHANNEL, detached().webContents, later);
+      detached().close();
+      expect(await invoke(VISUALISER_GET_STATE_CHANNEL)).toEqual(later);
+    });
+
+    it('ignores state that is not a camera and haze override', async () => {
+      await boot();
+      send(VISUALISER_SET_STATE_CHANNEL, win().webContents, state);
+      send(VISUALISER_SET_STATE_CHANNEL, win().webContents, { haze: 'lots' });
+      send(VISUALISER_SET_STATE_CHANNEL, win().webContents, 'x');
+      expect(await invoke(VISUALISER_GET_STATE_CHANNEL)).toEqual(state);
+    });
+
+    it('holds nothing at first', async () => {
+      await boot();
+      expect(await invoke(VISUALISER_GET_STATE_CHANNEL)).toBeUndefined();
+    });
   });
 
   it('closes with the main window', async () => {

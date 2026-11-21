@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FixtureLight } from '../../../shared/protocol';
+import type { VisualiserHandover } from '../../../shared/visualiser-handover';
 import type { VenuePatch } from '../../../shared/venue-patch';
 import { subscribePreview } from '../show/usePreview';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { cx } from '../ui/cx';
 import { forgetCamera, rememberCamera, rememberedCamera, sameStage } from './cameraMemory';
+import { handedOverHaze, setHandedOverHaze } from './handover';
 import { buildScene, fixtureLooks, type CameraPose, type CameraPresetName } from './sceneModel';
 import { createSceneRenderer, type Quality, type SceneRenderer } from './sceneRenderer';
 import styles from './VisualiserView.module.css';
@@ -56,7 +58,7 @@ function Stage({
   const [failed, setFailed] = useState(false);
   // View-only, not saved: the Assume haze (none follows the Hazers) and the
   // quality.
-  const [assumed, setAssumed] = useState<number>();
+  const [assumed, setAssumed] = useState<number | undefined>(handedOverHaze);
   const [quality, setQuality] = useState<Quality>('high');
   const [hover, setHover] = useState<{ name: string; x: number; y: number }>();
   // The model the renderer made on mount starts from, then the latest.
@@ -64,38 +66,55 @@ function Stage({
   // What the renderer has been given, so the first effect run does not repeat
   // what `attach` did.
   const applied = useRef<{ model: typeof model; patch: VenuePatch }>(undefined);
+  // What main holds for the other window to take over: the free camera and the
+  // haze override. Sent as they change, so a window closing loses nothing.
+  const handover = useRef<VisualiserHandover>({});
+  const publish = useCallback(() => window.visualiserWindow.setState(handover.current), []);
   // The latest patch and engine lights, for events and for a patch change.
   const latest = useRef({ patch, lights: {} as Record<string, FixtureLight> });
 
   // Makes the renderer when the canvas's host mounts, frees it when it goes.
-  const attach = useCallback((host: HTMLDivElement | null) => {
-    if (!host) return;
-    let created: SceneRenderer;
-    try {
-      const stage = latest.current.patch.stage;
-      created = createSceneRenderer(host, rememberedCamera(stage) ?? drawn.current.cameras.foh, {
-        onCamera: (pose) => rememberCamera(pose, latest.current.patch.stage),
-        onHover: setHover,
+  const attach = useCallback(
+    (host: HTMLDivElement | null) => {
+      if (!host) return;
+      let created: SceneRenderer;
+      try {
+        const stage = latest.current.patch.stage;
+        created = createSceneRenderer(host, rememberedCamera(stage) ?? drawn.current.cameras.foh, {
+          onCamera: (pose) => {
+            const stage = latest.current.patch.stage;
+            rememberCamera(pose, stage);
+            handover.current = { ...handover.current, camera: { pose, stage } };
+            publish();
+          },
+          onHover: setHover,
+        });
+      } catch {
+        setFailed(true);
+        return;
+      }
+      created.setModel(drawn.current);
+      handover.current = {
+        ...handover.current,
+        camera: { pose: created.camera(), stage: latest.current.patch.stage },
+      };
+      publish();
+      applied.current = { model: drawn.current, patch: latest.current.patch };
+      renderer.current = created;
+      const unsubscribe = subscribePreview((lights, haze, house) => {
+        latest.current.lights = lights;
+        created.setHaze(haze);
+        created.setHouse(house);
+        created.setLooks(fixtureLooks(latest.current.patch, lights));
       });
-    } catch {
-      setFailed(true);
-      return;
-    }
-    created.setModel(drawn.current);
-    applied.current = { model: drawn.current, patch: latest.current.patch };
-    renderer.current = created;
-    const unsubscribe = subscribePreview((lights, haze, house) => {
-      latest.current.lights = lights;
-      created.setHaze(haze);
-      created.setHouse(house);
-      created.setLooks(fixtureLooks(latest.current.patch, lights));
-    });
-    return () => {
-      unsubscribe();
-      created.dispose();
-      renderer.current = undefined;
-    };
-  }, []);
+      return () => {
+        unsubscribe();
+        created.dispose();
+        renderer.current = undefined;
+      };
+    },
+    [publish],
+  );
 
   useEffect(() => {
     drawn.current = model;
@@ -117,6 +136,12 @@ function Stage({
   }, [model, patch]);
 
   useEffect(() => renderer.current?.setAssumedHaze(assumed), [assumed]);
+  useEffect(() => {
+    handover.current = { ...handover.current, haze: assumed };
+    publish();
+    setHandedOverHaze(assumed);
+    return () => setHandedOverHaze(undefined);
+  }, [assumed, publish]);
   useEffect(() => renderer.current?.setQuality(quality), [quality]);
 
   const go = (id: CameraPresetName | 'reset') => {
