@@ -52,6 +52,7 @@ import {
   type AppInfo,
   type DocumentKind,
   type EngineConnect,
+  type UiClient,
   type ExamplePaths,
   type EngineGrantPath,
   type EnginePathGranted,
@@ -60,6 +61,7 @@ import {
 import { diskShowFiles, diskVenueFiles, fileStorage } from '../engine/file-storage';
 import { snapshotFile } from './engine-snapshot';
 import { superviseEngine } from './engine-supervisor';
+import { createWindowRegistry } from './window-registry';
 import { licensePath } from './licenses';
 import { createLog, lineSplitter } from './log';
 import { restrictContents } from './navigation';
@@ -136,37 +138,47 @@ function startEngine(): UtilityProcess {
 
 type Supervisor = ReturnType<typeof superviseEngine<UtilityProcess>>;
 
-// Gives the window a direct MessagePort to the engine, so UI traffic never
-// passes through the main process.
-function connectWindow(window: BrowserWindow, engine: UtilityProcess): void {
-  const { port1, port2 } = new MessageChannelMain();
-  const connect: EngineConnect = { type: 'connect', client: 'main' };
-  engine.postMessage(connect, [port1]);
-  window.webContents.postMessage(ENGINE_PORT_CHANNEL, null, [port2]);
+type Windows = ReturnType<typeof createWindows>;
+
+// The open windows. Each gets a direct MessagePort to the engine, so UI
+// traffic never passes through the main process. The engine learns which
+// client it serves.
+function createWindows() {
+  return createWindowRegistry<BrowserWindow, UtilityProcess>({
+    postPort: (window, client, engine) => {
+      const { port1, port2 } = new MessageChannelMain();
+      const connect: EngineConnect = { type: 'connect', client };
+      engine.postMessage(connect, [port1]);
+      window.webContents.postMessage(ENGINE_PORT_CHANNEL, null, [port2]);
+    },
+    send: (window, channel, ...args) => window.webContents.send(channel, ...args),
+  });
 }
 
 // Connects the window to the current engine on every load, so reloads
 // reconnect. An engine that is down gets no port.
-function connectWindowToEngine(window: BrowserWindow, supervisor: Supervisor): void {
+function connectWindowToEngine(
+  window: BrowserWindow,
+  windows: Windows,
+  supervisor: Supervisor,
+): void {
   window.webContents.on('did-finish-load', () => {
-    if (!supervisor.isDown()) connectWindow(window, supervisor.current());
+    if (!supervisor.isDown()) windows.connect(window, supervisor.current());
   });
 }
 
 // Starts the engine and restarts it after a crash (ADR 0011). A restarted
-// engine reaches the window, if there is one, on a new port; the renderer
-// hears how its restore went, or that the engine is down for good.
-function startSupervisedEngine(window: () => BrowserWindow | undefined): Supervisor {
+// engine reaches every open window on a new port; each renderer hears how the
+// restore went, or that the engine is down for good. The restore runs once per
+// restart, not once per window.
+function startSupervisedEngine(windows: Windows): Supervisor {
   const supervisor = superviseEngine({
     start: startEngine,
     now: Date.now,
     log: (message) => log(message),
-    connect: (engine) => {
-      const current = window();
-      if (current) connectWindow(current, engine);
-    },
-    restarted: (result) => window()?.webContents.send(ENGINE_RESTARTED_CHANNEL, result),
-    down: () => window()?.webContents.send(ENGINE_DOWN_CHANNEL),
+    connect: (engine) => windows.connectAll(engine),
+    restarted: (result) => windows.sendAll(ENGINE_RESTARTED_CHANNEL, result),
+    down: () => windows.sendAll(ENGINE_DOWN_CHANNEL),
   });
   app.on('before-quit', () => supervisor.quitting());
   ipcMain.handle(ENGINE_IS_DOWN_CHANNEL, () => supervisor.isDown());
@@ -457,7 +469,12 @@ function guardClose(window: BrowserWindow, engineDown: () => boolean): void {
   });
 }
 
-function createWindow(supervisor: Supervisor, pageUrl: string): BrowserWindow {
+function createWindow(
+  windows: Windows,
+  supervisor: Supervisor,
+  client: UiClient,
+  pageUrl: string,
+): BrowserWindow {
   const window = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -471,7 +488,9 @@ function createWindow(supervisor: Supervisor, pageUrl: string): BrowserWindow {
       nodeIntegration: false,
     },
   });
-  connectWindowToEngine(window, supervisor);
+  windows.add(window, client);
+  window.on('closed', () => windows.remove(window));
+  connectWindowToEngine(window, windows, supervisor);
   guardClose(window, supervisor.isDown);
   void window.loadURL(pageUrl);
   return window;
@@ -500,8 +519,8 @@ process.on('unhandledRejection', (reason) => logError('Main unhandled rejection:
 log(`LightCues ${app.getVersion()} starting`);
 
 void app.whenReady().then(() => {
-  let window: BrowserWindow | undefined;
-  const engine = startSupervisedEngine(() => window);
+  const windows = createWindows();
+  const engine = startSupervisedEngine(windows);
   handleFileDialogs(
     engine,
     CHOOSE_VENUE_TO_OPEN_CHANNEL,
@@ -522,9 +541,7 @@ void app.whenReady().then(() => {
   handleOpenLicense();
   const pageUrl = rendererUrl();
   restrictNavigation(pageUrl);
-  window = createWindow(engine, pageUrl);
-  window.on('closed', () => (window = undefined));
-  handleUpdateCheck(window);
+  handleUpdateCheck(createWindow(windows, engine, 'main', pageUrl));
 });
 
 app.on('window-all-closed', () => app.quit());

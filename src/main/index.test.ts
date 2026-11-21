@@ -316,6 +316,25 @@ describe('engine connection', () => {
     expect(win().webContents.send).toHaveBeenCalledWith(ENGINE_RESTARTED_CHANNEL, 'restored');
   });
 
+  it('sends a closed window no more ports or notices', async () => {
+    await boot();
+    const closed = win();
+    snapshot(engine());
+    closed.close();
+    closed.webContents.postMessage.mockClear();
+
+    engine().emit('exit', 1);
+    engine().emit('message', { type: 'restored', result: 'restored' });
+    for (let i = 0; i < 4; i++) engine().emit('exit', 1);
+
+    expect(closed.webContents.postMessage).not.toHaveBeenCalled();
+    expect(closed.webContents.send).not.toHaveBeenCalledWith(
+      ENGINE_RESTARTED_CHANNEL,
+      expect.anything(),
+    );
+    expect(closed.webContents.send).not.toHaveBeenCalledWith(ENGINE_DOWN_CHANNEL);
+  });
+
   it('tells the window when the engine is down for good', async () => {
     await boot();
     for (let i = 0; i < 4; i++) engine().emit('exit', 1);

@@ -113,6 +113,22 @@ describe('superviseEngine', () => {
     expect(log).toContain('Restarting the engine');
   });
 
+  it('restores once and connects once per restart, whatever the number of windows', () => {
+    // The supervisor knows engines, not windows: main fans the one connect and
+    // the one restarted out to every open window (window-registry.ts).
+    const { connected, results, latest } = supervised();
+    latest().send({ type: 'snapshot', ...snapshot });
+
+    latest().exit();
+    latest().send({ type: 'restored', result: 'restored' });
+
+    expect(latest().posted.filter((m) => (m as { type: string }).type === 'restore')).toHaveLength(
+      1,
+    );
+    expect(connected).toHaveLength(1);
+    expect(results).toEqual(['restored']);
+  });
+
   it('reports and logs the restore result', () => {
     const { results, log, latest } = supervised();
     latest().send({ type: 'snapshot', ...snapshot });
