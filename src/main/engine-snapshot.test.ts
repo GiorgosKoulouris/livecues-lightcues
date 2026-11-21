@@ -30,6 +30,7 @@ const snapshot: EngineSnapshot = {
   },
   house: { look: {}, fired: { type: 'startup' } },
   haze: { type: 'preset', id: 'light' },
+  colourSet: { id: 'verse' },
   midiInput: {},
 };
 
@@ -47,6 +48,9 @@ describe('createSnapshotStore', () => {
     expect(store.latest()).toBeUndefined();
 
     store.merge({ type: 'snapshot', haze: snapshot.haze });
+    expect(store.latest()).toBeUndefined();
+
+    store.merge({ type: 'snapshot', colourSet: snapshot.colourSet });
     expect(store.latest()).toEqual(snapshot);
   });
 

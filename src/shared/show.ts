@@ -129,6 +129,23 @@ export interface IntensityEffect {
   width?: EffectWidth;
 }
 
+// The three colours a Colour Set holds, by slot.
+export const SLOTS = ['Primary', 'Secondary', 'Accent'] as const;
+export type Slot = (typeof SLOTS)[number];
+
+// A slot reference: the held Colour Set's colour for that slot, in place of a
+// Colour.
+export interface SlotRef {
+  slot: Slot;
+}
+
+// What a Rule, or a Step or Fade, sets as a colour: a Colour or a slot.
+export type RuleColour = Colour | SlotRef;
+
+export function isSlotRef(colour: RuleColour): colour is SlotRef {
+  return 'slot' in colour;
+}
+
 // Colour Effects, which change a Fixture's colour to the Tempo. Step holds
 // each colour in turn, Fade fades from each to the next, and Rainbow cycles
 // the hue.
@@ -142,7 +159,7 @@ export const MAX_EFFECT_COLOURS = 4;
 // A Step or Fade runs through its colours over each cycle; a Rainbow takes
 // none.
 export type ColourEffect = { length: EffectLength; spread: Spread } & (
-  { shape: 'Step' | 'Fade'; colours: Colour[] } | { shape: 'Rainbow' }
+  { shape: 'Step' | 'Fade'; colours: RuleColour[] } | { shape: 'Rainbow' }
 );
 
 // How fast a Fixture strobes: Off, a named rate, or once per 1, 1/2 or 1/4
@@ -192,7 +209,7 @@ export interface Rule {
   target: RuleTarget;
   // 0–1.
   intensity?: number;
-  colour?: Colour;
+  colour?: RuleColour;
   // Aims the moving Fixtures targeted.
   direction?: Direction;
   // Moves the moving Fixtures targeted around their aim. None holds them
@@ -284,6 +301,20 @@ export interface HazePreset {
   note?: MidiNote;
 }
 
+// A named slot of three Colours the Show's Rules can name by slot. Its note
+// only does Go, and one Colour Set holds at a time. When it changes, every slot
+// colour crossfades to the new one over its fade. Not a palette: that is the
+// Plan's per-tier Scene map.
+export interface ColourSet {
+  // Unique in the Show.
+  id: string;
+  name: string;
+  colours: Record<Slot, Colour>;
+  // Seconds to crossfade the slot colours from the held Colour Set.
+  fade: number;
+  note?: MidiNote;
+}
+
 export interface Show {
   // In display order.
   layers: Layer[];
@@ -301,6 +332,9 @@ export interface Show {
   // In order, at most `MAX_HAZE_PRESETS`. None when absent. Haze Off is built
   // in and not listed.
   hazePresets?: HazePreset[];
+  // In order, at most `MAX_COLOUR_SETS`. None when absent. The first holds at
+  // launch and when the Show is opened.
+  colourSets?: ColourSet[];
 }
 
 // The House Preset slots.
@@ -309,6 +343,9 @@ export const MAX_HOUSE_PRESETS = 8;
 // The most Haze Presets: it limits the width of the button row in Perform. Haze
 // has no keys.
 export const MAX_HAZE_PRESETS = 8;
+
+// The most Colour Sets: it limits the width of the button row in Perform.
+export const MAX_COLOUR_SETS = 16;
 
 export type ShowResult = { show: Show } | { errors: string[] };
 
@@ -337,7 +374,7 @@ export function findTrigger(show: Show, note: MidiNote): Trigger | undefined {
 
 // The two kinds of Preset list in a Show, by the Show's field. Their edits
 // share one shape (preset-list.ts).
-type PresetKey = 'housePresets' | 'hazePresets';
+type PresetKey = 'housePresets' | 'hazePresets' | 'colourSets';
 type PresetOf<K extends PresetKey> = NonNullable<Show[K]>[number];
 
 function presetsOf<K extends PresetKey>(show: Show, key: K): PresetOf<K>[] {
@@ -368,6 +405,19 @@ export function findHazePreset(show: Show, id: string): HazePreset | undefined {
 // The Haze Preset a channel and note fire, if any.
 export function findHazePresetOn(show: Show, note: MidiNote): HazePreset | undefined {
   return findListedOn(showHazePresets(show), note);
+}
+
+export function showColourSets(show: Show): ColourSet[] {
+  return presetsOf(show, 'colourSets');
+}
+
+export function findColourSet(show: Show, id: string): ColourSet | undefined {
+  return showColourSets(show).find((p) => p.id === id);
+}
+
+// The Colour Set a channel and note fire, if any.
+export function findColourSetOn(show: Show, note: MidiNote): ColourSet | undefined {
+  return findListedOn(showColourSets(show), note);
 }
 
 // Checks a whole Show. Returns readable errors; an empty list means it is
@@ -408,6 +458,7 @@ export function validateShow(show: Show): string[] {
   }
   errors.push(...housePresetErrors(show));
   errors.push(...hazePresetErrors(show));
+  errors.push(...colourSetErrors(show));
   return errors;
 }
 
@@ -501,6 +552,47 @@ function hazePresetErrors(show: Show): string[] {
   return errors;
 }
 
+// A Colour Set note may not also be a Trigger's, a House Preset's or a Haze
+// Preset's, so a note does one thing.
+function colourSetErrors(show: Show): string[] {
+  const sets = showColourSets(show);
+  const errors: string[] = [];
+  for (const { id, name, colours, fade, note } of sets) {
+    const at = `Colour Set "${name}": `;
+    errors.push(...presetProblems({ id, name }, at));
+    for (const slot of SLOTS) {
+      const colour = colours?.[slot] as Colour | undefined;
+      if (typeof colour !== 'object' || colour === null) {
+        errors.push(`${at}${slot} colour is missing`);
+      } else if ('slot' in colour) {
+        errors.push(`${at}${slot} colour must be a Colour, not a slot`);
+      } else {
+        for (const problem of colourProblems(colour)) errors.push(`${at}${slot}: ${problem}`);
+      }
+    }
+    if (!Number.isFinite(fade) || fade < 0) errors.push(`${at}fade must be 0 seconds or more`);
+    if (note === undefined) continue;
+    errors.push(...noteProblems(note).map((problem) => at + problem));
+    const taken = findTrigger(show, note)
+      ? 'a Trigger'
+      : findHousePresetOn(show, note)
+        ? 'a House Preset'
+        : findHazePresetOn(show, note)
+          ? 'a Haze Preset'
+          : undefined;
+    if (taken) errors.push(`${at}note ${note.channel}/${note.note} is also ${taken}`);
+  }
+  errors.push(...listProblems('Colour Set', sets, MAX_COLOUR_SETS));
+  return errors;
+}
+
+// The problems with a Rule's colour: a Colour, or a slot that exists.
+function ruleColourProblems(colour: RuleColour): string[] {
+  if (typeof colour !== 'object' || colour === null) return ['colour must be a Colour or a slot'];
+  if (!isSlotRef(colour)) return colourProblems(colour);
+  return SLOTS.includes(colour.slot) ? [] : [`"${colour.slot}" is not a slot`];
+}
+
 function hasScene(show: Show, id: string): boolean {
   return show.scenes.some((s) => s.id === id);
 }
@@ -523,7 +615,7 @@ function ruleProblems(rule: Rule): string[] {
   if (intensity !== undefined && !inRange(intensity, 0, 1)) {
     problems.push('intensity must be from 0 to 1');
   }
-  if (colour !== undefined) problems.push(...colourProblems(colour));
+  if (colour !== undefined) problems.push(...ruleColourProblems(colour));
   if (direction !== undefined) problems.push(...directionProblems(direction));
   if (strobe !== undefined && !STROBE_RATES.includes(strobe)) {
     problems.push('strobe must be Off, Slow, Medium, Fast, or 1, 1/2 or 1/4 beat');
@@ -607,7 +699,8 @@ function colourEffectProblems(effect: ColourEffect): string[] {
       );
     }
     colours.forEach((colour, i) => {
-      for (const problem of colourProblems(colour)) problems.push(`colour ${i + 1}: ${problem}`);
+      for (const problem of ruleColourProblems(colour))
+        problems.push(`colour ${i + 1}: ${problem}`);
     });
   }
   return [...problems, ...timingProblems(length, spread)];

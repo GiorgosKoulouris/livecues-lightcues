@@ -52,7 +52,9 @@ export function createSnapshotReporter(
             ? now.house === last.house
             : part === 'haze'
               ? sameHaze(now.haze, last.haze)
-              : sameDocument(now[part], last[part]);
+              : part === 'colourSet'
+                ? now.colourSet.id === last.colourSet.id
+                : sameDocument(now[part], last[part]);
       if (same) return;
       last = { ...last, [part]: now[part] };
       report({ [part]: now[part] });

@@ -10,10 +10,17 @@ import {
   type LibraryImportResult,
   type RestoreResult,
 } from '../shared/protocol';
-import { findHazePresetOn, findHousePresetOn, findTrigger, validateShow } from '../shared/show';
+import {
+  findColourSetOn,
+  findHazePresetOn,
+  findHousePresetOn,
+  findTrigger,
+  validateShow,
+} from '../shared/show';
 import { validatePatch } from '../shared/venue-patch';
 import { profileName } from '../shared/profile-edit';
 import { createChannelMonitor } from './channel-monitor';
+import { createColourSets } from './colour-sets';
 import { createHaze } from './haze';
 import { createHouse } from './house';
 import { withoutContents } from './log-safe';
@@ -123,6 +130,7 @@ const SNAPSHOT_PARTS: Partial<Record<EngineEvent['type'], keyof EngineSnapshot>>
   tempo: 'playback',
   house: 'house',
   haze: 'haze',
+  colourSet: 'colourSet',
   midiInput: 'midiInput',
 };
 
@@ -178,13 +186,16 @@ export function createEngine({
       playback.showEdited();
       house.showEdited();
       haze.showEdited();
+      colourSets.showEdited();
     },
     replaced: () => {
       playback.showReplaced();
       haze.reset();
+      colourSets.reset();
     },
   });
   const tempo = createTempo({ now, emit });
+  const colourSets = createColourSets({ show: show.show, now, emit });
   const playback = createPlayback({
     emit,
     now,
@@ -192,6 +203,7 @@ export function createEngine({
     bpm: tempo.bpm,
     show: show.show,
     patch: venue.patch,
+    slots: colourSets.slots,
   });
   const house = createHouse({ patch: venue.patch, show: show.show, now, emit });
   const haze = createHaze({ patch: venue.patch, show: show.show, now, emit });
@@ -247,12 +259,14 @@ export function createEngine({
       return;
     }
     const trigger = findTrigger(show.show(), note);
-    // A House Preset's or Haze Preset's note only does Go.
+    // A House Preset's, Haze Preset's or Colour Set's note only does Go.
     const preset = findHousePresetOn(show.show(), note);
     const hazePreset = findHazePresetOn(show.show(), note);
+    const colourSet = findColourSetOn(show.show(), note);
     if (trigger) playback.fire(trigger);
     else if (preset) house.fire(preset.id);
     else if (hazePreset) haze.fire(hazePreset.id);
+    else if (colourSet) colourSets.fire(colourSet.id);
   }
 
   function libraryChanged(): void {
@@ -352,6 +366,7 @@ export function createEngine({
       playback: { ...playback.snapshot(), bpm: tempo.bpm(), tempoSource: tempo.source() },
       house: house.snapshot(),
       haze: haze.snapshot(),
+      colourSet: colourSets.snapshot(),
       midiInput: selected === undefined ? {} : { selected },
     };
   }
@@ -391,11 +406,17 @@ export function createEngine({
 
   // The Venue Patch first, so the Show's Scenes resolve against it. The
   // House Lights go to its Startup look, until the house state is restored.
-  // The Hazers get the held Haze Preset back, which the Show must have first.
+  // The Hazers get the held Haze Preset back, and the slots the held Colour
+  // Set, which the Show must have first.
   // Their files are granted, as the last engine held them: main re-grants
   // only the paths it granted, not the recent files the engine reopened
   // itself. The errors name no contents, since they are logged.
-  function restoreDocuments({ show: shown, venue: patched, haze: held }: EngineSnapshot): void {
+  function restoreDocuments({
+    show: shown,
+    venue: patched,
+    haze: held,
+    colourSet: heldSet,
+  }: EngineSnapshot): void {
     if (validatePatch(patched.document).length > 0) throw new Error('Invalid Venue Patch');
     if (validateShow(shown.document).length > 0) throw new Error('Invalid Show');
     for (const { path } of [patched, shown]) if (path !== undefined) grants.grant(path);
@@ -403,6 +424,7 @@ export function createEngine({
     show.restore(shown);
     house.venueReplaced();
     haze.restore(held);
+    colourSets.restore(heldSet);
   }
 
   function resolveOnce(): void {
@@ -560,6 +582,12 @@ export function createEngine({
           break;
         case 'fireHazePreset':
           haze.fire(command.id);
+          break;
+        case 'getColourSet':
+          colourSets.emitHeld();
+          break;
+        case 'fireColourSet':
+          colourSets.fire(command.id);
           break;
         case 'hazeOff':
           haze.off();

@@ -121,7 +121,18 @@ export type EngineCommand =
   // nothing when the Show lacks the Haze Preset. Not in the undo history.
   | { type: 'fireHazePreset'; id: string }
   // Takes every Hazer to 0 at once, fan included.
-  | { type: 'hazeOff' };
+  | { type: 'hazeOff' }
+  | { type: 'getColourSet' }
+  // Crossfades every slot colour to the Colour Set's over its fade. Scenes stay
+  // active. Does nothing when the Show lacks the Colour Set. Not in the undo
+  // history.
+  | { type: 'fireColourSet'; id: string };
+
+// The Colour Set the slot colours follow, by id; none when the Show has no
+// Colour Sets. The first when a Show is opened and at launch.
+export interface HeldColourSet {
+  id?: string;
+}
 
 // What the Hazers went to last: Haze Off, or a Haze Preset by id, or none
 // when that Haze Preset was removed from the Show (the output holds). Off at
@@ -290,6 +301,9 @@ export type EngineEvent =
   // What the Hazers went to last, during its fade too. Sent on request and
   // after every change.
   | { type: 'haze'; fired: HazeFired }
+  // The Colour Set held, during its crossfade too. Sent on request and on every
+  // change.
+  | { type: 'colourSet'; held: HeldColourSet }
   // The MIDI input status. Sent on request and after every change.
   | { type: 'midiInput'; status: MidiInputStatus }
   // The Tempo and where it comes from. Sent on request and after every change
@@ -341,6 +355,8 @@ export interface EngineSnapshot {
   house: HouseSnapshot;
   // The Haze Preset the Hazers hold, or Haze Off. Not the mid-fade position.
   haze: HazeFired;
+  // The Colour Set the slots follow. Not the mid-fade position.
+  colourSet: HeldColourSet;
   // The selected MIDI Input's name, absent when none is selected.
   midiInput: { selected?: string };
 }
@@ -532,6 +548,7 @@ export const STATE_REQUESTS: readonly EngineCommand['type'][] = [
   'getPlayback',
   'getHouse',
   'getHaze',
+  'getColourSet',
   'listOutputs',
   'listMidiInputs',
   'getTempo',

@@ -13,13 +13,16 @@ import {
 import type { FixtureLight } from '../shared/protocol';
 import {
   DEFAULT_DIRECTION,
+  isSlotRef,
   NO_EFFECT,
   ruleTargets,
   type Colour,
   type Direction,
   type EffectLength,
   type Scene,
+  type RuleColour,
   type Show,
+  type Slot,
   type GoboSetting,
   KELVIN_RANGE,
   PRISM_BEHAVIOUR,
@@ -144,6 +147,7 @@ function shownAims(
       beat,
       DEFAULT_BPM,
       runs,
+      undefined,
     );
     const { aim, direction, intensity } = output;
     if (aim && direction) shown[fixture.id] = { ...aim, direction, dark: intensity === 0 };
@@ -251,6 +255,7 @@ export function resolveFrames(
   beat = 0,
   bpm = DEFAULT_BPM,
   runs: EffectRuns = {},
+  slots?: SlotLevels,
 ): Map<number, Uint8Array> {
   const frames = new Map(patch.universes.map((u) => [u.number, new Uint8Array(DMX_CHANNELS)]));
   for (const fixture of patch.fixtures) {
@@ -264,6 +269,7 @@ export function resolveFrames(
       beat,
       bpm,
       runs,
+      slots,
     );
     const { channels, output } = resolved;
     frames.get(fixture.universe)!.set(encodeChannels(channels, output), fixture.address - 1);
@@ -282,6 +288,7 @@ export function resolveLights(
   beat = 0,
   bpm = DEFAULT_BPM,
   runs: EffectRuns = {},
+  slots?: SlotLevels,
 ): Record<string, FixtureLight> {
   return Object.fromEntries(
     patch.fixtures.map((fixture) => {
@@ -295,6 +302,7 @@ export function resolveLights(
         beat,
         bpm,
         runs,
+        slots,
       );
       const { channels, output } = resolved;
       return [fixture.id, fixtureLight(channels, output)];
@@ -340,10 +348,12 @@ function fixtureOutput(
   beat: number,
   bpm: number,
   runs: EffectRuns,
+  held: SlotLevels | undefined,
 ): { channels: Channel[]; output: FixtureOutput } {
+  const slots = held ?? defaultSlots(show);
   const entries = byChange(show, active, time);
   const items = entries.map((entry) => ({ entry, layer: layerIndex(show, entry) }));
-  const state = stackLooks(show, patch, fixture, items, time, beat, runs);
+  const state = stackLooks(show, patch, fixture, items, time, beat, runs, slots);
   const { intensity, colour, effectColour, direction, turn, scale, snap } = state;
   const shown =
     effectColour === undefined || effectColour === NO_EFFECT
@@ -393,13 +403,14 @@ function stackLooks(
   time: number,
   beat: number,
   runs: EffectRuns,
+  slots: SlotLevels,
 ): Combined {
   let state: Combined = { intensity: 0, snap: {} };
   const skipped = new Set<Item>();
   items.forEach((item, i) => {
     if (skipped.has(item)) return;
     const { entry } = item;
-    const look = layerLook(show, patch, fixture, entry, time, beat, runs);
+    const look = layerLook(show, patch, fixture, entry, time, beat, runs, slots);
     const { releasing } = entry;
     if (item.stopped) {
       state = combineLook(show, state, stoppedLook(look));
@@ -414,8 +425,9 @@ function stackLooks(
     const earlier = items.slice(0, i);
     const below = items.slice(i + 1).filter((o) => o.layer < item.layer && !skipped.has(o));
     for (const o of below) skipped.add(o);
-    const to = releasing.to && layerLook(show, patch, fixture, releasing.to, time, beat, runs);
-    const base = stackLooks(show, patch, fixture, [...earlier, ...below], time, beat, runs);
+    const to =
+      releasing.to && layerLook(show, patch, fixture, releasing.to, time, beat, runs, slots);
+    const base = stackLooks(show, patch, fixture, [...earlier, ...below], time, beat, runs, slots);
     const under = to ? combineLook(show, base, to) : base;
     const over = stackLooks(
       show,
@@ -425,6 +437,7 @@ function stackLooks(
       time,
       beat,
       runs,
+      slots,
     );
     state = mixCombined(show, over, under, releaseProgress(releasing, time));
   });
@@ -787,13 +800,14 @@ function layerLook(
   time: number,
   beat: number,
   runs: EffectRuns,
+  slots: SlotLevels,
 ): Look {
   const { scene: id, since, from } = active;
   const scene = findScene(show, id);
-  const target = scene ? sceneLook(patch, fixture, scene, beat, runs) : {};
+  const target = scene ? sceneLook(patch, fixture, scene, beat, runs, slots) : {};
   const p = progress(show, active, time);
   if (p === 1) return target;
-  const before = from ? fromLook(show, patch, fixture, from, since, beat, runs) : {};
+  const before = from ? fromLook(show, patch, fixture, from, since, beat, runs, slots) : {};
   const look: Look = {};
   if (before.intensity !== undefined || target.intensity !== undefined) {
     look.intensity = lerp(before.intensity ?? 0, target.intensity ?? 0, p);
@@ -836,12 +850,13 @@ function fromLook(
   time: number,
   beat: number,
   runs: EffectRuns,
+  slots: SlotLevels,
 ): Look {
-  const look = layerLook(show, patch, fixture, from, time, beat, runs);
+  const look = layerLook(show, patch, fixture, from, time, beat, runs, slots);
   const { releasing } = from;
   if (!releasing) return look;
   const p = releaseProgress(releasing, time);
-  const to = releasing.to && layerLook(show, patch, fixture, releasing.to, time, beat, runs);
+  const to = releasing.to && layerLook(show, patch, fixture, releasing.to, time, beat, runs, slots);
   const out = stoppedLook(look);
   const colour =
     out.colour && to?.colour ? blend(out.colour, to.colour, p) : (to?.colour ?? out.colour);
@@ -864,6 +879,7 @@ function sceneLook(
   scene: Scene,
   beat: number,
   runs: EffectRuns,
+  slots: SlotLevels,
 ): Look {
   const look: Look = {};
   const snap = sceneSnap(patch, fixture, scene);
@@ -873,7 +889,7 @@ function sceneLook(
     if (!ruleTargets(patch, fixture, rule)) continue;
     if (rule.intensity !== undefined) look.intensity = rule.intensity;
     if (rule.colour !== undefined) {
-      look.colour = colourLevels(rule.colour);
+      look.colour = ruleLevels(rule.colour, slots);
       look.effectColour = NO_EFFECT;
     }
     if (rule.direction !== undefined) look.direction = rule.direction;
@@ -912,14 +928,29 @@ function sceneLook(
     } else if (colourEffect !== undefined) {
       const targeted = patch.fixtures.filter((other) => ruleTargets(patch, other, rule));
       const delay = spreadDelay(colourEffect.spread, fixture, targeted);
-      look.effectColour = mixLevels(colourEffectMix(colourEffect, beat, delay));
+      look.effectColour = mixLevels(colourEffectMix(colourEffect, beat, delay), slots);
     }
   }
   return look;
 }
 
-function mixLevels({ from, to, p }: ColourMix): ColourLevels {
-  return blend(colourLevels(from), colourLevels(to), p);
+function mixLevels({ from, to, p }: ColourMix, slots: SlotLevels): ColourLevels {
+  return blend(ruleLevels(from, slots), ruleLevels(to, slots), p);
+}
+
+// The colour of every slot: the held Colour Set's, crossfading when it
+// changes. Without a held Colour Set, every slot is the Default Colour.
+export type SlotLevels = Record<Slot, ColourLevels>;
+
+// What a Rule's colour shows: a Colour's levels, or the slot's colour.
+function ruleLevels(colour: RuleColour, slots: SlotLevels): ColourLevels {
+  return isSlotRef(colour) ? slots[colour.slot] : colourLevels(colour);
+}
+
+// Every slot at the Default Colour.
+export function defaultSlots(show: Show): SlotLevels {
+  const levels = defaultColour(show);
+  return { Primary: levels, Secondary: levels, Accent: levels };
 }
 
 export function lerp(a: number, b: number, p: number): number {

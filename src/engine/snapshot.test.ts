@@ -105,6 +105,7 @@ describe('engine snapshot', () => {
       },
       house: { look: {}, fired: { type: 'startup' } },
       haze: { type: 'off' },
+      colourSet: {},
       midiInput: {},
     });
   });
@@ -477,6 +478,22 @@ describe('engine restore', () => {
 
       expect(s.take()).toEqual([{ haze: { type: 'preset', id: 'light' } }]);
     });
+  });
+
+  it('sends the colourSet part when the held Colour Set changes', () => {
+    const s = snapshotEngine();
+    const colours = {
+      Primary: { swatch: 'Red' as const },
+      Secondary: { swatch: 'Blue' as const },
+      Accent: { swatch: 'White' as const },
+    };
+    s.editShow({ type: 'putColourSet', set: { id: 'a', name: 'A', colours, fade: 0 } });
+    s.editShow({ type: 'putColourSet', set: { id: 'b', name: 'B', colours, fade: 0 } });
+    s.take();
+
+    s.engine.handle({ type: 'fireColourSet', id: 'b' });
+
+    expect(s.take()).toEqual([{ colourSet: { id: 'b' } }]);
   });
 
   it('starts empty when the documents fail too', () => {

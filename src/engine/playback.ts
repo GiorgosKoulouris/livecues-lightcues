@@ -29,6 +29,7 @@ import {
   releaseLayer,
   resolveLights,
   settleAll,
+  type SlotLevels,
   type ActiveScene,
   type ActiveScenes,
   type EffectRuns,
@@ -79,6 +80,9 @@ export interface PlaybackOptions {
   bpm: () => number;
   show: () => Show;
   patch: () => VenuePatch;
+  // The slot colours Rules name, mid-fade too. Without it, every slot is the
+  // Default Colour.
+  slots?: () => SlotLevels;
 }
 
 // A Scene flashed onto a Layer while `held`, and what the Layer held before
@@ -101,7 +105,7 @@ interface Flash {
 // Strobe runs on, at the Tempo as it is. Each movement Effect runs at a
 // length held to keep it under the Speed limit (ADR 0015). None of this is
 // part of the Show or the Venue Patch.
-export function createPlayback({ emit, now, beat, bpm, show, patch }: PlaybackOptions) {
+export function createPlayback({ emit, now, beat, bpm, show, patch, slots }: PlaybackOptions) {
   let active: ActiveScenes = {};
   // By Layer id.
   const flashes = new Map<string, Flash>();
@@ -413,11 +417,22 @@ export function createPlayback({ emit, now, beat, bpm, show, patch }: PlaybackOp
           effectBeat(),
           bpm(),
           runs,
+          slots?.(),
         );
       }
       let frames = sent;
       if (mode === 'blind' && blackout) {
-        frames = resolveFrames(show(), patch(), active, seconds(), 0, effectBeat(), bpm(), runs);
+        frames = resolveFrames(
+          show(),
+          patch(),
+          active,
+          seconds(),
+          0,
+          effectBeat(),
+          bpm(),
+          runs,
+          slots?.(),
+        );
       }
       if (focusCheck === undefined) return frames;
       return focusCheckFrames(patch(), frames, focusCheck, blackout ? 0 : 1);
@@ -436,6 +451,7 @@ export function createPlayback({ emit, now, beat, bpm, show, patch }: PlaybackOp
         effectBeat(),
         bpm(),
         runs,
+        slots?.(),
       );
       if (focusCheck === undefined) return lights;
       return focusCheckLights(patch(), lights, focusCheck, blackout ? 0 : 1);

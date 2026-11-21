@@ -1,30 +1,43 @@
-import { KELVIN_RANGE, SWATCHES, type Colour, type Swatch } from '../../../shared/show';
+import {
+  isSlotRef,
+  KELVIN_RANGE,
+  SLOTS,
+  SWATCHES,
+  type Colour,
+  type RuleColour,
+  type Slot,
+  type Swatch,
+} from '../../../shared/show';
 import { Select } from '../ui/Select';
 import styles from './ColourPicker.module.css';
 
-type Kind = 'none' | 'swatch' | 'kelvin' | 'hue';
+type Kind = 'none' | 'swatch' | 'kelvin' | 'hue' | 'slot';
 
-// Picks a swatch, a white in kelvin or a hue and saturation, or no colour, shown as `unset`.
-// With `unset` null, a colour must be picked.
-export function ColourPicker({
-  label = 'Colour',
-  unset = 'Not set',
-  colour,
-  onChange,
-}: {
+type ColourPickerProps = {
   label?: string;
   unset?: string | null;
-  colour?: Colour;
-  onChange(colour: Colour | undefined): void;
-}) {
+} & (
+  | { slots?: false; colour?: Colour; onChange(colour: Colour | undefined): void }
+  | { slots: true; colour?: RuleColour; onChange(colour: RuleColour | undefined): void }
+);
+
+// Picks a swatch, a white in kelvin or a hue and saturation, or no colour, shown as `unset`.
+// With `unset` null, a colour must be picked. With `slots`, it may also pick
+// a slot of the held Colour Set.
+export function ColourPicker(props: ColourPickerProps) {
+  const { label = 'Colour', unset = 'Not set', slots = false, colour } = props;
+  // A picker without `slots` is given Colours and only ever sends Colours.
+  const onChange = props.onChange as (colour: RuleColour | undefined) => void;
   const kind: Kind =
     colour === undefined
       ? 'none'
-      : 'swatch' in colour
-        ? 'swatch'
-        : 'kelvin' in colour
-          ? 'kelvin'
-          : 'hue';
+      : isSlotRef(colour)
+        ? 'slot'
+        : 'swatch' in colour
+          ? 'swatch'
+          : 'kelvin' in colour
+            ? 'kelvin'
+            : 'hue';
   return (
     <div className={styles.picker}>
       <Select<Kind>
@@ -35,14 +48,24 @@ export function ColourPicker({
           { value: 'swatch', label: 'Swatch' },
           { value: 'kelvin', label: 'Colour temperature' },
           { value: 'hue', label: 'Hue and saturation' },
+          ...(slots ? [{ value: 'slot' as const, label: 'Colour Set slot' }] : []),
         ]}
         onChange={(value) => {
           if (value === 'none') onChange(undefined);
           else if (value === 'swatch') onChange({ swatch: 'White' });
           else if (value === 'kelvin') onChange({ kelvin: 3200 });
+          else if (value === 'slot') onChange({ slot: 'Primary' });
           else onChange({ hue: 0, saturation: 1 });
         }}
       />
+      {colour && isSlotRef(colour) && (
+        <Select<Slot>
+          label="Slot"
+          value={colour.slot}
+          options={SLOTS.map((slot) => ({ value: slot, label: slot }))}
+          onChange={(slot) => onChange({ slot })}
+        />
+      )}
       {colour && 'swatch' in colour && (
         <Select<Swatch>
           label="Swatch"

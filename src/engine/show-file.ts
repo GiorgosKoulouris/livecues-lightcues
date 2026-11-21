@@ -1,4 +1,12 @@
-import { validateShow, type Colour, type Rule, type Show } from '../shared/show';
+import {
+  isSlotRef,
+  showColourSets,
+  validateShow,
+  type Colour,
+  type Rule,
+  type RuleColour,
+  type Show,
+} from '../shared/show';
 
 // The .lcshow file: a Show as versioned JSON. Version 2 added the default
 // colour, version 3 the Fallback Panel's Scene buttons (dropped in version 8), version 4 Rule
@@ -17,9 +25,13 @@ import { validateShow, type Colour, type Rule, type Show } from '../shared/show'
 // that has one is rejected as an unknown field.
 // Version 11 added a Scene's `fadeOut` and `fadeOutUnit`: a Show saves as
 // version 11 only when a Scene sets a fade-out, and older files load with none.
+// Version 12 added Colour Sets and slot colours (`{ slot }`) in Rules and in
+// Step and Fade colour Effects: a Show saves as version 12 only when it has a
+// Colour Set or uses a slot, and an older file that has one is rejected as an
+// unknown field.
 
-const VERSION = 11;
-const VERSIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, VERSION];
+const VERSION = 12;
+const VERSIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, VERSION];
 
 interface ShowFile extends Show {
   version: number;
@@ -33,16 +45,27 @@ export function saveShowFile(show: Show): string {
   const usesFadeOut = show.scenes.some(
     (scene) => scene.fadeOut !== undefined || scene.fadeOutUnit !== undefined,
   );
-  const version = usesFadeOut ? 11 : usesKelvin ? 10 : usesFadeUnit ? 9 : 8;
+  const usesColourSets =
+    showColourSets(show).length > 0 || ruleColours(show).some((colour) => isSlotRef(colour));
+  const version = usesColourSets ? 12 : usesFadeOut ? 11 : usesKelvin ? 10 : usesFadeUnit ? 9 : 8;
   const file: ShowFile = { version, ...show };
   return JSON.stringify(file);
 }
 
-// Every Colour the Show sets: its default, its Rules' colours and colour Effects'.
+// Every Colour the Show sets: its default, its Colour Sets', its Rules' colours
+// and colour Effects'. A slot is not a Colour.
 function showColours(show: Show): Colour[] {
-  const rules = show.scenes.flatMap((scene) => scene.rules);
   return [
     ...(show.defaultColour ? [show.defaultColour] : []),
+    ...showColourSets(show).flatMap(({ colours }) => Object.values(colours)),
+    ...ruleColours(show).filter((colour): colour is Colour => !isSlotRef(colour)),
+  ];
+}
+
+// Every colour the Rules set, plain or in a colour Effect: Colours and slots.
+function ruleColours(show: Show): RuleColour[] {
+  const rules = show.scenes.flatMap((scene) => scene.rules);
+  return [
     ...rules.flatMap(({ colour }) => colour ?? []),
     ...rules.flatMap(({ colourEffect }) =>
       typeof colourEffect === 'object' && 'colours' in colourEffect ? colourEffect.colours : [],
@@ -65,6 +88,9 @@ export function loadShowFile(json: string): Show {
   }
   if (show.hazePresets !== undefined && !Array.isArray(show.hazePresets)) {
     throw new Error('Invalid Show: hazePresets must be a list');
+  }
+  if (show.colourSets !== undefined && !Array.isArray(show.colourSets)) {
+    throw new Error('Invalid Show: colourSets must be a list');
   }
   // Version 1–7 files may carry the retired Fallback Panel Scenes.
   const { panelScenes, ...current } = show as Show & { panelScenes?: unknown };
@@ -106,7 +132,9 @@ function checkMalformed(check: () => string[]): string[] {
   try {
     return check();
   } catch {
-    return ['a Layer, Scene, Rule, Trigger, House Preset or Haze Preset is missing fields'];
+    return [
+      'a Layer, Scene, Rule, Trigger, House Preset, Haze Preset or Colour Set is missing fields',
+    ];
   }
 }
 
@@ -123,14 +151,16 @@ function unknownFields(file: ShowFile): string[] {
       if (!fields.includes(key)) found.push(`unknown field "${path}${key}"`);
     }
   };
-  const allowColour = (colour: Colour, path: string) =>
+  const allowColour = (colour: RuleColour, path: string) =>
     allow(
       colour,
-      'swatch' in colour
-        ? ['swatch']
-        : 'kelvin' in colour && file.version >= 10
-          ? ['kelvin']
-          : ['hue', 'saturation'],
+      'slot' in colour && file.version >= 12
+        ? ['slot']
+        : 'swatch' in colour
+          ? ['swatch']
+          : 'kelvin' in colour && file.version >= 10
+            ? ['kelvin']
+            : ['hue', 'saturation'],
       path,
     );
   // The top-level fields each version added.
@@ -146,6 +176,7 @@ function unknownFields(file: ShowFile): string[] {
     [], // 9: none at the top level; a Scene's fadeUnit is allowed below.
     [], // 10: none at the top level; kelvin Colours are allowed below.
     [], // 11: none at the top level; a Scene's fadeOut and fadeOutUnit are allowed below.
+    ['colourSets'],
   ];
   const top = added.slice(0, file.version).flat();
   // Versions 1–7 may carry the retired panelScenes, which is dropped on load.
@@ -198,7 +229,7 @@ function unknownFields(file: ShowFile): string[] {
         if (Array.isArray(colours)) {
           colours.forEach((colour: unknown, k) => {
             if (typeof colour === 'object' && colour !== null) {
-              allowColour(colour as Colour, `${at}colourEffect.colours[${k}].`);
+              allowColour(colour as RuleColour, `${at}colourEffect.colours[${k}].`);
             }
           });
         }
@@ -218,6 +249,16 @@ function unknownFields(file: ShowFile): string[] {
     file.hazePresets?.forEach(({ note, ...rest }, i) => {
       allow(rest, ['id', 'name', 'level', 'fade'], `hazePresets[${i}].`);
       if (note !== undefined) allow(note, ['channel', 'note'], `hazePresets[${i}].note.`);
+    });
+  }
+  if (file.version >= 12) {
+    file.colourSets?.forEach(({ note, colours, ...rest }, i) => {
+      allow(rest, ['id', 'name', 'fade'], `colourSets[${i}].`);
+      if (note !== undefined) allow(note, ['channel', 'note'], `colourSets[${i}].note.`);
+      allow(colours, ['Primary', 'Secondary', 'Accent'], `colourSets[${i}].colours.`);
+      for (const [slot, colour] of Object.entries(colours)) {
+        allowColour(colour, `colourSets[${i}].colours.${slot}.`);
+      }
     });
   }
   return found;

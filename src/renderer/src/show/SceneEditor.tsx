@@ -9,7 +9,7 @@ import {
   PRISM_SETTINGS,
   STROBE_HZ,
   STROBE_RATES,
-  type Colour,
+  type RuleColour as RuleColourValue,
   type ColourEffect,
   type Direction,
   type EffectSlot,
@@ -347,9 +347,9 @@ function RuleColour({
   onColour,
   onColourEffect,
 }: {
-  colour?: Colour;
+  colour?: RuleColourValue;
   colourEffect?: EffectSlot<ColourEffect>;
-  onColour(colour: Colour | undefined): void;
+  onColour(colour: RuleColourValue | undefined): void;
   onColourEffect(slot: EffectSlot<ColourEffect> | undefined): void;
 }) {
   // The mode last switched to, shown while neither is set.
@@ -380,7 +380,7 @@ function RuleColour({
         ))}
       </div>
       {mode === 'colour' ? (
-        <ColourPicker colour={colour} onChange={onColour} />
+        <ColourPicker slots colour={colour} onChange={onColour} />
       ) : (
         <ColourEffectPicker slot={colourEffect} onChange={onColourEffect} />
       )}

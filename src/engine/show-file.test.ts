@@ -139,8 +139,8 @@ describe('.lcshow file', () => {
   it('rejects a file of an unknown version', () => {
     const saved = JSON.parse(saveShowFile(show));
 
-    expect(() => loadShowFile(JSON.stringify({ ...saved, version: 12 }))).toThrow(
-      'Unsupported Show version: 12',
+    expect(() => loadShowFile(JSON.stringify({ ...saved, version: 13 }))).toThrow(
+      'Unsupported Show version: 13',
     );
     expect(() => loadShowFile(JSON.stringify({ ...show }))).toThrow(
       'Unsupported Show version: undefined',
@@ -268,6 +268,92 @@ describe('.lcshow file', () => {
     expect(JSON.parse(saveShowFile(show)).version).toBe(8);
     expect(() => loadShowFile(JSON.stringify({ version: 9, ...faded }))).toThrow(
       'unknown field "scenes[0].fadeOut"',
+    );
+  });
+
+  it('saves version 12 with Colour Sets or a slot colour, and loads older files as they are', () => {
+    const colours = {
+      Primary: { kelvin: 3200 },
+      Secondary: { swatch: 'Red' as const },
+      Accent: { hue: 200, saturation: 0.5 },
+    };
+    const sets: Show = {
+      ...show,
+      colourSets: [
+        { id: 'verse', name: 'Verse', colours, fade: 2 },
+        { id: 'chorus', name: 'Chorus', colours, fade: 0, note: { channel: 3, note: 5 } },
+      ],
+    };
+    const [first, ...others] = show.scenes;
+    const slotted: Show = {
+      ...show,
+      scenes: [
+        {
+          ...first!,
+          rules: [
+            { target: {}, colour: { slot: 'Primary' } },
+            {
+              target: {},
+              colourEffect: {
+                shape: 'Fade',
+                colours: [{ slot: 'Secondary' }, { swatch: 'Blue' }],
+                length: 2,
+                spread: 'In sync',
+              },
+            },
+          ],
+        },
+        ...others,
+      ],
+    };
+
+    for (const full of [sets, slotted]) {
+      const saved = saveShowFile(full);
+      expect(JSON.parse(saved).version).toBe(12);
+      expect(loadShowFile(saved)).toEqual(full);
+    }
+    expect(JSON.parse(saveShowFile(show)).version).toBe(8);
+    expect(loadShowFile(JSON.stringify({ version: 11, ...show }))).toEqual(show);
+    expect(() => loadShowFile(JSON.stringify({ version: 11, ...sets }))).toThrow(
+      'unknown field "colourSets"',
+    );
+    expect(() => loadShowFile(JSON.stringify({ version: 11, ...slotted }))).toThrow(
+      'unknown field "scenes[0].rules[0].colour.slot"',
+    );
+  });
+
+  it('rejects an unknown slot, a slot in a Colour Set and unknown Colour Set fields', () => {
+    const colours = {
+      Primary: { swatch: 'Red' },
+      Secondary: { swatch: 'Red' },
+      Accent: { swatch: 'Red' },
+    };
+    const [first, ...others] = show.scenes;
+    const bad = {
+      version: 12,
+      ...show,
+      scenes: [{ ...first!, rules: [{ target: {}, colour: { slot: 'Tertiary' } }] }, ...others],
+    };
+
+    expect(() => loadShowFile(JSON.stringify(bad))).toThrow('"Tertiary" is not a slot');
+    const inSet = {
+      version: 12,
+      ...show,
+      colourSets: [
+        { id: 'a', name: 'A', fade: 0, colours: { ...colours, Accent: { slot: 'Primary' } } },
+      ],
+    };
+    expect(() => loadShowFile(JSON.stringify(inSet))).toThrow(
+      'Colour Set "A": Accent colour must be a Colour, not a slot',
+    );
+    const odd = {
+      version: 12,
+      ...show,
+      colourSets: [{ id: 'a', name: 'A', fade: 0, colours, look: 1 }],
+    };
+    expect(() => loadShowFile(JSON.stringify(odd))).toThrow('unknown field "colourSets[0].look"');
+    expect(() => loadShowFile(JSON.stringify({ version: 12, ...show, colourSets: 'A' }))).toThrow(
+      'colourSets must be a list',
     );
   });
 
@@ -414,12 +500,12 @@ describe('.lcshow file', () => {
     delete saved.scenes[0].rules[0].target;
 
     expect(() => loadShowFile(JSON.stringify(saved))).toThrow(
-      'Invalid Show:\na Layer, Scene, Rule, Trigger, House Preset or Haze Preset is missing fields',
+      'Invalid Show:\na Layer, Scene, Rule, Trigger, House Preset, Haze Preset or Colour Set is missing fields',
     );
     expect(() =>
       loadShowFile(JSON.stringify({ ...show, version: 5, housePresets: [null] })),
     ).toThrow(
-      'Invalid Show:\na Layer, Scene, Rule, Trigger, House Preset or Haze Preset is missing fields',
+      'Invalid Show:\na Layer, Scene, Rule, Trigger, House Preset, Haze Preset or Colour Set is missing fields',
     );
     expect(() =>
       loadShowFile(JSON.stringify({ ...show, version: 5, housePresets: 'Dim' })),

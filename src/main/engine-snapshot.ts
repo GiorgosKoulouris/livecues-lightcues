@@ -18,9 +18,11 @@ export function createSnapshotStore() {
       parts = { ...parts, ...message };
     },
     latest(): EngineSnapshot | undefined {
-      const { show, venue, playback, house, haze, midiInput } = parts;
-      if (!show || !venue || !playback || !house || !haze || !midiInput) return undefined;
-      return { show, venue, playback, house, haze, midiInput };
+      const { show, venue, playback, house, haze, colourSet, midiInput } = parts;
+      if (!show || !venue || !playback || !house || !haze || !colourSet || !midiInput) {
+        return undefined;
+      }
+      return { show, venue, playback, house, haze, colourSet, midiInput };
     },
   };
 }

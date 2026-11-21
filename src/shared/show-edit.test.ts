@@ -3,6 +3,7 @@ import { applyShowEdit } from './show-edit';
 import {
   emptyShow,
   validateShow,
+  type ColourSet,
   type HazePreset,
   type HousePreset,
   type Scene,
@@ -439,5 +440,80 @@ describe('Haze Presets', () => {
         { type: 'putHousePreset', preset: house },
       ),
     ).toEqual({ errors: ['Haze Preset "Light": note 3/5 is also a House Preset'] });
+  });
+});
+
+describe('Colour Sets', () => {
+  const colours = {
+    Primary: { swatch: 'Red' as const },
+    Secondary: { swatch: 'Blue' as const },
+    Accent: { swatch: 'White' as const },
+  };
+  const verse: ColourSet = { id: 'verse', name: 'Verse', colours, fade: 2 };
+  const chorus: ColourSet = {
+    ...verse,
+    id: 'chorus',
+    name: 'Chorus',
+    note: { channel: 3, note: 9 },
+  };
+  const withSets = (...colourSets: ColourSet[]): Show => ({ ...emptyShow(), colourSets });
+  const put = (show: Show, set: ColourSet) => applyShowEdit(show, { type: 'putColourSet', set });
+
+  it('adds Colour Sets at the end, then edits them in place', () => {
+    const added = applied(applied(emptyShow(), { type: 'putColourSet', set: verse }), {
+      type: 'putColourSet',
+      set: chorus,
+    });
+    const edited = { ...verse, name: 'Verse 2', fade: 0 };
+
+    expect(added.colourSets).toEqual([verse, chorus]);
+    expect(applied(added, { type: 'putColourSet', set: edited }).colourSets).toEqual([
+      edited,
+      chorus,
+    ]);
+  });
+
+  it('refuses a bad Colour Set, a slot as its colour, and a clashing note', () => {
+    expect(put(emptyShow(), { ...verse, fade: -1 })).toEqual({
+      errors: ['Colour Set "Verse": fade must be 0 seconds or more'],
+    });
+    const slotted = { ...verse, colours: { ...colours, Primary: { slot: 'Accent' } } };
+    expect(put(emptyShow(), slotted as unknown as ColourSet)).toEqual({
+      errors: ['Colour Set "Verse": Primary colour must be a Colour, not a slot'],
+    });
+    const trigger = { ...emptyShow(), scenes: [scene({ id: 'a', layer: 'layer-1' })] };
+    const mapped = applied(trigger, {
+      type: 'putTrigger',
+      trigger: { channel: 3, note: 9, scene: 'a', mode: 'go' },
+    });
+    expect(put(mapped, chorus)).toEqual({
+      errors: ['Colour Set "Chorus": note 3/9 is also a Trigger'],
+    });
+  });
+
+  it('reorders Colour Sets', () => {
+    expect(
+      applied(withSets(verse, chorus), { type: 'moveColourSet', id: 'chorus', to: 0 }).colourSets,
+    ).toEqual([chorus, verse]);
+  });
+
+  it('removes a Colour Set, leaving the Show without the list when it was the last', () => {
+    expect(
+      applyShowEdit(withSets(verse, chorus), { type: 'removeColourSet', id: 'verse' }),
+    ).toEqual({ show: withSets(chorus) });
+    expect(applyShowEdit(withSets(verse), { type: 'removeColourSet', id: 'verse' })).toEqual({
+      show: emptyShow(),
+    });
+  });
+
+  it('refuses to move or remove a Colour Set that is not in the Show', () => {
+    const errors = ['Colour Set id "nope" is not in the Show'];
+
+    expect(applyShowEdit(withSets(verse), { type: 'moveColourSet', id: 'nope', to: 0 })).toEqual({
+      errors,
+    });
+    expect(applyShowEdit(withSets(verse), { type: 'removeColourSet', id: 'nope' })).toEqual({
+      errors,
+    });
   });
 });

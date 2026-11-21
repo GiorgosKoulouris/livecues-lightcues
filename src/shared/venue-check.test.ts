@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Capability, Channel, FixtureProfile } from './fixture-profile';
-import type { Rule, Show } from './show';
+import type { Colour, Rule, Show } from './show';
 import {
   DEFAULT_MOUNTING,
   type Hazer,
@@ -308,6 +308,24 @@ describe('approximatedKelvins', () => {
     expect(approximatedKelvins(s, rig)).toEqual([
       { fixtureId: 'wheel', scenes: ['s1'], defaultColour: false },
     ]);
+  });
+
+  it('counts a slot that a Colour Set fills with a kelvin white', () => {
+    const slotted = show([{ target: {}, colour: { slot: 'Accent' } }]);
+    const colours = (accent: Colour) => ({
+      Primary: { swatch: 'Red' as const },
+      Secondary: { swatch: 'Red' as const },
+      Accent: accent,
+    });
+    const set = (accent: Colour) => ({ id: 'a', name: 'A', fade: 0, colours: colours(accent) });
+
+    expect(approximatedKelvins({ ...slotted, colourSets: [set({ kelvin: 3200 })] }, rig)).toEqual([
+      { fixtureId: 'wheel', scenes: ['s1'], defaultColour: false },
+    ]);
+    expect(
+      approximatedKelvins({ ...slotted, colourSets: [set({ swatch: 'White' })] }, rig),
+    ).toEqual([]);
+    expect(approximatedKelvins(slotted, rig)).toEqual([]);
   });
 
   it('counts a kelvin in a colour Effect and in the Default Colour', () => {

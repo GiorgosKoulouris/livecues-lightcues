@@ -19,6 +19,7 @@ import {
   NO_EFFECT,
   SPREADS,
   type Colour,
+  type RuleColour,
   type ColourEffect,
   type ColourShape,
   type EffectLength,
@@ -208,8 +209,8 @@ function ColourList({
   colours,
   onChange,
 }: {
-  colours: Colour[];
-  onChange(colours: Colour[]): void;
+  colours: RuleColour[];
+  onChange(colours: RuleColour[]): void;
 }) {
   return (
     <div className={styles.colours}>
@@ -218,6 +219,7 @@ function ColourList({
           <ColourPicker
             label={`Colour ${i + 1}`}
             unset={null}
+            slots
             colour={colour}
             onChange={(next) => {
               if (next) onChange(colours.map((c, j) => (j === i ? next : c)));

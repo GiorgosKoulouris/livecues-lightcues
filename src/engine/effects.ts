@@ -3,11 +3,11 @@
 // a colour Effect mixes, at a point in the Tempo's beat count. Pure.
 import type { Turn } from '../shared/aim';
 import type {
-  Colour,
   ColourEffect,
   IntensityEffect,
   IntensityShape,
   MovementEffect,
+  RuleColour,
   Spread,
 } from '../shared/show';
 import type { StagePosition } from '../shared/venue-patch';
@@ -139,8 +139,8 @@ function fullLevel(
 
 // A colour `p` (0–1) of the way from `from` to `to`.
 export interface ColourMix {
-  from: Colour;
-  to: Colour;
+  from: RuleColour;
+  to: RuleColour;
   p: number;
 }
 

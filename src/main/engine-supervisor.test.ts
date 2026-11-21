@@ -50,6 +50,7 @@ const snapshot: EngineSnapshot = {
   },
   house: { look: {}, fired: { type: 'preset', id: 'dim' } },
   haze: { type: 'off' },
+  colourSet: {},
   midiInput: { selected: 'Pads' },
 };
 

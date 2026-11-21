@@ -4,10 +4,12 @@ import { editProblem, moveListed, putListed, removeListed } from './preset-list'
 import {
   findTrigger,
   sameNote,
+  showColourSets,
   showHazePresets,
   showHousePresets,
   validateShow,
   type Colour,
+  type ColourSet,
   type Direction,
   type HazePreset,
   type HousePreset,
@@ -43,7 +45,13 @@ export type ShowEdit =
   | { type: 'putHazePreset'; preset: HazePreset }
   // Moves the Haze Preset to index `to`.
   | { type: 'moveHazePreset'; id: string; to: number }
-  | { type: 'removeHazePreset'; id: string };
+  | { type: 'removeHazePreset'; id: string }
+  // Adds at the end, or replaces the Colour Set with the same id in place.
+  | { type: 'putColourSet'; set: ColourSet }
+  // Moves the Colour Set to index `to`.
+  | { type: 'moveColourSet'; id: string; to: number }
+  // If it was held, the first Colour Set takes over (engine).
+  | { type: 'removeColourSet'; id: string };
 
 // Applies one edit to a Show. Returns the new Show, or the errors that refused
 // the edit.
@@ -97,6 +105,16 @@ export function applyShowEdit(show: Show, edit: ShowEdit): ShowResult {
     case 'removeHazePreset': {
       const problem = editProblem('Haze Preset', showHazePresets(show), edit.id);
       return problem ? { errors: [problem] } : { show: removeHazePreset(show, edit.id) };
+    }
+    case 'putColourSet':
+      return putColourSet(show, edit.set);
+    case 'moveColourSet': {
+      const problem = editProblem('Colour Set', showColourSets(show), edit.id, edit.to);
+      return problem ? { errors: [problem] } : { show: moveColourSet(show, edit.id, edit.to) };
+    }
+    case 'removeColourSet': {
+      const problem = editProblem('Colour Set', showColourSets(show), edit.id);
+      return problem ? { errors: [problem] } : { show: removeColourSet(show, edit.id) };
     }
     default: {
       const unhandled: never = edit;
@@ -201,6 +219,23 @@ function removeHazePreset(show: Show, id: string): Show {
   return withPresets(show, 'hazePresets', removeListed(showHazePresets(show), id));
 }
 
+// Adds a Colour Set at the end, or replaces the one with the same id in place.
+function putColourSet(show: Show, set: ColourSet): ShowResult {
+  return validated({ ...show, colourSets: putListed(showColourSets(show), set) });
+}
+
+// Moves a Colour Set to index `to`.
+function moveColourSet(show: Show, id: string, to: number): Show {
+  const list = showColourSets(show);
+  const moved = moveListed(list, id, to);
+  return moved === list ? show : { ...show, colourSets: moved };
+}
+
+// Removes a Colour Set; without any left, the Show has no list.
+function removeColourSet(show: Show, id: string): Show {
+  return withPresets(show, 'colourSets', removeListed(showColourSets(show), id));
+}
+
 // `items` with `item` in place of the one matching `same`, or appended.
 function put<T>(items: T[], item: T, same: (other: T) => boolean): T[] {
   return items.some(same) ? items.map((other) => (same(other) ? item : other)) : [...items, item];
@@ -212,7 +247,7 @@ function validated(show: Show): ShowResult {
 }
 
 // The Show with the list replaced; without any left, the Show has no list.
-type PresetKey = 'housePresets' | 'hazePresets';
+type PresetKey = 'housePresets' | 'hazePresets' | 'colourSets';
 type PresetOf<K extends PresetKey> = NonNullable<Show[K]>[number];
 
 function withPresets<K extends PresetKey>(show: Show, key: K, list: PresetOf<K>[]): Show {

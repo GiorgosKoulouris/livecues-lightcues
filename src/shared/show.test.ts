@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   emptyShow,
+  findColourSetOn,
   findHazePresetOn,
   validateShow,
+  type ColourSet,
   type HazePreset,
   type HousePreset,
   type Rule,
@@ -329,5 +331,113 @@ describe('Haze Presets', () => {
       'Haze Preset " ": name is empty',
       'Haze Preset id "light" is used twice',
     ]);
+  });
+});
+
+describe('Colour Sets', () => {
+  const colours = {
+    Primary: { swatch: 'Red' as const },
+    Secondary: { kelvin: 3200 },
+    Accent: { hue: 10, saturation: 1 },
+  };
+  const verse: ColourSet = { id: 'verse', name: 'Verse', colours, fade: 2 };
+  const chorus: ColourSet = {
+    ...verse,
+    id: 'chorus',
+    name: 'Chorus',
+    note: { channel: 3, note: 9 },
+  };
+
+  const withSets = (...colourSets: ColourSet[]): Show => ({ ...emptyShow(), colourSets });
+
+  it('finds a Colour Set by its note', () => {
+    expect(findColourSetOn(withSets(verse, chorus), { channel: 3, note: 9 })).toEqual(chorus);
+    expect(findColourSetOn(withSets(verse, chorus), { channel: 1, note: 9 })).toBeUndefined();
+  });
+
+  it('accepts a slot in a Rule and in a Step or Fade colour Effect', () => {
+    const rules: Rule[] = [
+      { target: {}, colour: { slot: 'Accent' } },
+      {
+        target: {},
+        colourEffect: {
+          shape: 'Step',
+          colours: [{ slot: 'Primary' }, { swatch: 'Blue' }],
+          length: 1,
+          spread: 'In sync',
+        },
+      },
+    ];
+
+    expect(validateShow(show(scene({ rules })))).toEqual([]);
+  });
+
+  it('rejects an unknown slot', () => {
+    const rules = [
+      { target: {}, colour: { slot: 'Tertiary' } },
+      {
+        target: {},
+        colourEffect: {
+          shape: 'Fade',
+          colours: [{ slot: 'Primary' }, { slot: 'Nope' }],
+          length: 1,
+          spread: 'In sync',
+        },
+      },
+    ] as unknown as Rule[];
+
+    expect(validateShow(show(scene({ rules })))).toEqual([
+      'Scene "Scene" Rule 1: "Tertiary" is not a slot',
+      'Scene "Scene" Rule 2: colour 2: "Nope" is not a slot',
+    ]);
+  });
+
+  it('rejects bad colours and fades, a missing slot colour and repeated ids and notes', () => {
+    const bad = {
+      ...verse,
+      fade: -1,
+      colours: { ...colours, Primary: { kelvin: 100 }, Accent: undefined },
+    } as unknown as ColourSet;
+
+    expect(
+      validateShow(withSets(bad, { ...chorus, id: 'verse' }, { ...chorus, id: 'again' })),
+    ).toEqual([
+      'Colour Set "Verse": Primary: kelvin must be from 2700 to 6500',
+      'Colour Set "Verse": Accent colour is missing',
+      'Colour Set "Verse": fade must be 0 seconds or more',
+      'Colour Set id "verse" is used twice',
+      'Colour Set note 3/9 is used twice',
+    ]);
+  });
+
+  it('refuses a note that a Trigger, a House Preset or a Haze Preset has', () => {
+    const base = withSets({ ...verse, note: { channel: 1, note: 1 } });
+    const fixture = (extra: Partial<Show>): Show => ({
+      ...base,
+      scenes: [scene({ layer: 'layer-1' })],
+      ...extra,
+    });
+
+    expect(
+      validateShow(fixture({ triggers: [{ channel: 1, note: 1, scene: 's1', mode: 'go' }] })),
+    ).toEqual(['Colour Set "Verse": note 1/1 is also a Trigger']);
+    expect(
+      validateShow(
+        fixture({ housePresets: [{ id: 'd', name: 'D', fade: 0, note: { channel: 1, note: 1 } }] }),
+      ),
+    ).toEqual(['Colour Set "Verse": note 1/1 is also a House Preset']);
+    expect(
+      validateShow(
+        fixture({
+          hazePresets: [{ id: 'h', name: 'H', level: 0, fade: 0, note: { channel: 1, note: 1 } }],
+        }),
+      ),
+    ).toEqual(['Colour Set "Verse": note 1/1 is also a Haze Preset']);
+  });
+
+  it('allows at most 16', () => {
+    const many = Array.from({ length: 17 }, (_, i) => ({ ...verse, id: `s${i}`, name: `S${i}` }));
+
+    expect(validateShow(withSets(...many))).toEqual(['Colour Sets: at most 16']);
   });
 });

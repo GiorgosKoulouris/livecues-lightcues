@@ -2,17 +2,19 @@
 // makings of the Venue Check. Pure, and shared so the editors can show it
 // where the operator fixes it.
 import { aimAt, type Approximation } from './aim';
-import type { Colour } from './colour';
 import { kelvinSupport } from './kelvin';
 import {
   DEFAULT_DIRECTION,
   DIRECTIONS,
+  isSlotRef,
   ruleTargets,
+  showColourSets,
   showHazePresets,
   showHousePresets,
   type Direction,
   type HazePreset,
   type HousePreset,
+  type RuleColour,
   type Show,
 } from './show';
 import { hasGobo, hasPrism } from './gobo-prism';
@@ -132,7 +134,12 @@ export function fixtureApproximatedKelvin(
   fixture: PatchedFixture,
 ): ApproximatedKelvin | undefined {
   if (kelvinSupport(fixtureMode(patch, fixture).channels) !== 'wheel') return undefined;
-  const isKelvin = (colour: Colour | undefined) => colour !== undefined && 'kelvin' in colour;
+  // A slot is a kelvin white when any Colour Set has one in it.
+  const isKelvin = (colour: RuleColour | undefined): boolean =>
+    colour !== undefined &&
+    (isSlotRef(colour)
+      ? showColourSets(show).some((set) => 'kelvin' in set.colours[colour.slot])
+      : 'kelvin' in colour);
   const scenes = show.scenes.filter((scene) =>
     scene.rules.some(
       (rule) =>
