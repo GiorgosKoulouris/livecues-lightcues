@@ -18,7 +18,7 @@
 
 ## Show generator
 
-`npm run show:generate -- <brief.yaml>` writes a Show and Cue Sheet beside the brief (or to `--out`). Its sample output is committed under `scripts/make-shows/fixtures/` with `git add -f`; rerun it after changing `scripts/make-shows/generate.ts`, `rules.ts` or the app models, and commit both. Never write generated output into `shows/`. See [docs/development.md](../development.md#show-generator).
+`npm run show:generate -- <brief.yaml>` writes a Show and Cue Sheet beside the brief (or to `--out`). Its sample output is committed under `scripts/make-shows/fixtures/` with `git add -f`; rerun it after changing `scripts/make-shows/generate.ts`, `dynamics.ts`, `rules.ts` or the app models, and commit both. Never write generated output into `shows/`. See [docs/development.md](../development.md#show-generator).
 
 ## Show lint
 

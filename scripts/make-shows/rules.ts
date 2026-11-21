@@ -247,6 +247,10 @@ export const tierFadeIn = (tier: Tier): number => TIER_BANDS[tier].fadeBeats[1];
 export const BASE_KELVIN = 3200;
 export const BASE_LEVELS = { front: 0.6, back: 0.5 } as const;
 
+// The first MIDI note of each tier, on every Layer that has tier Scenes.
+// Tiers sit on two octaves each: C1, C3, C5, C7.
+export const TIER_BASE: Record<Tier, number> = { chill: 24, groove: 48, drive: 72, peak: 96 };
+
 // Seconds a Colour Set takes to crossfade the slot colours (set between songs).
 export const COLOUR_SET_FADE_S = 2;
 

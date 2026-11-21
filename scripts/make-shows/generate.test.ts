@@ -29,7 +29,7 @@ const sample = loadBrief(fixture('sample-brief.yaml').pathname);
 const files = generateFiles(sample.brief, sample.venue);
 const show = loadShowFile(files.show);
 const scene = (id: string): Scene => show.scenes.find((s) => s.id === id)!;
-const looks = show.scenes.filter((s) => tierOf(s) !== undefined);
+const looks = show.scenes.filter((s) => s.layer === 'look' && tierOf(s) !== undefined);
 
 const brief = (text: string): Brief => parseBrief(`band: X\n${text}`);
 const songs = (n: number) =>
@@ -239,26 +239,34 @@ describe('the sample Show', () => {
     ).toBe(2.5);
   });
 
-  it('passes the Venue Check on the fixture venue', () => {
+  it('passes the Venue Check on the fixture venue, but for the Strobe Hit', () => {
     const patch = loadVenueFile(readFileSync(fixture('sample-venue.lcvenue'), 'utf8'));
-    expect(venueCheckLines(show, patch)).toEqual([]);
+    // The sample washes and beams have no strobe channel, so the one Scene that
+    // strobes, the Hit, is approximated on them. Nothing else is reported.
+    const lines = venueCheckLines(show, patch);
+    expect(lines.length).toBeGreaterThan(0);
+    for (const line of lines)
+      expect(line).toContain('strobe approximated (noStrobeChannel) in 1 Scene');
   });
 
-  it('scores 2 on lint items 1-6, 10 and 12', () => {
-    const report = lintShow(show);
-    for (const item of [1, 3, 4, 5, 6, 10, 12, 17]) {
-      expect(report.items.find((i) => i.item === item)?.score).toBe(2);
-    }
-    for (const item of [1, 2, 3, 4, 5, 6, 10, 12]) {
-      expect([2, null]).toContain(report.items.find((i) => i.item === item)?.score);
+  it('scores every lint item 2, so items 3, 4 and 11 pass and the total clears the pass mark', () => {
+    for (const bpm of [120, 154, 200]) {
+      const report = lintShow(show, bpm);
+      expect(report.scored).toBe(13);
+      for (const i of report.items) expect(i.score, `item ${i.item} at ${bpm} BPM`).toBe(2);
+      // The lint can score 26 of the rubric's 34 points. 28 of 34 is 22 of 26 pro rata.
+      expect(report.total).toBeGreaterThanOrEqual((28 / 34) * report.max);
     }
   });
 
-  it('flags no Scene as flashing', () => {
-    expect(flashingScenes(show)).toEqual([]);
+  it('flags only Hits as flashing, and no Scene fired by Go', () => {
+    const hits = new Set(show.triggers.filter((t) => t.mode === 'flash').map((t) => t.scene));
+    expect(flashingScenes(show, 154).length).toBeGreaterThan(0);
+    for (const s of flashingScenes(show, 154)) expect(hits.has(s.id)).toBe(true);
     expect(files.cueSheet).toContain(
-      'No Scene flashes faster than the cap at 154 BPM, the fastest song.',
+      'No Scene fired by Go flashes faster than the cap at 154 BPM, the fastest song.',
     );
+    expect(files.cueSheet).toContain('Hit: Strobe');
   });
 
   it('flags a beat-rate strobe at the fastest song BPM, not at 120', () => {
