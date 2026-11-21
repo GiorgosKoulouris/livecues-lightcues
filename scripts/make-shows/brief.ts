@@ -11,7 +11,7 @@ import { loadVenueFile } from '../../src/engine/venue-file';
 import { SWATCHES, type Swatch } from '../../src/shared/colour';
 import type { Role } from '../../src/shared/fixture-profile';
 import { ROLES } from '../../src/shared/fixture-profile';
-import { SWATCH_HUE } from './rules';
+import { inPart, MOODS, STROBE_MAX_HZ, SWATCH_HUE, type Mood } from './rules';
 import {
   fixtureRole,
   fixtureZone,
@@ -21,15 +21,10 @@ import {
   type ZoneRow,
 } from '../../src/shared/venue-patch';
 
-export const MOODS = ['upbeat', 'melancholy', 'aggressive', 'calm', 'dreamy'] as const;
-export type Mood = (typeof MOODS)[number];
-
 export const FRONT_POLICIES = ['pale', 'colour'] as const;
 export type FrontPolicy = (typeof FRONT_POLICIES)[number];
 
 export const BPM_RANGE = [90, 200] as const;
-/** The strobe rate for `strobe: capped`, in Hz. */
-export const STROBE_CAP_HZ = 4;
 /** The fastest strobe a Brief may ask for, in Hz. */
 export const MAX_STROBE_HZ = 25;
 
@@ -63,7 +58,7 @@ export interface Brief {
   venue?: string;
   venueLine?: number;
   front: FrontPolicy;
-  /** The strobe cap in Hz: `STROBE_CAP_HZ` for `capped`. */
+  /** The strobe cap in Hz: `STROBE_MAX_HZ` for `capped`. */
   strobeHz: number;
 }
 
@@ -146,7 +141,7 @@ export function parseBrief(text: string): Brief {
     colours: [],
     songs: [],
     front: 'pale',
-    strobeHz: STROBE_CAP_HZ,
+    strobeHz: STROBE_MAX_HZ,
   };
   const seen = new Set<string>();
   for (const { key, value, line } of r.entries(top)) {
@@ -171,7 +166,7 @@ export function parseBrief(text: string): Brief {
 
 function readStrobe(r: Reader, node: Node | null): number {
   const text = r.text(node, 'strobe', node);
-  if (text.toLowerCase() === 'capped') return STROBE_CAP_HZ;
+  if (text.toLowerCase() === 'capped') return STROBE_MAX_HZ;
   const hz = /^\d+(\.\d+)?$/.test(text) ? Number(text) : NaN;
   if (!(hz > 0 && hz <= MAX_STROBE_HZ)) {
     r.fail(node, `strobe must be 'capped' or a rate from above 0 to ${MAX_STROBE_HZ} Hz`);
@@ -227,9 +222,6 @@ function readBpm(r: Reader, node: Node | null): number {
   return bpm;
 }
 
-/** The rows that count as the front of the stage: Downstage counts as front. */
-export const FRONT_ROWS: readonly ZoneRow[] = ['Front', 'Downstage'];
-
 /** A Role in a Zone: how many Fixtures, and how many of them move. */
 export interface VenueGroup {
   role: Role;
@@ -250,7 +242,7 @@ export interface VenueSummary {
   fixtures: number;
   /** Moving Fixtures (a pan or tilt channel). */
   movers: number;
-  /** Wash Fixtures in the front rows that move. The generator keeps movement off them. */
+  /** Moving Fixtures in the front part (wash Roles, front rows, Overhead). The generator keeps movement off them. */
   movingFrontWashes: number;
 }
 
@@ -300,9 +292,7 @@ function summarise(source: VenueSummary['source'], placed: Placed[]): VenueSumma
     groups: [...groups.values()],
     fixtures: placed.length,
     movers: placed.filter((p) => p.moving).length,
-    movingFrontWashes: placed.filter(
-      (p) => p.moving && p.role === 'Wash' && FRONT_ROWS.includes(p.zone.row),
-    ).length,
+    movingFrontWashes: placed.filter((p) => p.moving && inPart('front', p.role, p.zone)).length,
   };
 }
 

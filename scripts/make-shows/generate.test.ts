@@ -15,7 +15,6 @@ import {
   levelOf,
   presentParts,
   primaryPool,
-  PART_TARGETS,
   RECIPES,
   secondaryFor,
   songColours,
@@ -176,7 +175,7 @@ describe('composition rules (P3, P4, R1-R3, I4, I5)', () => {
       for (const recipe of RECIPES[tier]) expect(recipe.parts).toContain('front');
     }
     const rules = composeLook('chill', ['front', 'beams'], 'pale');
-    expect(rules.find((r) => r.target === PART_TARGETS.beams)!.intensity).toBe(0.3);
+    expect(rules.find((r) => r.target.roles?.includes('Spot/Beam'))!.intensity).toBe(0.3);
   });
 
   it('drops parts the rig lacks, and Looks that become empty or repeat', () => {
@@ -257,7 +256,27 @@ describe('the sample Show', () => {
 
   it('flags no Scene as flashing', () => {
     expect(flashingScenes(show)).toEqual([]);
-    expect(files.cueSheet).toContain('No Scene flashes faster than the cap.');
+    expect(files.cueSheet).toContain(
+      'No Scene flashes faster than the cap at 154 BPM, the fastest song.',
+    );
+  });
+
+  it('flags a beat-rate strobe at the fastest song BPM, not at 120', () => {
+    const half: Scene = {
+      id: 'half',
+      name: 'Half',
+      tags: [],
+      layer: 'look',
+      fadeIn: 0,
+      rules: [{ target: {}, strobe: 0.5 }],
+    };
+    const capped = { ...show, scenes: [half], strobeCap: 4 };
+    expect(flashingScenes(capped)).toEqual([]);
+    expect(flashingScenes(capped, 154)).toEqual([half]);
+  });
+
+  it('names the BPM the flashing list is read at', () => {
+    expect(files.cueSheet).toMatch(/at \d+ BPM/);
   });
 
   it('writes the cue sheet layout, Colour Sets with notes, and Scenes with tags', () => {

@@ -1,9 +1,12 @@
 // The lighting rule thresholds, in one place. `show-lint.ts` scores a Show
 // against them and the Show generator builds to them. Rule IDs (P1, M4, ...)
 // refer to the rules catalogue in the show generator research. Plain data and
-// small helpers only: no Show or app imports beyond types.
+// small helpers only: no app imports beyond types and the shared strobe maths.
 import type { Role } from '../../src/shared/fixture-profile';
 import type { Swatch } from '../../src/shared/colour';
+import { NO_EFFECT, type Rule, type RuleTarget } from '../../src/shared/show';
+import { strobeHz } from '../../src/shared/strobe';
+import type { Zone, ZoneRow } from '../../src/shared/venue-patch';
 
 // ---------------------------------------------------------------- tiers
 
@@ -15,7 +18,7 @@ export interface TierBand {
   frontMin: number;
   // I4: the most parts a Look lights.
   maxParts: number;
-  // M4: the most dynamic Layers that stack in one cue.
+  // M4: the most dynamic Layers that stack at once.
   maxDynamic: number;
   // T3 and M2: movement Effect length (beats) and size (degrees), inclusive.
   movementLength: readonly [number, number];
@@ -83,13 +86,66 @@ export const PARTS = ['front', 'back', 'floor', 'beams', 'fx'] as const;
 export type Part = (typeof PARTS)[number];
 
 // R1, D10: Downstage counts as front light.
-export const FRONT_ROWS = ['Front', 'Downstage'] as const;
-export const BACK_ROWS = ['Midstage', 'Upstage'] as const;
+export const FRONT_ROWS: readonly ZoneRow[] = ['Front', 'Downstage'];
+export const BACK_ROWS: readonly ZoneRow[] = ['Midstage', 'Upstage'];
+export const ALL_ROWS: readonly ZoneRow[] = ['Front', 'Downstage', 'Midstage', 'Upstage'];
+export const COLUMNS = ['Stage Right', 'Centre', 'Stage Left'] as const;
 
-// Roles that make up the washes (front, back, floor), the beams and the effects.
+// Roles that make up the washes (front, back, floor) and the beams.
 export const WASH_ROLES: readonly Role[] = ['Wash', 'Pixel/Bar'];
 export const BEAM_ROLES: readonly Role[] = ['Spot/Beam'];
-export const FX_ROLES: readonly Role[] = ['Effect', 'Blinder', 'Strobe'];
+// The fx part is the Effect Role only. A Blinder is a Hit (R5) and a Strobe is
+// for drops and endings (R6), so no sustained Look lights either one.
+export const FX_ROLES: readonly Role[] = ['Effect'];
+
+/** What makes up a stage part: its Roles, and the rows and level it sits in. Beams and fx sit anywhere. */
+export interface PartDef {
+  roles: readonly Role[];
+  rows?: readonly ZoneRow[];
+  level?: Zone['level'];
+}
+
+// The one map from a part to Roles and Zones, for the generator (what a Rule
+// targets), the lint (what a Rule covers) and the venue summary (what the rig has).
+export const PART_DEFS: Record<Part, PartDef> = {
+  front: { roles: WASH_ROLES, rows: FRONT_ROWS, level: 'Overhead' },
+  back: { roles: WASH_ROLES, rows: BACK_ROWS, level: 'Overhead' },
+  floor: { roles: WASH_ROLES, rows: ALL_ROWS, level: 'Floor' },
+  beams: { roles: BEAM_ROLES },
+  fx: { roles: FX_ROLES },
+};
+
+/** Whether a Fixture of `role` in `zone` is in `part`. */
+export function inPart(part: Part, role: Role, zone: Zone): boolean {
+  const def = PART_DEFS[part];
+  return (
+    def.roles.includes(role) &&
+    (def.rows === undefined || def.rows.includes(zone.row)) &&
+    (def.level === undefined || def.level === zone.level)
+  );
+}
+
+/** The Roles and Zones a Rule targets to light `part`. Never a Fixture. */
+export function partTarget(part: Part): RuleTarget {
+  const { roles, rows, level } = PART_DEFS[part];
+  return {
+    roles: [...roles],
+    ...(rows !== undefined && level !== undefined
+      ? { zones: rows.flatMap((row) => COLUMNS.map((column) => ({ row, column, level }))) }
+      : {}),
+  };
+}
+
+/** Whether `target` takes in a stage part. An absent role or zone list takes in all. */
+export function targetCovers(target: RuleTarget, part: Part): boolean {
+  const { roles, rows, level } = PART_DEFS[part];
+  const roleIn = target.roles === undefined || target.roles.some((r) => roles.includes(r));
+  const zoneIn =
+    rows === undefined ||
+    target.zones === undefined ||
+    target.zones.some((z) => z.level === level && rows.includes(z.row));
+  return roleIn && zoneIn;
+}
 
 // ---------------------------------------------------------------- colour
 
@@ -132,7 +188,21 @@ export function hueGap(a: number, b: number): number {
 export const REFERENCE_BPM = 120;
 
 // R6: the most flashes per second a sustained strobe or square Effect makes.
+// It is also the rate of the Brief's `strobe: capped`.
 export const STROBE_MAX_HZ = 4;
+
+/**
+ * The flashes per second a Rule makes at `bpm`: its Strobe rate and its square
+ * intensity Effect, 0 for each it does not set. Beat rates scale with the Tempo.
+ */
+export function flashHz(rule: Rule, bpm: number): { strobe: number; square: number } {
+  const pulse = rule.intensityEffect;
+  const square =
+    pulse !== undefined && pulse !== NO_EFFECT && pulse.shape === 'Square'
+      ? bpm / 60 / pulse.length
+      : 0;
+  return { strobe: rule.strobe === undefined ? 0 : strobeHz(rule.strobe, bpm), square };
+}
 
 // ---------------------------------------------------------------- scoring
 
@@ -181,16 +251,19 @@ export const BASE_LEVELS = { front: 0.6, back: 0.5 } as const;
 export const COLOUR_SET_FADE_S = 2;
 
 // P6: the primary hues a mood suggests when the brief gives no band colours.
-export const MOOD_PRIMARIES: Record<string, readonly Swatch[]> = {
+export const MOODS = ['upbeat', 'melancholy', 'aggressive', 'calm', 'dreamy'] as const;
+export type Mood = (typeof MOODS)[number];
+
+export const MOOD_PRIMARIES: Record<Mood, readonly Swatch[]> = {
   upbeat: ['Amber', 'Orange'],
   melancholy: ['Blue', 'Lavender'],
   aggressive: ['Red', 'Orange'],
   calm: ['Cyan', 'Green'],
   dreamy: ['Magenta', 'Lavender'],
 };
-export const DEFAULT_MOOD = 'upbeat';
+export const DEFAULT_MOOD: Mood = 'upbeat';
 // P2: calm moods take an analogous Secondary, the others a complementary one.
-export const ANALOGOUS_MOODS: readonly string[] = ['melancholy', 'calm', 'dreamy'];
+export const ANALOGOUS_MOODS: readonly Mood[] = ['melancholy', 'calm', 'dreamy'];
 
 // R5, P4: the most songs that may share one Colour Set.
 export const MAX_SONGS_PER_COLOUR_SET = 3;

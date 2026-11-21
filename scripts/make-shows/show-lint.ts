@@ -6,8 +6,8 @@
 // name prefix); parts from `part:<name>` tags, else from what a Scene's Rules
 // target; `dynamic` marks a Scene as dynamic, which an active Effect also
 // does. An item that cannot be placed is "not scored".
+import { parseArgs } from 'node:util';
 import { loadShowFile } from '../../src/engine/show-file';
-import { strobeHz } from '../../src/shared/strobe';
 import type { Colour } from '../../src/shared/colour';
 import {
   isSlotRef,
@@ -17,16 +17,12 @@ import {
   type EffectSlot,
   type Rule,
   type RuleColour,
-  type RuleTarget,
   type Scene,
   type Show,
 } from '../../src/shared/show';
 import {
-  BACK_ROWS,
-  BEAM_ROLES,
   DARK_NAME,
-  FRONT_ROWS,
-  FX_ROLES,
+  flashHz,
   HUE_MERGE_DEG,
   hueGap,
   MAX_LOOKS_PER_TIER,
@@ -40,10 +36,10 @@ import {
   SATURATED_MIN_SATURATION,
   STROBE_MAX_HZ,
   SWATCH_HUE,
+  targetCovers,
   TIER_BANDS,
   TIERS,
   UNLIT_FRONT_NAME,
-  WASH_ROLES,
   type Part,
   type Tier,
 } from './rules';
@@ -66,6 +62,8 @@ export interface LintReport {
   total: number;
   max: number;
   scored: number;
+  // The tempo the strobe rates were read at.
+  bpm: number;
 }
 
 /** The items whose score of 0 fails `--strict`. */
@@ -103,28 +101,6 @@ export function dynamicKinds(scene: Scene): number {
 
 const isDynamic = (scene: Scene): boolean =>
   scene.tags.includes('dynamic') || scene.rules.some(hasDynamicEffect);
-
-/** Whether `target` takes in a stage part. An absent role or zone list takes in all. */
-export function targetCovers(target: RuleTarget, part: Part): boolean {
-  const roleIn = (roles: readonly string[]) =>
-    target.roles === undefined || target.roles.some((r) => roles.includes(r));
-  const zoneIn = (test: (z: NonNullable<RuleTarget['zones']>[number]) => boolean) =>
-    target.zones === undefined || target.zones.some(test);
-  const overhead = (rows: readonly string[]) =>
-    zoneIn((z) => z.level === 'Overhead' && rows.includes(z.row));
-  switch (part) {
-    case 'front':
-      return roleIn(WASH_ROLES) && overhead(FRONT_ROWS);
-    case 'back':
-      return roleIn(WASH_ROLES) && overhead(BACK_ROWS);
-    case 'floor':
-      return roleIn(WASH_ROLES) && zoneIn((z) => z.level === 'Floor');
-    case 'beams':
-      return roleIn(BEAM_ROLES);
-    case 'fx':
-      return roleIn(FX_ROLES);
-  }
-}
 
 type Tone =
   { kind: 'pale' } | { kind: 'tint' } | { kind: 'hue'; hue: number | undefined; key: string };
@@ -210,6 +186,8 @@ export function grade(failures: number, total: number): Score | null {
 
 interface Context {
   show: Show;
+  // The tempo beat-rate strobes and square Effects are read at.
+  bpm: number;
   // Scenes only a Flash fires: Hits.
   hits: Set<string>;
 }
@@ -509,7 +487,7 @@ function checkStacking(cx: Context): Omit<ItemResult, 'item' | 'title'> {
     const scenes = dynamicScenes(cx).filter((s) => tierOf(s) === tier);
     if (scenes.length === 0) continue;
     tiers++;
-    // The most dynamic Layers one cue can stack: each Layer holds one Scene,
+    // The most dynamic Layers that can stack at once: each Layer holds one Scene,
     // so it adds the kinds of its busiest Scene.
     const byLayer = new Map<string, Scene[]>();
     for (const s of scenes) byLayer.set(s.layer, [...(byLayer.get(s.layer) ?? []), s]);
@@ -529,22 +507,16 @@ function checkStacking(cx: Context): Omit<ItemResult, 'item' | 'title'> {
   );
 }
 
-/** The Hz a strobe or square Effect flashes at, with the Show's cap on a Go Scene. */
+/** What flashes too fast in a Scene at the context's BPM, with the Show's cap on a Go Scene. */
 function strobeProblems(scene: Scene, cx: Context): string[] {
   const problems: string[] = [];
   const goFired = !cx.hits.has(scene.id);
+  if (!goFired) return problems;
   for (const rule of scene.rules) {
-    if (rule.strobe !== undefined && rule.strobe !== 'Off' && goFired) {
-      const raw = strobeHz(rule.strobe, REFERENCE_BPM);
-      const hz = cx.show.strobeCap === undefined ? raw : Math.min(raw, cx.show.strobeCap);
-      if (hz > STROBE_MAX_HZ) problems.push(`strobe ${round(hz)} Hz at ${REFERENCE_BPM} BPM`);
-    }
-    const pulse = rule.intensityEffect;
-    if (active(pulse) && pulse.shape === 'Square' && goFired) {
-      const hz = REFERENCE_BPM / 60 / pulse.length;
-      if (hz > STROBE_MAX_HZ)
-        problems.push(`square Effect ${round(hz)} Hz at ${REFERENCE_BPM} BPM`);
-    }
+    const { strobe, square } = flashHz(rule, cx.bpm);
+    const hz = cx.show.strobeCap === undefined ? strobe : Math.min(strobe, cx.show.strobeCap);
+    if (hz > STROBE_MAX_HZ) problems.push(`strobe ${round(hz)} Hz at ${cx.bpm} BPM`);
+    if (square > STROBE_MAX_HZ) problems.push(`square Effect ${round(square)} Hz at ${cx.bpm} BPM`);
   }
   return problems;
 }
@@ -610,15 +582,15 @@ function checkLookCount(cx: Context): Omit<ItemResult, 'item' | 'title'> {
 
 // ---------------------------------------------------------------- the report
 
-/** Scores a Show. */
-export function lintShow(show: Show): LintReport {
+/** Scores a Show. Beat-rate strobes are read at `bpm`. */
+export function lintShow(show: Show, bpm = REFERENCE_BPM): LintReport {
   const flash = new Set<string>();
   const go = new Set<string>();
   for (const t of show.triggers) {
     if (t.mode === 'flash') flash.add(t.scene);
     if (t.mode === 'go') go.add(t.scene);
   }
-  const cx: Context = { show, hits: new Set([...flash].filter((id) => !go.has(id))) };
+  const cx: Context = { show, bpm, hits: new Set([...flash].filter((id) => !go.has(id))) };
   const items = ITEMS.map(({ item, title, check }) => ({ item, title, ...check(cx) }));
   const scoredItems = items.filter((i) => i.score !== null);
   return {
@@ -626,6 +598,7 @@ export function lintShow(show: Show): LintReport {
     total: scoredItems.reduce((sum, i) => sum + (i.score ?? 0), 0),
     max: scoredItems.length * 2,
     scored: scoredItems.length,
+    bpm,
   };
 }
 
@@ -650,21 +623,32 @@ export function formatReport(name: string, report: LintReport): string {
   lines.push(
     `Total: ${report.total}/${report.max} (${report.scored} of ${report.items.length} items scored)`,
   );
+  lines.push(`Strobe rates read at ${report.bpm} BPM (item 11). Use --bpm <n> for a song's tempo.`);
   lines.push('Items 13-16 need a Plan or screenshots and are not linted here.');
   return lines.join('\n');
 }
+
+const USAGE = 'Usage: npm run show:lint -- <file.lcshow> [--strict] [--bpm <n>]';
 
 /** The command: lints a Show file. Returns the exit code. */
 export function runLint(
   argv: string[],
   read: (path: string) => string,
 ): { text: string; code: number } {
-  const files = argv.filter((a) => !a.startsWith('--'));
-  const strict = argv.includes('--strict');
-  const unknown = argv.filter((a) => a.startsWith('--') && a !== '--strict');
-  if (files.length !== 1 || unknown.length > 0) {
-    throw new Error('Usage: npm run show:lint -- <file.lcshow> [--strict]');
-  }
-  const report = lintShow(loadShowFile(read(files[0]!)));
-  return { text: formatReport(files[0]!, report), code: strict && failsStrict(report) ? 1 : 0 };
+  const { values, positionals } = (() => {
+    try {
+      return parseArgs({
+        args: argv,
+        options: { strict: { type: 'boolean' }, bpm: { type: 'string' } },
+        allowPositionals: true,
+      });
+    } catch {
+      throw new Error(USAGE);
+    }
+  })();
+  const bpm = values.bpm === undefined ? REFERENCE_BPM : Number(values.bpm);
+  const [file, ...extra] = positionals;
+  if (file === undefined || extra.length > 0 || !(bpm > 0)) throw new Error(USAGE);
+  const report = lintShow(loadShowFile(read(file)), bpm);
+  return { text: formatReport(file, report), code: values.strict && failsStrict(report) ? 1 : 0 };
 }

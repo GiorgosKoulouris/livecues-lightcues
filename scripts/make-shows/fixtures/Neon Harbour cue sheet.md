@@ -41,7 +41,7 @@ Names follow `<Tier>: <Name>`. Tiers sit on two octaves each: Chill C1 (24), Gro
 
 Strobe cap: 4 Hz for every Scene fired by Go.
 
-No Scene flashes faster than the cap.
+No Scene flashes faster than the cap at 154 BPM, the fastest song.
 
 ## Note map
 

@@ -407,6 +407,29 @@ describe('item 11: strobe', () => {
     expect(score(s, 11)).toBe(2);
   });
 
+  it('reads a beat-rate strobe at the song BPM', () => {
+    const half = scene('half', [{ target: FRONT, strobe: 0.5 }]);
+    // Once per half beat: 4 Hz at 120 BPM, 5.1 Hz at 154 BPM.
+    expect(score(show([half]), 11)).toBe(2);
+    const fast = lintShow(show([half]), 154);
+    expect(fast.items.find((i) => i.item === 11)!.score).toBe(0);
+    expect(fast.items.find((i) => i.item === 11)!.offenders[0]).toMatch(
+      /strobe 5\.13 Hz at 154 BPM/,
+    );
+    expect(fast.bpm).toBe(154);
+  });
+
+  it('reads a square Effect at the song BPM', () => {
+    const square = scene('sq', [
+      {
+        target: FRONT,
+        intensityEffect: { shape: 'Square', length: 0.5, depth: 1, spread: 'In sync' },
+      },
+    ]);
+    expect(score(show([square]), 11)).toBe(2);
+    expect(lintShow(show([square]), 154).items.find((i) => i.item === 11)!.score).toBe(0);
+  });
+
   it('applies the Show strobe cap to a Go Scene', () => {
     expect(score(show([strobe('Fast')], { strobeCap: 4 }), 11)).toBe(2);
     expect(score(show([strobe('Fast')], { strobeCap: 8 }), 11)).toBe(0);
@@ -520,6 +543,12 @@ describe('strict mode', () => {
     expect(text).toMatch(/ 3\. Front light is pale.*: 0\/2/);
     expect(text).toContain('groove: Red front: saturated front');
     expect(text).toMatch(/Total: \d+\/\d+/);
+  });
+
+  it('takes --bpm and says which BPM the strobe rates were read at', () => {
+    expect(runLint(['x.lcshow'], () => file).text).toContain('read at 120 BPM');
+    expect(runLint(['x.lcshow', '--bpm', '154'], () => file).text).toContain('read at 154 BPM');
+    expect(() => runLint(['x.lcshow', '--bpm', 'fast'], () => file)).toThrow(/Usage/);
   });
 
   it('rejects a missing file argument', () => {

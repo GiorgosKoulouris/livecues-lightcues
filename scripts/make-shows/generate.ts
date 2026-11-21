@@ -6,7 +6,7 @@
 // Thresholds and the generator's own knobs are in `rules.ts`, shared with
 // `show-lint.ts`, which scores what comes out. The rule groups are exported
 // functions so each has its own test:
-//   palette      `colourSets`         P1, P2, P5, P6
+//   colour       `colourSets`         P1, P2, P5, P6
 //   intensity    `levelOf`            I1, I2, T2
 //   composition  `composeLook`        P3, P4, R1-R3, I4, I5
 //   rig          `presentParts`       parts the venue can light
@@ -18,36 +18,32 @@ import { parseArgs } from 'node:util';
 import { readFileSync } from 'node:fs';
 import { saveShowFile } from '../../src/engine/show-file';
 import {
-  NO_EFFECT,
   type Colour,
   type ColourSet,
   type Layer,
   type Rule,
   type RuleColour,
-  type RuleTarget,
   type Scene,
   type Show,
   type Slot,
   type Swatch,
   type Trigger,
 } from '../../src/shared/show';
-import type { Zone, ZoneRow } from '../../src/shared/venue-patch';
-import { strobeHz } from '../../src/shared/strobe';
-import { loadBrief, venueCount, type Brief, type VenueSummary } from './brief';
+import { loadBrief, type Brief, type VenueSummary } from './brief';
 import {
   ANALOGOUS_MAX_DEG,
   ANALOGOUS_MOODS,
-  BACK_ROWS,
   BASE_KELVIN,
   BASE_LEVELS,
-  BEAM_ROLES,
   COLOUR_SET_FADE_S,
   COMPLEMENTARY_MIN_DEG,
   DEFAULT_MOOD,
-  FRONT_ROWS,
+  flashHz,
   hueGap,
+  inPart,
   MAX_SONGS_PER_COLOUR_SET,
   MOOD_PRIMARIES,
+  partTarget,
   PARTS,
   REFERENCE_BPM,
   SWATCH_HUE,
@@ -56,13 +52,12 @@ import {
   TIER_LEVELS,
   TIERS,
   tierFadeIn,
-  WASH_ROLES,
   type Part,
   type Tier,
 } from './rules';
 import { venueCheckReport, writeShowFiles } from './write';
 
-// ---------------------------------------------------------------- palette
+// ---------------------------------------------------------------- colour
 
 export interface SongColours {
   song: string;
@@ -120,14 +115,14 @@ function goodPair(a: Swatch, b: Swatch): boolean {
 /** P6: the primaries songs draw on: the band colours, else the mood's. One alone gains its complement. */
 export function primaryPool(brief: Brief): Swatch[] {
   const own = brief.colours.filter((c) => hueOf(c) !== undefined);
-  const pool = own.length > 0 ? own : [...(MOOD_PRIMARIES[brief.mood ?? DEFAULT_MOOD] ?? [])];
+  const pool = own.length > 0 ? own : [...MOOD_PRIMARIES[brief.mood ?? DEFAULT_MOOD]];
   return pool.length === 1 ? [...pool, secondaryFor(pool[0]!, 'complementary')] : pool;
 }
 
 /** The colours of each song: P1 (one primary, one secondary, white), P2, P5, P6. */
 export function songColours(brief: Brief): { songs: SongColours[]; notes: string[] } {
   const pool = primaryPool(brief);
-  const kind = ANALOGOUS_MOODS.includes(brief.mood ?? '') ? 'analogous' : 'complementary';
+  const kind = ANALOGOUS_MOODS.includes(brief.mood ?? DEFAULT_MOOD) ? 'analogous' : 'complementary';
   const notes: string[] = [];
   const songs: SongColours[] = [];
   brief.songs.forEach((song, i) => {
@@ -191,32 +186,9 @@ export function colourSets(brief: Brief): ColourSetPlan {
 
 // ---------------------------------------------------------------- rig
 
-const COLUMNS = ['Stage Right', 'Centre', 'Stage Left'] as const;
-const zones = (rows: readonly ZoneRow[], level: Zone['level']): Zone[] =>
-  rows.flatMap((row) => COLUMNS.map((column) => ({ row, column, level })));
-const ALL_ROWS: ZoneRow[] = ['Front', 'Downstage', 'Midstage', 'Upstage'];
-
-/** What each part of the stage targets. Roles and Zones only, never a Fixture. */
-export const PART_TARGETS: Record<Part, RuleTarget> = {
-  front: { roles: [...WASH_ROLES], zones: zones(FRONT_ROWS, 'Overhead') },
-  back: { roles: [...WASH_ROLES], zones: zones(BACK_ROWS, 'Overhead') },
-  floor: { roles: [...WASH_ROLES], zones: zones(ALL_ROWS, 'Floor') },
-  beams: { roles: [...BEAM_ROLES] },
-  fx: { roles: ['Effect'] },
-};
-
 /** The parts the venue has Fixtures for. */
 export function presentParts(venue: VenueSummary): Part[] {
-  const washes = (rows: readonly ZoneRow[], level: Zone['level']) =>
-    WASH_ROLES.reduce((n, role) => n + venueCount(venue, { role, rows, level }), 0);
-  const has: Record<Part, boolean> = {
-    front: washes(FRONT_ROWS, 'Overhead') > 0,
-    back: washes(BACK_ROWS, 'Overhead') > 0,
-    floor: washes(ALL_ROWS, 'Floor') > 0,
-    beams: BEAM_ROLES.some((role) => venueCount(venue, { role }) > 0),
-    fx: venueCount(venue, { role: 'Effect' }) > 0,
-  };
-  return PARTS.filter((p) => has[p]);
+  return PARTS.filter((part) => venue.groups.some((g) => inPart(part, g.role, g.zone)));
 }
 
 // ---------------------------------------------------------------- intensity
@@ -276,7 +248,7 @@ export function colourOf(part: Part, tier: Tier, front: Brief['front']): RuleCol
 /** The Rules of a Look: each lit part at its tier level, in its colour. */
 export function composeLook(tier: Tier, parts: readonly Part[], front: Brief['front']): Rule[] {
   return parts.map((part) => ({
-    target: PART_TARGETS[part],
+    target: partTarget(part),
     intensity: levelOf(tier, part),
     colour: colourOf(part, tier, front),
   }));
@@ -298,9 +270,9 @@ export function tierRecipes(tier: Tier, present: readonly Part[]): Recipe[] {
 
 // ---------------------------------------------------------------- Scenes and notes
 
-// One MIDI channel per Layer. Colour Sets are on channel 6, like House and
-// Haze Presets in Energy. Dynamic Layers keep channels 2-5 for later.
-export const CH = { look: 1, movement: 2, pulse: 3, colourfx: 4, hit: 5, presets: 6 } as const;
+// One MIDI channel per Layer. Colour Sets are on channel 6, where House and
+// Haze Presets sit in Energy. Dynamic Layers keep channels 2-5 for later.
+export const CH = { look: 1, movement: 2, pulse: 3, colourfx: 4, hit: 5, colourSets: 6 } as const;
 export const LOOK_LAYER: Layer = { id: 'look', name: 'Look' };
 /** The Layers the dynamics add. */
 export const DYNAMIC_LAYERS: Layer[] = [];
@@ -430,7 +402,7 @@ function utilityScene(spec: UtilitySpec, present: readonly Part[]): Scene | unde
   const lit = parts.filter(([, level]) => level > 0);
   if (!everything && lit.length === 0) return undefined;
   const rules: Rule[] = parts.map(([part, intensity, colour]) => ({
-    target: PART_TARGETS[part],
+    target: partTarget(part),
     intensity,
     colour,
   }));
@@ -510,7 +482,7 @@ export function generate(brief: Brief, venue: VenueSummary): Generated {
     ...(base ? { baseLook: 'base' } : {}),
     colourSets: plan.sets.map((set, i) => ({
       ...set,
-      note: { channel: CH.presets, note: COLOUR_SET_BASE + i },
+      note: { channel: CH.colourSets, note: COLOUR_SET_BASE + i },
     })),
     strobeCap: brief.strobeHz,
   };
@@ -530,19 +502,13 @@ const colourText = (c: Colour): string =>
 const beatsOrSeconds = (value: number, unit: 'seconds' | 'beats' | undefined) =>
   `${value} ${unit === 'beats' ? (value === 1 ? 'beat' : 'beats') : 's'}`;
 
-/** Scenes whose strobe or square Effect flashes faster than the cap (R6). */
+/** Scenes whose strobe or square Effect flashes faster than the cap at `bpm` (R6). */
 export function flashingScenes(show: Show, bpm = REFERENCE_BPM): Scene[] {
   const cap = show.strobeCap ?? Infinity;
   return show.scenes.filter((scene) =>
     scene.rules.some((r) => {
-      const strobe = r.strobe !== undefined && strobeHz(r.strobe, bpm) > cap;
-      const pulse = r.intensityEffect;
-      const square =
-        pulse !== undefined &&
-        pulse !== NO_EFFECT &&
-        pulse.shape === 'Square' &&
-        bpm / 60 / pulse.length > cap;
-      return strobe || square;
+      const { strobe, square } = flashHz(r, bpm);
+      return strobe > cap || square > cap;
     }),
   );
 }
@@ -567,7 +533,9 @@ function cueSheet(brief: Brief, g: Generated): string {
     g.venue.source === 'venue'
       ? `the venue's ${g.venue.fixtures} Fixtures`
       : 'the default rig (front and back washes, beams, floor)';
-  const flashing = flashingScenes(show);
+  // The fastest song sets the pace: beat rates are quickest there.
+  const bpm = Math.max(...brief.songs.map((song) => song.bpm));
+  const flashing = flashingScenes(show, bpm);
   const left = [
     ...g.omitted.map((p) => `- Part left out: ${p}. The rig has no Fixtures for it.`),
     ...g.skipped.map((s) => `- Scene left out: ${s}.`),
@@ -576,7 +544,7 @@ function cueSheet(brief: Brief, g: Generated): string {
 
 Generated by \`npm run show:generate\` from the brief. Do not edit; edit the brief and re-run.
 
-${g.entries.length} Scenes on MIDI channel ${CH.look}, one Layer, and ${sets.length} Colour Set${sets.length === 1 ? '' : 's'} on channel ${CH.presets}. C4 = note 60. Send MIDI Clock from the DAW for the Tempo.
+${g.entries.length} Scenes on MIDI channel ${CH.look}, one Layer, and ${sets.length} Colour Set${sets.length === 1 ? '' : 's'} on channel ${CH.colourSets}. C4 = note 60. Send MIDI Clock from the DAW for the Tempo.
 
 ## Rig
 
@@ -611,7 +579,7 @@ Names follow \`<Tier>: <Name>\`. Tiers sit on two octaves each: Chill C1 (24), G
 ## Strobe
 
 Strobe cap: ${show.strobeCap} Hz for every Scene fired by Go.
-${flashing.length > 0 ? `\nScenes that flash faster than the cap:\n\n${flashing.map((s) => `- ${s.name}`).join('\n')}` : '\nNo Scene flashes faster than the cap.'}
+${flashing.length > 0 ? `\nScenes that flash faster than the cap at ${bpm} BPM, the fastest song:\n\n${flashing.map((s) => `- ${s.name}`).join('\n')}` : `\nNo Scene flashes faster than the cap at ${bpm} BPM, the fastest song.`}
 
 ## Note map
 

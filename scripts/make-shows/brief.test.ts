@@ -7,12 +7,12 @@ import { loadVenueFile } from '../../src/engine/venue-file';
 import {
   BriefError,
   DEFAULT_RIG,
-  FRONT_ROWS,
   loadBrief,
   parseBrief,
   summariseVenue,
   venueCount,
 } from './brief';
+import { FRONT_ROWS } from './rules';
 
 const sample = new URL('./fixtures/sample-brief.yaml', import.meta.url);
 const sampleVenue = new URL('./fixtures/sample-venue.lcvenue', import.meta.url);
@@ -169,6 +169,22 @@ describe('summariseVenue', () => {
     for (const f of moved.fixtures) if (f.id.startsWith('front-mover')) f.y = 5;
     expect(summariseVenue(moved).movingFrontWashes).toBe(0);
     expect(summariseVenue(moved).movers).toBe(4);
+  });
+
+  it('counts a moving front wash only in the Front part: wash Roles, front rows, Overhead', () => {
+    const moved = (change: (f: (typeof patch.fixtures)[number]) => void) => {
+      const copy = structuredClone(patch);
+      for (const f of copy.fixtures) if (f.id.startsWith('front-mover')) change(f);
+      return summariseVenue(copy);
+    };
+    // On the floor, a front-row mover is not Overhead light.
+    expect(moved((f) => (f.height = 0.3)).movingFrontWashes).toBe(0);
+    // A Pixel/Bar is a wash Role.
+    expect(moved((f) => (f.role = 'Pixel/Bar')).movingFrontWashes).toBe(2);
+    // A Spot/Beam is not.
+    expect(moved((f) => (f.role = 'Spot/Beam')).movingFrontWashes).toBe(0);
+    // Downstage counts as front.
+    expect(moved((f) => (f.y = 0.5)).movingFrontWashes).toBe(2);
   });
 
   it('gives the default rig without a venue', () => {
