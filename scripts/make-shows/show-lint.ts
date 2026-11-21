@@ -11,6 +11,8 @@ import { strobeHz } from '../../src/shared/strobe';
 import type { Colour } from '../../src/shared/colour';
 import {
   isSlotRef,
+  type ColourSet,
+  type Slot,
   NO_EFFECT,
   type EffectSlot,
   type Rule,
@@ -127,13 +129,9 @@ export function targetCovers(target: RuleTarget, part: Part): boolean {
 type Tone =
   { kind: 'pale' } | { kind: 'tint' } | { kind: 'hue'; hue: number | undefined; key: string };
 
-function toneOf(colour: RuleColour | undefined): Tone {
+function toneOf(colour: RuleColour | undefined, sets: readonly ColourSet[] = []): Tone {
   if (colour === undefined) return { kind: 'pale' };
-  if (isSlotRef(colour)) {
-    return colour.slot === 'Accent'
-      ? { kind: 'pale' }
-      : { kind: 'hue', hue: undefined, key: `slot:${colour.slot}` };
-  }
+  if (isSlotRef(colour)) return slotTone(colour.slot, sets);
   if ('kelvin' in colour) return { kind: 'pale' };
   if ('swatch' in colour) {
     const hue = SWATCH_HUE[colour.swatch];
@@ -146,13 +144,27 @@ function toneOf(colour: RuleColour | undefined): Tone {
   return { kind: 'tint' };
 }
 
+/**
+ * A slot is judged by the colours it takes across the Colour Sets: a hue slot
+ * when any set gives it a saturated colour, a tint when any gives a mid one,
+ * else pale. With no sets nothing is known: Primary and Secondary count as
+ * hues, Accent as white.
+ */
+function slotTone(slot: Slot, sets: readonly ColourSet[]): Tone {
+  const hue: Tone = { kind: 'hue', hue: undefined, key: `slot:${slot}` };
+  if (sets.length === 0) return slot === 'Accent' ? { kind: 'pale' } : hue;
+  const kinds = sets.map((set) => toneOf(set.colours[slot]).kind);
+  if (kinds.includes('hue')) return hue;
+  return kinds.includes('tint') ? { kind: 'tint' } : { kind: 'pale' };
+}
+
 interface PartState {
   intensity: number;
   tone: Tone;
 }
 
 /** What a Scene's Rules leave on each part: the last Rule to set a thing wins. */
-function lookState(scene: Scene): Record<Part, PartState> {
+function lookState(scene: Scene, sets: readonly ColourSet[] = []): Record<Part, PartState> {
   const state = Object.fromEntries(
     PARTS.map((p) => [p, { intensity: 0, tone: { kind: 'pale' } } satisfies PartState]),
   ) as Record<Part, PartState>;
@@ -160,17 +172,17 @@ function lookState(scene: Scene): Record<Part, PartState> {
     for (const part of PARTS) {
       if (!targetCovers(rule.target, part)) continue;
       if (rule.intensity !== undefined) state[part].intensity = rule.intensity;
-      if (rule.colour !== undefined) state[part].tone = toneOf(rule.colour);
+      if (rule.colour !== undefined) state[part].tone = toneOf(rule.colour, sets);
     }
   }
   return state;
 }
 
 /** The parts a Scene lights: its `part:` tags if it has any, else what its Rules light. */
-function litParts(scene: Scene): Part[] {
+function litParts(scene: Scene, sets: readonly ColourSet[] = []): Part[] {
   const tagged = scene.tags.flatMap((t) => (t.startsWith('part:') ? [t.slice(5)] : []));
   if (tagged.length > 0) return PARTS.filter((p) => tagged.includes(p));
-  const state = lookState(scene);
+  const state = lookState(scene, sets);
   return PARTS.filter((p) => state[p].intensity > 0);
 }
 
@@ -257,7 +269,7 @@ const ITEMS: { item: number; title: string; check: Check }[] = [
       sceneCheck(
         looks(cx),
         (s) => {
-          const { degrees, slots } = hueClusters(lookState(s));
+          const { degrees, slots } = hueClusters(lookState(s, cx.show.colourSets));
           const n = degrees.length + slots.length;
           return n > MAX_SATURATED_HUES ? `${n} saturated hues` : undefined;
         },
@@ -273,10 +285,16 @@ const ITEMS: { item: number; title: string; check: Check }[] = [
     item: 3,
     title: 'Front light is pale in every tier Look (file half)',
     check: (cx) => {
-      const scenes = tierLooks(cx).filter((s) => lookState(s).front.intensity > 0);
+      const scenes = tierLooks(cx).filter(
+        (s) => lookState(s, cx.show.colourSets).front.intensity > 0,
+      );
       return sceneCheck(
         scenes,
-        (s) => (lookState(s).front.tone.kind === 'hue' ? 'saturated front' : undefined),
+        (s) => {
+          const tone = lookState(s, cx.show.colourSets).front.tone;
+          if (tone.kind === 'hue') return 'saturated front';
+          return tone.kind === 'tint' ? 'front is not pale' : undefined;
+        },
         needsTier,
       );
     },
@@ -378,7 +396,7 @@ function checkPairs(cx: Context): Omit<ItemResult, 'item' | 'title'> {
   let checks = 0;
   const all = looks(cx);
   for (const s of all) {
-    const { degrees, slots } = hueClusters(lookState(s));
+    const { degrees, slots } = hueClusters(lookState(s, cx.show.colourSets));
     if (degrees.length !== 2 || slots.length !== 0) continue;
     checks++;
     const gap = hueGap(degrees[0]!, degrees[1]!);
@@ -397,7 +415,7 @@ function checkPairs(cx: Context): Omit<ItemResult, 'item' | 'title'> {
     }
   }
   const slotted = all.filter((s) => {
-    const { degrees, slots } = hueClusters(lookState(s));
+    const { degrees, slots } = hueClusters(lookState(s, cx.show.colourSets));
     return (
       degrees.length === 0 && slots.includes('slot:Primary') && slots.includes('slot:Secondary')
     );

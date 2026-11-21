@@ -107,10 +107,29 @@ describe('parseBrief', () => {
       'band: X\nsongs:\n  - name: A\n    bpm: 120\n    colours: [Red, Puce]\n',
       "Line 5: colours: 'puce'",
     ],
+    [
+      'a coloured song Accent',
+      'band: X\nsongs:\n  - name: A\n    bpm: 120\n    colours: [Red, Blue, Amber]\n',
+      "Line 5: colours: the Accent 'Amber' must be White or Warm White",
+    ],
     ['duplicate song', `${base}  - name: a\n    bpm: 100\n`, "Line 5: Song 'a' is listed twice"],
     ['empty venue', `${base}venue:\n`, 'Line 5: venue must be'],
   ])('rejects %s with its line', (_name, text, message) => {
     expect(failure(text)).toContain(message);
+  });
+});
+
+describe('song Accent', () => {
+  const song = (colours: string) =>
+    `band: X\nsongs:\n  - name: A\n    bpm: 120\n    colours: ${colours}\n`;
+
+  it('takes White or Warm White as the third colour, and any colour as the first two', () => {
+    expect(parseBrief(song('[Red, Blue, White]')).songs[0]!.colours).toEqual([
+      'Red',
+      'Blue',
+      'White',
+    ]);
+    expect(parseBrief(song('[Amber, Blue, warm white]')).songs[0]!.colours![2]).toBe('Warm White');
   });
 });
 

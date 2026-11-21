@@ -82,10 +82,10 @@ describe('palette rules (P1, P2, P5, P6)', () => {
   it('takes a song override as given and notes a repeated primary', () => {
     const text = `${songs(2)}`.replace(
       '    bpm: 120\n  - name: S2\n    bpm: 120',
-      '    bpm: 120\n    colours: [Red, Cyan, Amber]\n  - name: S2\n    bpm: 120\n    colours: [Red]',
+      '    bpm: 120\n    colours: [Red, Cyan, Warm White]\n  - name: S2\n    bpm: 120\n    colours: [Red]',
     );
     const { songs: out, notes } = songColours(brief(text));
-    expect(out[0]).toMatchObject({ primary: 'Red', secondary: 'Cyan', accent: 'Amber' });
+    expect(out[0]).toMatchObject({ primary: 'Red', secondary: 'Cyan', accent: 'Warm White' });
     expect(out[1]!.primary).toBe('Red');
     expect(notes).toEqual([expect.stringContaining('S2 repeats the primary of S1')]);
   });
@@ -158,6 +158,17 @@ describe('composition rules (P3, P4, R1-R3, I4, I5)', () => {
       'beams',
       'fx',
     ]);
+  });
+
+  it('lights every part the rig has in every Peak Look (I1, I5)', () => {
+    const all = [...presentParts(DEFAULT_RIG), 'fx' as const];
+    for (const present of [all, all.filter((p) => p !== 'floor'), all.filter((p) => p !== 'fx')]) {
+      for (const recipe of tierRecipes('peak', present)) expect(recipe.parts).toEqual(present);
+    }
+    const parts = (s: Scene) => s.tags.filter((t) => t.startsWith('part:')).map((t) => t.slice(5));
+    const peak = looks.filter((s) => tierOf(s) === 'peak');
+    expect(peak.length).toBeGreaterThan(0);
+    for (const s of peak) expect(parts(s).sort()).toEqual([...presentParts(sample.venue)].sort());
   });
 
   it('puts the front in every sung Look and the beams in Drive and Peak only above Chill', () => {

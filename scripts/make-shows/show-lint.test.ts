@@ -149,6 +149,79 @@ describe('item 2: slot colours and Colour Sets', () => {
   });
 });
 
+describe('item 3: pale front, boundary', () => {
+  const front = (saturation: number) =>
+    tiered('groove', `S${saturation}`, [
+      set(FRONT, 0.8, { hue: 30, saturation }),
+      set(BACK, 0.8, sw('Red')),
+    ]);
+
+  it('passes saturation 0.3 and fails anything above it, tints included', () => {
+    expect(score(show([front(0.3)]), 3)).toBe(2);
+    expect(score(show([front(0.31)]), 3)).toBe(0);
+    expect(score(show([front(0.45)]), 3)).toBe(0);
+    expect(score(show([front(0.6)]), 3)).toBe(0);
+  });
+
+  it('does not count a tint as a saturated hue in item 1', () => {
+    const look = scene('tints', [
+      set(BACK, 1, { hue: 0, saturation: 0.5 }),
+      set(FLOOR, 1, { hue: 120, saturation: 0.5 }),
+      set(BEAMS, 1, { hue: 240, saturation: 0.5 }),
+    ]);
+    expect(score(show([look]), 1)).toBe(2);
+  });
+});
+
+describe('slot colours across Colour Sets (items 1 and 3)', () => {
+  const colourSet = (name: string, accent: Colour, primary: Colour = sw('Amber')) => ({
+    id: name,
+    name,
+    fade: 1,
+    colours: { Primary: primary, Secondary: sw('Blue'), Accent: accent },
+  });
+  const accentLook = scene('accented', [
+    set(BACK, 1, { slot: 'Primary' } as never),
+    set(FLOOR, 1, { slot: 'Secondary' } as never),
+    set(BEAMS, 1, { slot: 'Accent' } as never),
+  ]);
+
+  it('passes item 1 with white Accents and fails it when one set has a coloured Accent', () => {
+    const white = show([accentLook], { colourSets: [colourSet('W', sw('White'))] });
+    expect(score(white, 1)).toBe(2);
+    const red = show([accentLook], {
+      colourSets: [colourSet('W', sw('White')), colourSet('R', sw('Red'))],
+    });
+    expect(score(red, 1)).toBe(0);
+    expect(offenders(red, 1)[0]).toMatch(/^accented: 3 saturated hues/);
+  });
+
+  it('fails item 3 for a front on a slot whose set colour is not pale', () => {
+    const look = tiered('groove', 'Slot front', [
+      set(FRONT, 0.8, { slot: 'Accent' } as never),
+      set(BACK, 0.8, { slot: 'Primary' } as never),
+    ]);
+    const pale = show([look], { colourSets: [colourSet('W', sw('Warm White'))] });
+    expect(score(pale, 3)).toBe(2);
+    const mixed = show([look], {
+      colourSets: [colourSet('W', sw('White')), colourSet('R', sw('Red'))],
+    });
+    expect(score(mixed, 3)).toBe(0);
+    const tint = show([look], {
+      colourSets: [colourSet('T', { hue: 30, saturation: 0.4 })],
+    });
+    expect(score(tint, 3)).toBe(0);
+  });
+
+  it('judges a Primary front by the colours it takes', () => {
+    const look = tiered('groove', 'Primary front', [set(FRONT, 0.8, { slot: 'Primary' } as never)]);
+    expect(score(show([look], { colourSets: [colourSet('P', sw('White'), sw('White'))] }), 3)).toBe(
+      2,
+    );
+    expect(score(show([look], { colourSets: [colourSet('P', sw('White'))] }), 3)).toBe(0);
+  });
+});
+
 describe('item 3: pale front', () => {
   it('passes a pale front and fails a saturated one', () => {
     expect(score(show([goodLook('groove')]), 3)).toBe(2);

@@ -11,6 +11,7 @@ import { loadVenueFile } from '../../src/engine/venue-file';
 import { SWATCHES, type Swatch } from '../../src/shared/colour';
 import type { Role } from '../../src/shared/fixture-profile';
 import { ROLES } from '../../src/shared/fixture-profile';
+import { SWATCH_HUE } from './rules';
 import {
   fixtureRole,
   fixtureZone,
@@ -200,8 +201,17 @@ function readSong(r: Reader, node: YAMLMap): BriefSong {
     if (!SONG.includes(key)) throw new BriefError(`Unknown key '${key}'`, keyLine);
     if (key === 'name') name = r.text(value, 'name', value);
     else if (key === 'plan') plan = r.text(value, 'plan', value);
-    else if (key === 'colours') colours = r.swatches(value, 'colours', 3, value);
-    else bpm = readBpm(r, value);
+    else if (key === 'colours') {
+      colours = r.swatches(value, 'colours', 3, value);
+      // P4: beams take the Accent, and Peak beams are white.
+      const accent = colours[2];
+      if (accent !== undefined && SWATCH_HUE[accent] !== undefined) {
+        throw new BriefError(
+          `colours: the Accent '${accent}' must be White or Warm White`,
+          r.line(value) ?? keyLine,
+        );
+      }
+    } else bpm = readBpm(r, value);
   }
   if (name === undefined) throw new BriefError("A song needs a 'name'", line);
   if (bpm === undefined) throw new BriefError(`Song '${name}' needs a 'bpm'`, line);

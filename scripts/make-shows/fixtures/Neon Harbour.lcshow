@@ -2242,123 +2242,6 @@
           }
         }
       ]
-    },
-    {
-      "id": "peak-beam-wall",
-      "name": "Peak: Beam Wall",
-      "tags": [
-        "look",
-        "tier:peak",
-        "part:front",
-        "part:back",
-        "part:beams"
-      ],
-      "layer": "look",
-      "fadeIn": 0,
-      "fadeUnit": "beats",
-      "fadeOut": 0.5,
-      "fadeOutUnit": "beats",
-      "rules": [
-        {
-          "target": {
-            "roles": [
-              "Wash",
-              "Pixel/Bar"
-            ],
-            "zones": [
-              {
-                "row": "Front",
-                "column": "Stage Right",
-                "level": "Overhead"
-              },
-              {
-                "row": "Front",
-                "column": "Centre",
-                "level": "Overhead"
-              },
-              {
-                "row": "Front",
-                "column": "Stage Left",
-                "level": "Overhead"
-              },
-              {
-                "row": "Downstage",
-                "column": "Stage Right",
-                "level": "Overhead"
-              },
-              {
-                "row": "Downstage",
-                "column": "Centre",
-                "level": "Overhead"
-              },
-              {
-                "row": "Downstage",
-                "column": "Stage Left",
-                "level": "Overhead"
-              }
-            ]
-          },
-          "intensity": 0.7,
-          "colour": {
-            "kelvin": 4200
-          }
-        },
-        {
-          "target": {
-            "roles": [
-              "Wash",
-              "Pixel/Bar"
-            ],
-            "zones": [
-              {
-                "row": "Midstage",
-                "column": "Stage Right",
-                "level": "Overhead"
-              },
-              {
-                "row": "Midstage",
-                "column": "Centre",
-                "level": "Overhead"
-              },
-              {
-                "row": "Midstage",
-                "column": "Stage Left",
-                "level": "Overhead"
-              },
-              {
-                "row": "Upstage",
-                "column": "Stage Right",
-                "level": "Overhead"
-              },
-              {
-                "row": "Upstage",
-                "column": "Centre",
-                "level": "Overhead"
-              },
-              {
-                "row": "Upstage",
-                "column": "Stage Left",
-                "level": "Overhead"
-              }
-            ]
-          },
-          "intensity": 1,
-          "colour": {
-            "slot": "Primary"
-          }
-        },
-        {
-          "target": {
-            "roles": [
-              "Spot/Beam"
-            ]
-          },
-          "intensity": 1,
-          "colour": {
-            "slot": "Accent"
-          }
-        }
-      ]
     }
   ],
   "triggers": [
@@ -2474,12 +2357,6 @@
       "channel": 1,
       "note": 96,
       "scene": "peak-everything",
-      "mode": "go"
-    },
-    {
-      "channel": 1,
-      "note": 97,
-      "scene": "peak-beam-wall",
       "mode": "go"
     }
   ],

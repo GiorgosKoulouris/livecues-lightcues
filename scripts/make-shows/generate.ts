@@ -232,7 +232,8 @@ export interface Recipe {
 }
 
 // I4, I5: what a tier lights. Chill lights the front and at most one more part;
-// Groove up to four; Drive and Peak everything the rig has. The front is in
+// Groove up to four; Drive and Peak everything the rig has (Peak has the one
+// Look, since any other would leave a part dark, I5). The front is in
 // every sung Look (I2), the back carries the Primary and the floor the
 // Secondary (R2, R3), and white beams come in at Drive and Peak (P4).
 export const RECIPES: Record<Tier, Recipe[]> = {
@@ -252,10 +253,7 @@ export const RECIPES: Record<Tier, Recipe[]> = {
     { name: 'Beams', parts: ['front', 'back', 'beams'] },
     { name: 'Chorus', parts: ['front', 'back', 'floor', 'beams'] },
   ],
-  peak: [
-    { name: 'Everything', parts: ['front', 'back', 'floor', 'beams', 'fx'] },
-    { name: 'Beam Wall', parts: ['front', 'back', 'beams', 'fx'] },
-  ],
+  peak: [{ name: 'Everything', parts: ['front', 'back', 'floor', 'beams', 'fx'] }],
 };
 
 const kelvin = (k: number): Colour => ({ kelvin: k });
