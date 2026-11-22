@@ -2,15 +2,19 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { saveShowFile } from '../../src/engine/show-file';
 import type { Colour, Rule, RuleTarget, Scene, Show, Trigger } from '../../src/shared/show';
-import { failsStrict, grade, lintShow, runLint, tierOf, type Score } from './show-lint';
+import {
+  failsStrict,
+  grade,
+  lintShow,
+  parseSongSets,
+  runLint,
+  tierOf,
+  type Score,
+} from './show-lint';
 
 const FRONT: RuleTarget = {
   roles: ['Wash'],
   zones: [{ row: 'Front', column: 'Centre', level: 'Overhead' }],
-};
-const DOWNSTAGE: RuleTarget = {
-  roles: ['Wash'],
-  zones: [{ row: 'Downstage', column: 'Centre', level: 'Overhead' }],
 };
 const BACK: RuleTarget = {
   roles: ['Wash'],
@@ -69,56 +73,7 @@ const goodLook = (tier: string, name = 'Look', level = 0.6, extra: Partial<Scene
     extra,
   );
 
-describe('item 1: saturated hues per Look', () => {
-  it('passes two hues and fails three, naming the Scene', () => {
-    const two = scene('two', [set(BACK, 1, sw('Red')), set(FLOOR, 1, sw('Cyan'))]);
-    const three = scene('three', [
-      set(BACK, 1, sw('Red')),
-      set(FLOOR, 1, sw('Green')),
-      set(BEAMS, 1, sw('Blue')),
-    ]);
-    expect(score(show([two]), 1)).toBe(2);
-    expect(score(show([three]), 1)).toBe(0);
-    expect(offenders(show([three]), 1)[0]).toMatch(/^three: 3 saturated hues/);
-  });
-
-  it('counts hues within 15 degrees as one and ignores whites', () => {
-    const look = scene('near', [
-      set(BACK, 1, { hue: 0, saturation: 1 }),
-      set(FLOOR, 1, { hue: 10, saturation: 1 }),
-      set(BEAMS, 1, sw('White')),
-    ]);
-    expect(score(show([look]), 1)).toBe(2);
-  });
-
-  it('counts a slot colour as a hue and Accent as white', () => {
-    const look = scene('slots', [
-      set(BACK, 1, { slot: 'Primary' } as never),
-      set(FLOOR, 1, { slot: 'Secondary' } as never),
-      set(BEAMS, 1, { slot: 'Accent' } as never),
-    ]);
-    expect(score(show([look]), 1)).toBe(2);
-  });
-});
-
-describe('item 2: hue pairs', () => {
-  it('passes complementary and analogous pairs', () => {
-    const comp = scene('comp', [set(BACK, 1, sw('Red')), set(FLOOR, 1, sw('Cyan'))]);
-    const ana = scene('ana', [
-      set(BACK, 1, { hue: 200, saturation: 1 }),
-      set(FLOOR, 1, { hue: 230, saturation: 1 }),
-    ]);
-    expect(score(show([comp, ana]), 2)).toBe(2);
-  });
-
-  it('fails a near-miss pair', () => {
-    const miss = scene('miss', [set(BACK, 1, sw('Red')), set(FLOOR, 1, sw('Green'))]);
-    expect(score(show([miss]), 2)).toBe(0);
-    expect(offenders(show([miss]), 2)[0]).toMatch(/^miss:/);
-  });
-});
-
-describe('item 2: slot colours and Colour Sets', () => {
+describe('item 2: Colour Set pairs', () => {
   const slotLook = scene('slotted', [
     set(BACK, 1, { slot: 'Primary' } as never),
     set(FLOOR, 1, { slot: 'Secondary' } as never),
@@ -130,113 +85,22 @@ describe('item 2: slot colours and Colour Sets', () => {
     colours: { Primary: primary, Secondary: secondary, Accent: sw('White') },
   });
 
-  it('passes a complementary Colour Set, and a Look that uses its slots', () => {
+  it('passes a complementary Colour Set', () => {
     const s = show([slotLook], { colourSets: [colourSet('Good', sw('Amber'), sw('Blue'))] });
     expect(score(s, 2)).toBe(2);
   });
 
-  it('fails a near-miss Colour Set and the slot Look under it', () => {
+  it('fails a near-miss Colour Set', () => {
     const s = show([slotLook], { colourSets: [colourSet('Miss', sw('Red'), sw('Green'))] });
     expect(score(s, 2)).toBe(0);
     expect(offenders(s, 2)).toEqual([
       expect.stringMatching(/^Colour Set Miss: Primary and Secondary 120 degrees/),
-      expect.stringMatching(/^slotted: under Miss/),
     ]);
   });
 
-  it('is not scored when sets are pale and no Look has plain hues', () => {
+  it('is not scored when a set has a pale colour', () => {
     const s = show([slotLook], { colourSets: [colourSet('Pale', sw('White'), sw('Blue'))] });
     expect(score(s, 2)).toBeNull();
-  });
-});
-
-describe('item 3: pale front, boundary', () => {
-  const front = (saturation: number) =>
-    tiered('groove', `S${saturation}`, [
-      set(FRONT, 0.8, { hue: 30, saturation }),
-      set(BACK, 0.8, sw('Red')),
-    ]);
-
-  it('passes saturation 0.3 and fails anything above it, tints included', () => {
-    expect(score(show([front(0.3)]), 3)).toBe(2);
-    expect(score(show([front(0.31)]), 3)).toBe(0);
-    expect(score(show([front(0.45)]), 3)).toBe(0);
-    expect(score(show([front(0.6)]), 3)).toBe(0);
-  });
-
-  it('does not count a tint as a saturated hue in item 1', () => {
-    const look = scene('tints', [
-      set(BACK, 1, { hue: 0, saturation: 0.5 }),
-      set(FLOOR, 1, { hue: 120, saturation: 0.5 }),
-      set(BEAMS, 1, { hue: 240, saturation: 0.5 }),
-    ]);
-    expect(score(show([look]), 1)).toBe(2);
-  });
-});
-
-describe('slot colours across Colour Sets (items 1 and 3)', () => {
-  const colourSet = (name: string, accent: Colour, primary: Colour = sw('Amber')) => ({
-    id: name,
-    name,
-    fade: 1,
-    colours: { Primary: primary, Secondary: sw('Blue'), Accent: accent },
-  });
-  const accentLook = scene('accented', [
-    set(BACK, 1, { slot: 'Primary' } as never),
-    set(FLOOR, 1, { slot: 'Secondary' } as never),
-    set(BEAMS, 1, { slot: 'Accent' } as never),
-  ]);
-
-  it('passes item 1 with white Accents and fails it when one set has a coloured Accent', () => {
-    const white = show([accentLook], { colourSets: [colourSet('W', sw('White'))] });
-    expect(score(white, 1)).toBe(2);
-    const red = show([accentLook], {
-      colourSets: [colourSet('W', sw('White')), colourSet('R', sw('Red'))],
-    });
-    expect(score(red, 1)).toBe(0);
-    expect(offenders(red, 1)[0]).toMatch(/^accented: 3 saturated hues/);
-  });
-
-  it('fails item 3 for a front on a slot whose set colour is not pale', () => {
-    const look = tiered('groove', 'Slot front', [
-      set(FRONT, 0.8, { slot: 'Accent' } as never),
-      set(BACK, 0.8, { slot: 'Primary' } as never),
-    ]);
-    const pale = show([look], { colourSets: [colourSet('W', sw('Warm White'))] });
-    expect(score(pale, 3)).toBe(2);
-    const mixed = show([look], {
-      colourSets: [colourSet('W', sw('White')), colourSet('R', sw('Red'))],
-    });
-    expect(score(mixed, 3)).toBe(0);
-    const tint = show([look], {
-      colourSets: [colourSet('T', { hue: 30, saturation: 0.4 })],
-    });
-    expect(score(tint, 3)).toBe(0);
-  });
-
-  it('judges a Primary front by the colours it takes', () => {
-    const look = tiered('groove', 'Primary front', [set(FRONT, 0.8, { slot: 'Primary' } as never)]);
-    expect(score(show([look], { colourSets: [colourSet('P', sw('White'), sw('White'))] }), 3)).toBe(
-      2,
-    );
-    expect(score(show([look], { colourSets: [colourSet('P', sw('White'))] }), 3)).toBe(0);
-  });
-});
-
-describe('item 3: pale front', () => {
-  it('passes a pale front and fails a saturated one', () => {
-    expect(score(show([goodLook('groove')]), 3)).toBe(2);
-    const red = tiered('groove', 'Red front', [
-      set(FRONT, 0.8, sw('Red')),
-      set(BACK, 0.8, sw('Red')),
-    ]);
-    expect(score(show([red]), 3)).toBe(0);
-    expect(offenders(show([red]), 3)[0]).toMatch(/^groove: Red front:/);
-  });
-
-  it('counts Downstage as front', () => {
-    const red = tiered('groove', 'Downstage red', [set(DOWNSTAGE, 0.8, sw('Red'))]);
-    expect(score(show([red]), 3)).toBe(0);
   });
 });
 
@@ -298,32 +162,6 @@ describe('item 6: Chill negative space', () => {
       tags: ['tier:chill', 'part:front', 'part:back', 'part:floor'],
     });
     expect(score(show([tagged]), 6)).toBe(0);
-  });
-});
-
-describe('item 7: dynamic Scenes leave the front alone', () => {
-  const pan = (target: RuleTarget): Rule => ({
-    target,
-    direction: 'Down',
-    movementEffect: { shape: 'Pan sweep', size: 20, length: 4, spread: 'In sync' },
-  });
-
-  it('passes a beam Movement and fails one that reaches the front', () => {
-    expect(score(show([scene('beams', [pan(BEAMS)])]), 7)).toBe(2);
-    const movers = scene('movers', [pan({ roles: ['Spot/Beam', 'Wash'] })]);
-    expect(score(show([movers]), 7)).toBe(0);
-    expect(offenders(show([movers]), 7)[0]).toMatch(/^movers:/);
-  });
-
-  it('exempts Hits', () => {
-    const hit = scene('hit', [
-      {
-        target: FRONT,
-        intensityEffect: { shape: 'Pulse', depth: 1, length: 1, spread: 'In sync' },
-      },
-    ]);
-    const s = show([hit], {}, [{ channel: 1, note: 1, scene: hit.id, mode: 'flash' }]);
-    expect(score(s, 7)).toBeNull();
   });
 });
 
@@ -503,14 +341,79 @@ describe('item 12: Base, Dark and still Movement', () => {
   });
 });
 
-describe('item 17: Looks per tier', () => {
-  it('passes 8 Looks and fails 9', () => {
-    const many = (n: number) =>
-      Array.from({ length: n }, (_, i) => goodLook('chill', `look ${i}`, 0.5));
-    expect(score(show(many(8)), 17)).toBe(2);
-    const s = show(many(9));
+describe('Variety (item 17)', () => {
+  const LAYERS = ['movement', 'pulse', 'colour-fx'];
+  const tierNames = ['chill', 'groove', 'drive', 'peak'];
+  const dyn = (layer: string, tier: string, i: number) =>
+    tiered(
+      tier,
+      `${layer} ${i}`,
+      [
+        {
+          target: BEAMS,
+          movementEffect: { shape: 'Pan sweep', size: 20, length: 4, spread: 'In sync' },
+        },
+      ],
+      { layer, tags: [`tier:${tier}`, 'dynamic'] },
+    );
+  const dynamics = (n: number) =>
+    LAYERS.flatMap((layer) =>
+      tierNames.flatMap((tier) => Array.from({ length: n }, (_, i) => dyn(layer, tier, i))),
+    );
+  const hits = (n: number): [Scene[], Trigger[]] => {
+    const scenes = Array.from({ length: n }, (_, i) =>
+      scene(`Hit ${i}`, [set(BACK, 1, sw('White'))], { layer: 'hit' }),
+    );
+    return [scenes, scenes.map((s) => ({ scene: s.id, mode: 'flash' }) as unknown as Trigger)];
+  };
+  const sets = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      id: `set${i}`,
+      name: `Set ${i}`,
+      fade: 1,
+      colours: { Primary: sw('Amber'), Secondary: sw('Blue'), Accent: sw('White') },
+    }));
+  const full = (perLayer = 6, hitCount = 15, setCount = 6) => {
+    const [h, t] = hits(hitCount);
+    return show([...dynamics(perLayer), ...h], { colourSets: sets(setCount) }, t);
+  };
+  const songs = [{ song: 'A', main: 'M', break: 'B', swap: 'S' }];
+
+  it('scores 2 with 6 Scenes per Layer per tier, 15 Hits and 6 Colour Sets', () => {
+    expect(score(full(), 17)).toBe(2);
+    expect(lintShow(full(), 120, songs).items.find((i) => i.item === 17)!.score).toBe(2);
+  });
+
+  it('scores 1 with 4 Scenes per Layer, and 0 with 3', () => {
+    expect(score(full(4), 17)).toBe(1);
+    const s = full(3);
     expect(score(s, 17)).toBe(0);
-    expect(offenders(s, 17)[0]).toMatch(/9 Looks in chill/);
+    expect(offenders(s, 17)[0]).toMatch(/^movement in chill: 3 Scenes/);
+  });
+
+  it('lowers the score for too few Hits or Colour Sets', () => {
+    expect(score(full(6, 14), 17)).toBe(1);
+    expect(score(full(6, 15, 5), 17)).toBe(1);
+  });
+
+  it('lowers the score for a song whose Break equals its Main', () => {
+    const bad = [{ song: 'A', main: 'M', break: 'M', swap: 'S' }];
+    const r = lintShow(full(), 120, bad).items.find((i) => i.item === 17)!;
+    expect(r.score).toBe(1);
+    expect(r.offenders).toEqual(['A: Main, Break and Swap are not distinct']);
+  });
+
+  it('is not scored with no tiered dynamic Scene', () => {
+    expect(score(show([goodLook('chill')]), 17)).toBeNull();
+  });
+});
+
+describe('Song sets table', () => {
+  it('reads the roles, without the note labels', () => {
+    const md =
+      '### Song sets\n\n| Song | Main | Break | Swap |\n|---|---|---|---|\n| A | Red (C4) | Teal (D4) | Blue (E4) |\n\n## Next\n';
+    expect(parseSongSets(md)).toEqual([{ song: 'A', main: 'Red', break: 'Teal', swap: 'Blue' }]);
+    expect(parseSongSets('# none')).toBeUndefined();
   });
 });
 
@@ -519,7 +422,7 @@ describe('an untagged Show', () => {
     const plain = scene('Wash', [set(BACK, 1, sw('Red')), set(FLOOR, 1, sw('Cyan'))]);
     const report = lintShow(show([plain]));
     expect(report.scored).toBeLessThan(report.items.length);
-    expect(report.items.find((i) => i.item === 1)!.score).toBe(2);
+    expect(report.items.find((i) => i.item === 5)!.score).toBeNull();
     expect(report.items.find((i) => i.item === 4)!.score).toBeNull();
     expect(report.total).toBeLessThanOrEqual(report.max);
   });
@@ -550,10 +453,10 @@ describe('helpers', () => {
 });
 
 describe('strict mode', () => {
-  const bad = show([tiered('groove', 'Red front', [set(FRONT, 0.8, sw('Red'))])]);
+  const bad = show([tiered('groove', 'Red front', [set(BACK, 0.8, sw('Red'))])]);
   const file = saveShowFile(bad);
 
-  it('exits 1 when item 3, 4 or 11 scores 0, only with --strict', () => {
+  it('exits 1 when item 4 or 11 scores 0, only with --strict', () => {
     expect(failsStrict(lintShow(bad))).toBe(true);
     expect(runLint(['x.lcshow', '--strict'], () => file).code).toBe(1);
     expect(runLint(['x.lcshow'], () => file).code).toBe(0);
@@ -566,8 +469,8 @@ describe('strict mode', () => {
 
   it('prints each item, the Scene behind a failure and the total', () => {
     const { text } = runLint(['x.lcshow'], () => file);
-    expect(text).toMatch(/ 3\. Front light is pale.*: 0\/2/);
-    expect(text).toContain('groove: Red front: saturated front');
+    expect(text).toMatch(/ 4\. Front is lit.*: 0\/2/);
+    expect(text).toContain('groove: Red front: front 0%, needs');
     expect(text).toMatch(/Total: \d+\/\d+/);
   });
 

@@ -22,6 +22,6 @@
 
 ## Show lint
 
-`npm run show:lint -- <file.lcshow> [--strict] [--bpm <n>]` scores any Show against the rubric items checkable from the file (1-12 and 17). It is report-only: Palette and Energy are a baseline, not a gate. `--strict` exits 1 when item 3, 4 or 11 scores 0. Source: `scripts/make-shows/show-lint.ts`. Thresholds are in `scripts/make-shows/rules.ts`, which the generator shares. Tiers come from `tier:<name>` tags (or a `Chill: ` name prefix), parts from `part:<name>` tags.
+`npm run show:lint -- <file.lcshow> [--strict] [--bpm <n>]` scores any Show against the rubric items checkable from the file (2, 4-6, 8-12 and Variety; items 1, 3 and 7 are superseded by ADR 0023 and item 17 is replaced by Variety). Variety reads the Cue Sheet's Song sets table beside the file when it exists. It is report-only: Palette and Energy are a baseline, not a gate. `--strict` exits 1 when item 4 or 11 scores 0. Source: `scripts/make-shows/show-lint.ts`. Thresholds are in `scripts/make-shows/rules.ts`, which the generator shares. Tiers come from `tier:<name>` tags (or a `Chill: ` name prefix), parts from `part:<name>` tags.
 
 See [docs/development.md](../development.md#palette-show) for the full workflow.

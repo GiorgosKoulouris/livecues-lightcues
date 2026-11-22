@@ -1,5 +1,6 @@
 // Show lint: scores a Show file against the aesthetic rubric items that can be
-// checked from the file (items 1-12 and 17 of the show generator research).
+// checked from the file (items 2, 4-6, 8-12 and Variety, which replaces 17, of the show
+// generator research; items 1, 3 and 7 are superseded by ADR 0023).
 // Report-only. Thresholds live in `rules.ts`, which the generator shares.
 //
 // Tiers come from Scene tags (`tier:chill`, or a bare tier tag, or a `Chill: `
@@ -11,8 +12,6 @@ import { loadShowFile } from '../../src/engine/show-file';
 import type { Colour } from '../../src/shared/colour';
 import {
   isSlotRef,
-  type ColourSet,
-  type Slot,
   NO_EFFECT,
   type EffectSlot,
   type Rule,
@@ -23,10 +22,7 @@ import {
 import {
   DARK_NAME,
   flashHz,
-  HUE_MERGE_DEG,
   hueGap,
-  MAX_LOOKS_PER_TIER,
-  MAX_SATURATED_HUES,
   MIN_TIER_CLIMB,
   NEAR_MISS_DEG,
   PALE_MAX_SATURATION,
@@ -40,6 +36,7 @@ import {
   TIER_BANDS,
   TIERS,
   UNLIT_FRONT_NAME,
+  VARIETY,
   type Part,
   type Tier,
 } from './rules';
@@ -67,7 +64,7 @@ export interface LintReport {
 }
 
 /** The items whose score of 0 fails `--strict`. */
-export const STRICT_ITEMS = [3, 4, 11] as const;
+export const STRICT_ITEMS = [4, 11] as const;
 
 // ---------------------------------------------------------------- reading a Scene
 
@@ -105,9 +102,9 @@ const isDynamic = (scene: Scene): boolean =>
 type Tone =
   { kind: 'pale' } | { kind: 'tint' } | { kind: 'hue'; hue: number | undefined; key: string };
 
-function toneOf(colour: RuleColour | undefined, sets: readonly ColourSet[] = []): Tone {
+function toneOf(colour: RuleColour | undefined): Tone {
   if (colour === undefined) return { kind: 'pale' };
-  if (isSlotRef(colour)) return slotTone(colour.slot, sets);
+  if (isSlotRef(colour)) return { kind: 'pale' };
   if ('kelvin' in colour) return { kind: 'pale' };
   if ('swatch' in colour) {
     const hue = SWATCH_HUE[colour.swatch];
@@ -120,27 +117,13 @@ function toneOf(colour: RuleColour | undefined, sets: readonly ColourSet[] = [])
   return { kind: 'tint' };
 }
 
-/**
- * A slot is judged by the colours it takes across the Colour Sets: a hue slot
- * when any set gives it a saturated colour, a tint when any gives a mid one,
- * else pale. With no sets nothing is known: Primary and Secondary count as
- * hues, Accent as white.
- */
-function slotTone(slot: Slot, sets: readonly ColourSet[]): Tone {
-  const hue: Tone = { kind: 'hue', hue: undefined, key: `slot:${slot}` };
-  if (sets.length === 0) return slot === 'Accent' ? { kind: 'pale' } : hue;
-  const kinds = sets.map((set) => toneOf(set.colours[slot]).kind);
-  if (kinds.includes('hue')) return hue;
-  return kinds.includes('tint') ? { kind: 'tint' } : { kind: 'pale' };
-}
-
 interface PartState {
   intensity: number;
   tone: Tone;
 }
 
 /** What a Scene's Rules leave on each part: the last Rule to set a thing wins. */
-function lookState(scene: Scene, sets: readonly ColourSet[] = []): Record<Part, PartState> {
+function lookState(scene: Scene): Record<Part, PartState> {
   const state = Object.fromEntries(
     PARTS.map((p) => [p, { intensity: 0, tone: { kind: 'pale' } } satisfies PartState]),
   ) as Record<Part, PartState>;
@@ -148,31 +131,18 @@ function lookState(scene: Scene, sets: readonly ColourSet[] = []): Record<Part, 
     for (const part of PARTS) {
       if (!targetCovers(rule.target, part)) continue;
       if (rule.intensity !== undefined) state[part].intensity = rule.intensity;
-      if (rule.colour !== undefined) state[part].tone = toneOf(rule.colour, sets);
+      if (rule.colour !== undefined) state[part].tone = toneOf(rule.colour);
     }
   }
   return state;
 }
 
 /** The parts a Scene lights: its `part:` tags if it has any, else what its Rules light. */
-function litParts(scene: Scene, sets: readonly ColourSet[] = []): Part[] {
+function litParts(scene: Scene): Part[] {
   const tagged = scene.tags.flatMap((t) => (t.startsWith('part:') ? [t.slice(5)] : []));
   if (tagged.length > 0) return PARTS.filter((p) => tagged.includes(p));
-  const state = lookState(scene, sets);
+  const state = lookState(scene);
   return PARTS.filter((p) => state[p].intensity > 0);
-}
-
-/** The distinct saturated hues of a Look: hues within the merge distance count as one. */
-function hueClusters(state: Record<Part, PartState>): { degrees: number[]; slots: string[] } {
-  const degrees: number[] = [];
-  const slots = new Set<string>();
-  for (const part of PARTS) {
-    const { intensity, tone } = state[part];
-    if (intensity <= 0 || tone.kind !== 'hue') continue;
-    if (tone.hue === undefined) slots.add(tone.key);
-    else if (!degrees.some((d) => hueGap(d, tone.hue!) <= HUE_MERGE_DEG)) degrees.push(tone.hue);
-  }
-  return { degrees, slots: [...slots] };
 }
 
 // ---------------------------------------------------------------- scoring helpers
@@ -190,6 +160,8 @@ interface Context {
   bpm: number;
   // Scenes only a Flash fires: Hits.
   hits: Set<string>;
+  // Each song's Colour Set roles, from the Cue Sheet. Unknown when absent.
+  songs: readonly SongRoles[] | undefined;
 }
 
 const lights = (scene: Scene): boolean => litParts(scene).length > 0;
@@ -241,41 +213,9 @@ const needsTier = 'no Scene has a tier (tag tier:<name>)';
 
 const ITEMS: { item: number; title: string; check: Check }[] = [
   {
-    item: 1,
-    title: `At most ${MAX_SATURATED_HUES} saturated hues per Look`,
-    check: (cx) =>
-      sceneCheck(
-        looks(cx),
-        (s) => {
-          const { degrees, slots } = hueClusters(lookState(s, cx.show.colourSets));
-          const n = degrees.length + slots.length;
-          return n > MAX_SATURATED_HUES ? `${n} saturated hues` : undefined;
-        },
-        'no Look sets a colour',
-      ),
-  },
-  {
     item: 2,
-    title: 'Hue pairs are complementary or analogous, not near-miss',
+    title: 'Primary and Secondary are complementary or analogous, not near-miss',
     check: checkPairs,
-  },
-  {
-    item: 3,
-    title: 'Front light is pale in every tier Look (file half)',
-    check: (cx) => {
-      const scenes = tierLooks(cx).filter(
-        (s) => lookState(s, cx.show.colourSets).front.intensity > 0,
-      );
-      return sceneCheck(
-        scenes,
-        (s) => {
-          const tone = lookState(s, cx.show.colourSets).front.tone;
-          if (tone.kind === 'hue') return 'saturated front';
-          return tone.kind === 'tint' ? 'front is not pale' : undefined;
-        },
-        needsTier,
-      );
-    },
   },
   {
     item: 4,
@@ -307,16 +247,6 @@ const ITEMS: { item: number; title: string; check: Check }[] = [
             : undefined;
         },
         'no Chill Look',
-      ),
-  },
-  {
-    item: 7,
-    title: 'No Movement, Pulse or Colour FX Scene targets the front',
-    check: (cx) =>
-      sceneCheck(
-        dynamicScenes(cx),
-        (s) => (targetsFront(s) ? 'targets the front' : undefined),
-        'no dynamic Scene',
       ),
   },
   {
@@ -356,7 +286,11 @@ const ITEMS: { item: number; title: string; check: Check }[] = [
     title: 'Base is neutral and still, Dark exists, a still Movement per tier',
     check: checkBasics,
   },
-  { item: 17, title: 'Few Looks per tier', check: checkLookCount },
+  {
+    item: 17,
+    title: 'Variety: Scenes per Layer, Hits, Colour Sets, Set roles',
+    check: checkVariety,
+  },
 ];
 
 const nearMiss = (gap: number): boolean => gap >= NEAR_MISS_DEG[0] && gap <= NEAR_MISS_DEG[1];
@@ -367,59 +301,30 @@ function setHue(colour: Colour): number | undefined {
   return tone.kind === 'hue' ? tone.hue : undefined;
 }
 
-// Plain-hue Looks with two hues, each Colour Set's Primary and Secondary, and
-// each Look that lights both slots, under every set.
+// Each Colour Set's Primary and Secondary.
 function checkPairs(cx: Context): Omit<ItemResult, 'item' | 'title'> {
   const offenders: string[] = [];
   let checks = 0;
-  const all = looks(cx);
-  for (const s of all) {
-    const { degrees, slots } = hueClusters(lookState(s, cx.show.colourSets));
-    if (degrees.length !== 2 || slots.length !== 0) continue;
-    checks++;
-    const gap = hueGap(degrees[0]!, degrees[1]!);
-    if (nearMiss(gap)) offenders.push(`${s.name}: hues ${Math.round(gap)} degrees apart`);
-  }
-  const sets = (cx.show.colourSets ?? []).flatMap((set) => {
+  for (const set of cx.show.colourSets ?? []) {
     const [a, b] = [setHue(set.colours.Primary), setHue(set.colours.Secondary)];
-    return a === undefined || b === undefined ? [] : [{ name: set.name, gap: hueGap(a, b) }];
-  });
-  for (const set of sets) {
+    if (a === undefined || b === undefined) continue;
     checks++;
-    if (nearMiss(set.gap)) {
+    const gap = hueGap(a, b);
+    if (nearMiss(gap)) {
       offenders.push(
-        `Colour Set ${set.name}: Primary and Secondary ${Math.round(set.gap)} degrees apart`,
+        `Colour Set ${set.name}: Primary and Secondary ${Math.round(gap)} degrees apart`,
       );
-    }
-  }
-  const slotted = all.filter((s) => {
-    const { degrees, slots } = hueClusters(lookState(s, cx.show.colourSets));
-    return (
-      degrees.length === 0 && slots.includes('slot:Primary') && slots.includes('slot:Secondary')
-    );
-  });
-  for (const s of slotted) {
-    for (const set of sets) {
-      checks++;
-      if (nearMiss(set.gap)) {
-        offenders.push(`${s.name}: under ${set.name}, hues ${Math.round(set.gap)} degrees apart`);
-      }
     }
   }
   return result(
     grade(offenders.length, checks),
     offenders,
-    checks === 0 ? 'no Look or Colour Set has two plain hues' : undefined,
+    checks === 0 ? 'no Colour Set has two plain hues' : undefined,
   );
 }
 
 const pct = (n: number): string => `${Math.round(n * 100)}%`;
 const round = (n: number): number => Math.round(n * 100) / 100;
-
-function targetsFront(scene: Scene): boolean {
-  if (scene.tags.some((t) => t.startsWith('part:'))) return scene.tags.includes('part:front');
-  return scene.rules.some((r) => hasDynamicEffect(r) && targetCovers(r.target, 'front'));
-}
 
 function fadeBeats(scene: Scene): number {
   return scene.fadeUnit === 'beats' ? scene.fadeIn : (scene.fadeIn * REFERENCE_BPM) / 60;
@@ -561,33 +466,76 @@ function checkBasics(cx: Context): Omit<ItemResult, 'item' | 'title'> {
   return result(grade(offenders.length, checks), offenders);
 }
 
-function checkLookCount(cx: Context): Omit<ItemResult, 'item' | 'title'> {
+/** A song's Colour Set roles, as set names. */
+export interface SongRoles {
+  song: string;
+  main: string;
+  break: string;
+  swap: string;
+}
+
+// Variety: the tier Scenes each dynamic Layer offers, the Hits, the Colour Sets
+// and, when the Cue Sheet's songs are known, a distinct Main, Break and Swap per
+// song. Counts are targets: a venue without a part gets fewer Scenes.
+function checkVariety(cx: Context): Omit<ItemResult, 'item' | 'title'> {
   const offenders: string[] = [];
-  let tiers = 0;
-  for (const tier of TIERS) {
-    const scenes = tierLooks(cx).filter((s) => tierOf(s) === tier);
-    if (scenes.length === 0) continue;
-    tiers++;
-    if (scenes.length > MAX_LOOKS_PER_TIER) {
-      offenders.push(
-        `${scenes[0]!.name}: ${scenes.length} Looks in ${tier}, at most ${MAX_LOOKS_PER_TIER}`,
-      );
+  const dynamic = dynamicScenes(cx).filter((s) => tierOf(s) !== undefined);
+  const tiers = TIERS.filter((t) => cx.show.scenes.some((s) => tierOf(s) === t));
+  const layers = [...new Set(dynamic.map((s) => s.layer))];
+  if (layers.length === 0 || tiers.length === 0) {
+    return result(null, [], 'no tiered dynamic Scene');
+  }
+  let fewest = Infinity;
+  for (const layer of layers) {
+    for (const tier of tiers) {
+      const n = dynamic.filter((s) => s.layer === layer && tierOf(s) === tier).length;
+      fewest = Math.min(fewest, n);
+      if (n < VARIETY.scenesPerLayer) {
+        offenders.push(`${layer} in ${tier}: ${n} Scenes, wants ${VARIETY.scenesPerLayer}`);
+      }
     }
   }
-  return result(grade(offenders.length, tiers), offenders, tiers === 0 ? needsTier : undefined);
+  const hits = cx.hits.size;
+  if (hits < VARIETY.hits) offenders.push(`${hits} Hits, wants ${VARIETY.hits}`);
+  const sets = cx.show.colourSets?.length ?? 0;
+  if (sets < VARIETY.colourSets) offenders.push(`${sets} Colour Sets, wants ${VARIETY.colourSets}`);
+  let rolesOk = true;
+  for (const { song, main, break: brk, swap } of cx.songs ?? []) {
+    if (new Set([main, brk, swap]).size < 3) {
+      rolesOk = false;
+      offenders.push(`${song}: Main, Break and Swap are not distinct`);
+    }
+  }
+  const full = fewest >= VARIETY.scenesPerLayer && hits >= VARIETY.hits;
+  const score: Score =
+    full && sets >= VARIETY.colourSets && rolesOk ? 2 : fewest >= VARIETY.partialScenes ? 1 : 0;
+  return result(
+    score,
+    offenders,
+    cx.songs === undefined ? 'Set roles not checked: no Song sets table' : undefined,
+  );
 }
 
 // ---------------------------------------------------------------- the report
 
 /** Scores a Show. Beat-rate strobes are read at `bpm`. */
-export function lintShow(show: Show, bpm = REFERENCE_BPM): LintReport {
+export function lintShow(
+  show: Show,
+  bpm = REFERENCE_BPM,
+  songs?: readonly SongRoles[],
+): LintReport {
   const flash = new Set<string>();
   const go = new Set<string>();
   for (const t of show.triggers) {
     if (t.mode === 'flash') flash.add(t.scene);
     if (t.mode === 'go') go.add(t.scene);
   }
-  const cx: Context = { show, bpm, hits: new Set([...flash].filter((id) => !go.has(id))) };
+  const cx: Context = {
+    show,
+    bpm,
+    hits: new Set([...flash].filter((id) => !go.has(id))),
+    songs,
+  };
   const items = ITEMS.map(({ item, title, check }) => ({ item, title, ...check(cx) }));
   const scoredItems = items.filter((i) => i.score !== null);
   return {
@@ -599,7 +547,7 @@ export function lintShow(show: Show, bpm = REFERENCE_BPM): LintReport {
   };
 }
 
-/** Whether `--strict` fails the report: an item 3, 4 or 11 scored 0. */
+/** Whether `--strict` fails the report: an item 4 or 11 scored 0. */
 export function failsStrict(report: LintReport): boolean {
   return report.items.some(
     (i) => (STRICT_ITEMS as readonly number[]).includes(i.item) && i.score === 0,
@@ -625,6 +573,38 @@ export function formatReport(name: string, report: LintReport): string {
   return lines.join('\n');
 }
 
+/** The Song sets table of the Cue Sheet beside `file` (`<name> cue sheet.md`), if there is one. */
+export function parseSongSets(markdown: string): SongRoles[] | undefined {
+  const lines = markdown.split('\n');
+  const at = lines.findIndex((l) => /^#+\s*Song sets\s*$/i.test(l));
+  if (at < 0) return undefined;
+  const label = (cell: string): string => cell.replace(/\s*\([A-G][#b]?-?\d+\)\s*$/, '').trim();
+  const rows: SongRoles[] = [];
+  for (const line of lines.slice(at + 1)) {
+    if (/^#/.test(line)) break;
+    const cells = line
+      .split('|')
+      .slice(1, -1)
+      .map((c) => c.trim());
+    if (cells.length !== 4 || /^-+$/.test(cells[0]!) || cells[0] === 'Song') continue;
+    rows.push({
+      song: cells[0]!,
+      main: label(cells[1]!),
+      break: label(cells[2]!),
+      swap: label(cells[3]!),
+    });
+  }
+  return rows;
+}
+
+function songRolesBeside(file: string, read: (path: string) => string): SongRoles[] | undefined {
+  try {
+    return parseSongSets(read(file.replace(/\.lcshow$/, '') + ' cue sheet.md'));
+  } catch {
+    return undefined;
+  }
+}
+
 const USAGE = 'Usage: npm run show:lint -- <file.lcshow> [--strict] [--bpm <n>]';
 
 /** The command: lints a Show file. Returns the exit code. */
@@ -646,6 +626,6 @@ export function runLint(
   const bpm = values.bpm === undefined ? REFERENCE_BPM : Number(values.bpm);
   const [file, ...extra] = positionals;
   if (file === undefined || extra.length > 0 || !(bpm > 0)) throw new Error(USAGE);
-  const report = lintShow(loadShowFile(read(file)), bpm);
+  const report = lintShow(loadShowFile(read(file)), bpm, songRolesBeside(file, read));
   return { text: formatReport(file, report), code: values.strict && failsStrict(report) ? 1 : 0 };
 }

@@ -1,6 +1,6 @@
 // Scores a Show file against the aesthetic rubric, from scripts/make-shows/show-lint.ts.
 // Usage: npm run show:lint -- <file.lcshow> [--strict] [--bpm <n>]
-// Report-only. With --strict, exits 1 when item 3, 4 or 11 scores 0.
+// Report-only. With --strict, exits 1 when item 4 or 11 scores 0.
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { runnerImport } from 'vite';

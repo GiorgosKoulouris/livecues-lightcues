@@ -77,8 +77,11 @@ export const UNLIT_FRONT_NAME = /silhouette|dark|walk-on|blackout/i;
 // L3, M5: the Dark Scene.
 export const DARK_NAME = /(^|[^a-z])dark([^a-z]|$)/i;
 
-// D11, D12: Looks a tier offers to pick from.
-export const MAX_LOOKS_PER_TIER = 8;
+// ADR 0023: what the Variety lint asks of a generated Show. 2 needs
+// `scenesPerLayer` Scenes on every dynamic Layer in every tier, `hits` Hits,
+// `colourSets` Colour Sets and a distinct Main, Break and Swap per song. 1 needs
+// `partialScenes` per Layer per tier.
+export const VARIETY = { scenesPerLayer: 6, partialScenes: 4, hits: 15, colourSets: 6 } as const;
 
 /** A lower-case, hyphenated form of `text`, for Scene and Colour Set ids. */
 export const slugOf = (text: string): string =>
@@ -169,10 +172,6 @@ export function targetCovers(target: RuleTarget, part: Part): boolean {
 
 // ---------------------------------------------------------------- colour
 
-// P1: saturated hues in one Look, White not counted.
-export const MAX_SATURATED_HUES = 2;
-// Hues this close, in degrees, count as one.
-export const HUE_MERGE_DEG = 15;
 // "Pale" is at most this saturation. "Saturated" is at least the next.
 export const PALE_MAX_SATURATION = 0.3;
 export const SATURATED_MIN_SATURATION = 0.6;

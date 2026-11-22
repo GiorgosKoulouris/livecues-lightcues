@@ -18,7 +18,7 @@ import {
   tierRecipes,
 } from './generate';
 import { TIER_BANDS, TIERS } from './rules';
-import { lintShow, tierOf } from './show-lint';
+import { lintShow, parseSongSets, tierOf } from './show-lint';
 import { venueCheckLines } from './write';
 
 const fixture = (name: string) => new URL(`./fixtures/${name}`, import.meta.url);
@@ -219,15 +219,15 @@ describe('the sample Show', () => {
       expect(line).toContain('strobe approximated (noStrobeChannel) in 1 Scene');
   });
 
-  it('scores every lint item 2 but items 3 and 7, so items 4 and 11 pass', () => {
-    // Items 3 (front pale) and 7 (no dynamic Scene on the front) are superseded by
-    // ADR 0023 and leave the lint with the Variety work (.scratch/show-variety,
-    // issue 05). The front now takes slot colours, Pulse and Colour FX.
+  it('scores every lint item 2 but Variety, held at 1 by the sample venue', () => {
+    const songs = parseSongSets(files.cueSheet);
+    expect(songs?.length).toBe(sample.brief.songs.length);
     for (const bpm of [120, 154, 200]) {
-      const report = lintShow(show, bpm);
-      expect(report.scored).toBe(13);
-      for (const i of report.items.filter((x) => x.item !== 3 && x.item !== 7)) {
-        expect(i.score, `item ${i.item} at ${bpm} BPM`).toBe(2);
+      const report = lintShow(show, bpm, songs);
+      expect(report.scored).toBe(10);
+      // The sample venue lacks a part, so Colour FX has 5 Scenes a tier, not 6: Variety 1.
+      for (const i of report.items) {
+        expect(i.score, `item ${i.item} at ${bpm} BPM`).toBe(i.item === 17 ? 1 : 2);
       }
     }
   });
