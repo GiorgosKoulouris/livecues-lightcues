@@ -13,11 +13,11 @@ import {
   type Show,
 } from '../../src/shared/show';
 import { fitSpeedLimit } from '../../src/shared/speed-limit';
-import { DEFAULT_RIG, loadBrief, type Brief } from './brief';
+import { DEFAULT_RIG, loadBrief, type Brief, type VenueSummary } from './brief';
 import { stepFlashLength, stepMovement } from './dynamics';
 import { generate, generateFiles } from './generate';
 import { flashHz, targetCovers, TIER_BANDS, TIERS, type Tier } from './rules';
-import { lintShow, tierOf } from './show-lint';
+import { dynamicKinds, lintShow, tierOf } from './show-lint';
 
 const fixture = (name: string) => new URL(`./fixtures/${name}`, import.meta.url);
 const sample = loadBrief(fileURLToPath(fixture('sample-brief.yaml')));
@@ -26,6 +26,21 @@ const show = loadShowFile(files.show);
 const scene = (id: string): Scene => show.scenes.find((s) => s.id === id)!;
 const onLayer = (s: Show, layer: string): Scene[] => s.scenes.filter((sc) => sc.layer === layer);
 const DYNAMIC = ['movement', 'pulse', 'colour-fx'];
+const effectGroup = {
+  role: 'Effect',
+  zone: { row: 'Upstage', column: 'Centre', level: 'Overhead' },
+  count: 2,
+  moving: 0,
+} as const;
+/** Every part, and prism and gobo beams. */
+const FULL_RIG: VenueSummary = {
+  ...DEFAULT_RIG,
+  groups: [...DEFAULT_RIG.groups, effectGroup],
+  prism: true,
+  gobo: true,
+};
+const full = generate(sample.brief, FULL_RIG);
+const inTier = (scenes: Scene[], tier: Tier): Scene[] => scenes.filter((s) => tierOf(s) === tier);
 const briefAt = (bpm: number, extra: Partial<Brief> = {}): Brief => ({
   ...sample.brief,
   ...extra,
@@ -55,28 +70,78 @@ describe('Movement, Pulse and Colour FX', () => {
     ]);
   });
 
-  it('leaves out front washes that are movers (M1)', () => {
+  it('leaves Movement off front washes that are movers (M1)', () => {
     const patch = loadVenueFile(readFileSync(fixture('sample-venue.lcvenue'), 'utf8'));
     const movers = patch.fixtures.filter((f) => f.id.startsWith('front-mover'));
     expect(movers).toHaveLength(2);
     expect(sample.venue.movingFrontWashes).toBe(2);
-    for (const layer of DYNAMIC) {
-      for (const s of onLayer(show, layer)) {
-        for (const rule of s.rules) {
-          expect(targetCovers(rule.target, 'front'), `${s.name} targets the front`).toBe(false);
-          for (const mover of movers) {
-            expect(ruleTargets(patch, mover, rule), `${s.name} aims at ${mover.id}`).toBe(false);
-          }
+    for (const s of onLayer(show, 'movement')) {
+      for (const rule of s.rules) {
+        expect(targetCovers(rule.target, 'front'), `${s.name} targets the front`).toBe(false);
+        for (const mover of movers) {
+          expect(ruleTargets(patch, mover, rule), `${s.name} aims at ${mover.id}`).toBe(false);
         }
       }
     }
     expect(files.cueSheet).toContain('2 front washes are movers.');
   });
 
-  it('keeps Pulse and Colour FX off the front (M1)', () => {
-    for (const s of [...onLayer(show, 'pulse'), ...onLayer(show, 'colour-fx')]) {
-      expect(s.tags).toContain('dynamic');
-      expect(s.tags).not.toContain('part:front');
+  it('gives every tier at least 6 Scenes on Movement, Pulse and Colour FX', () => {
+    for (const layer of DYNAMIC) {
+      for (const tier of TIERS) {
+        const n = inTier(onLayer(full.show, layer), tier).length;
+        expect(n, `${tier} ${layer}`).toBeGreaterThanOrEqual(6);
+      }
+    }
+  });
+
+  it('puts Move+FX combos (intensity on the beams) and a still in each Movement tier', () => {
+    for (const tier of TIERS) {
+      const scenes = inTier(onLayer(full.show, 'movement'), tier);
+      const combos = scenes.filter((s) => dynamicKinds(s) === 2);
+      expect(combos.length, tier).toBeGreaterThanOrEqual(2);
+      for (const c of combos) {
+        const fx = c.rules.filter((r) => r.intensityEffect !== undefined);
+        expect(fx.length).toBeGreaterThan(0);
+        for (const r of fx) {
+          expect(r.target.roles).toEqual(['Spot/Beam']);
+        }
+      }
+      expect(scenes.filter((s) => !s.tags.includes('dynamic'))).toHaveLength(1);
+    }
+  });
+
+  it('has Pulse and Colour FX Scenes on the front in every tier', () => {
+    for (const layer of ['pulse', 'colour-fx']) {
+      for (const tier of TIERS) {
+        const scenes = inTier(onLayer(full.show, layer), tier);
+        const front = scenes.filter((s) => s.rules.some((r) => targetCovers(r.target, 'front')));
+        expect(front.length, `${tier} ${layer}`).toBeGreaterThan(0);
+        for (const s of front) expect(s.tags).toContain('part:front');
+      }
+    }
+  });
+
+  it('has Pulse on every part and on everything', () => {
+    for (const tier of TIERS) {
+      const parts = new Set(
+        inTier(onLayer(full.show, 'pulse'), tier).flatMap((s) =>
+          s.tags.filter((t) => t.startsWith('part:')),
+        ),
+      );
+      expect([...parts].sort(), tier).toEqual([
+        'part:back',
+        'part:beams',
+        'part:floor',
+        'part:front',
+        'part:fx',
+      ]);
+      expect(
+        inTier(onLayer(full.show, 'pulse'), tier).some(
+          (s) => s.tags.filter((t) => t.startsWith('part:')).length === 5,
+        ),
+        tier,
+      ).toBe(true);
     }
   });
 
@@ -134,17 +199,12 @@ describe('Movement, Pulse and Colour FX', () => {
     for (const spread of spreads('peak')) expect(['Mirrored', 'Edges→Centre']).toContain(spread);
   });
 
-  it('offers no more dynamic Layers in a tier than its stacking cap (M4)', () => {
-    for (const tier of TIERS) {
-      const layers = new Set(
-        show.scenes
-          .filter((s) => DYNAMIC.includes(s.layer) && s.tags.includes('dynamic'))
-          .filter((s) => tierOf(s) === tier)
-          .map((s) => s.layer),
-      );
-      expect(layers.size, tier).toBeLessThanOrEqual(TIER_BANDS[tier].maxDynamic);
+  it('keeps every Scene inside its tier stacking cap (M4: Chill 2, Groove 3, Drive 3, Peak 4)', () => {
+    expect(TIERS.map((t) => TIER_BANDS[t].maxDynamic)).toEqual([2, 3, 3, 4]);
+    for (const s of full.show.scenes.filter((sc) => DYNAMIC.includes(sc.layer))) {
+      expect(dynamicKinds(s), s.name).toBeLessThanOrEqual(TIER_BANDS[tierOf(s)!].maxDynamic);
     }
-    expect(lintShow(show).items.find((i) => i.item === 9)?.score).toBe(2);
+    expect(lintShow(full.show).items.find((i) => i.item === 9)?.score).toBe(2);
   });
 
   it('lists the recommended combos per section type in the Cue Sheet', () => {
@@ -153,6 +213,9 @@ describe('Movement, Pulse and Colour FX', () => {
       expect(files.cueSheet).toContain(row);
     }
     expect(files.cueSheet).toContain('Drive: Fan or Drive: Texture');
+    expect(files.cueSheet).toContain(
+      'Keep to the cap for the tier: Chill 2 dynamic Layers, Groove 3, Drive 3, Peak 4.',
+    );
   });
 
   it('drops options the rig has no parts for', () => {
@@ -166,31 +229,99 @@ describe('Movement, Pulse and Colour FX', () => {
     expect(dynamic.length).toBeGreaterThan(0);
     for (const s of dynamic) expect(s.tags).not.toContain('part:beams');
     expect(g.show.scenes.some((s) => s.id === 'pulse-drive-beam-square')).toBe(false);
+    expect(g.show.scenes.some((s) => s.id === 'movement-peak-fan-pulse')).toBe(false);
   });
 
-  it('builds no Movement, Pulse or Colour FX for a rig with only front washes', () => {
+  it('builds only Pulse and Colour FX for a rig with only front washes', () => {
     const rig = {
       ...DEFAULT_RIG,
       groups: DEFAULT_RIG.groups.filter((g) => g.zone.row === 'Front'),
     };
     const g = generate(sample.brief, rig);
     expect(validateShow(g.show)).toEqual([]);
-    expect(g.show.layers.map((l) => l.id)).toEqual(['look', 'hit']);
-    expect(g.show.triggers.some((t) => t.channel > 1 && t.mode === 'release')).toBe(false);
+    expect(g.show.layers.map((l) => l.id)).toEqual(['look', 'pulse', 'colour-fx', 'hit']);
+    for (const s of g.show.scenes.filter((sc) => DYNAMIC.includes(sc.layer))) {
+      expect(s.tags.filter((t) => t.startsWith('part:'))).toEqual(['part:front']);
+    }
+    expect(g.show.triggers.filter((t) => t.channel > 1 && t.mode === 'release')).toHaveLength(2);
   });
 });
 
 describe('Hits', () => {
   const hits = onLayer(show, 'hit');
 
-  it('has a Blinder, a Strobe, a Blackout and Rolls (R5, R6, L4)', () => {
-    expect(hits.map((s) => s.name)).toEqual([
+  it('has the Core Hits (R5, R6, L4)', () => {
+    expect(hits.slice(0, 5).map((s) => s.name)).toEqual([
       'Hit: Blinder',
       'Hit: Strobe',
       'Hit: Blackout',
       'Hit: Riser',
       'Hit: Roll',
     ]);
+  });
+
+  it('has at least 18 Hits with all parts and prism and gobo beams', () => {
+    const all = onLayer(full.show, 'hit');
+    expect(all.length).toBeGreaterThanOrEqual(18);
+    expect(new Set(all.map((s) => s.id)).size).toBe(all.length);
+    expect(validateShow(full.show)).toEqual([]);
+  });
+
+  it('has a punch per part, left, right, front and back, in white', () => {
+    const names = onLayer(full.show, 'hit').map((s) => s.name);
+    for (const n of ['front', 'back', 'floor', 'beams', 'fx'].map((p) => `Hit: Punch ${p}`)) {
+      expect(names).toContain(n);
+    }
+    for (const n of ['left', 'right', 'front', 'back'].map((p) => `Hit: Side ${p}`)) {
+      expect(names).toContain(n);
+    }
+  });
+
+  it('makes Colour hits from slots, so they follow the held Colour Set', () => {
+    const colour = onLayer(full.show, 'hit').filter((s) => s.tags.includes('kind:colour'));
+    expect(colour.length).toBeGreaterThanOrEqual(3);
+    for (const s of colour) {
+      for (const r of s.rules) expect(isSlotRef(r.colour as RuleColour), s.name).toBe(true);
+    }
+    const slots = colour.flatMap((s) => s.rules.map((r) => (r.colour as { slot: string }).slot));
+    expect(new Set(slots)).toEqual(new Set(['Primary', 'Secondary', 'Accent']));
+  });
+
+  it('keeps Hits Flash-only and short: no Effect longer than 2 beats except the Riser', () => {
+    for (const s of onLayer(full.show, 'hit')) {
+      if (s.id === 'hit-riser') continue;
+      for (const r of s.rules) {
+        const e = r.intensityEffect;
+        if (e !== undefined && e !== NO_EFFECT) expect(e.length, s.name).toBeLessThanOrEqual(2);
+      }
+    }
+  });
+
+  it('omits the Prism and Gobo Hits, and says so, when the venue has neither', () => {
+    const none = generate(sample.brief, { ...FULL_RIG, prism: false, gobo: false });
+    const hitIds = onLayer(none.show, 'hit').map((s) => s.id);
+    expect(hitIds.some((id) => /prism|gobo/.test(id))).toBe(false);
+    expect(none.skipped.some((t) => /Prism and Gobo/.test(t))).toBe(true);
+    expect(onLayer(none.show, 'hit').length).toBeGreaterThanOrEqual(15);
+    const onlyGobo = generate(sample.brief, { ...FULL_RIG, prism: false });
+    const ids = onLayer(onlyGobo.show, 'hit').map((s) => s.id);
+    expect(ids).toContain('hit-gobo-beams');
+    expect(ids).not.toContain('hit-prism-burst');
+    expect(ids).not.toContain('hit-gobo-prism');
+  });
+
+  it('groups Hits by kind in the Cue Sheet', () => {
+    const sheet = generateFiles(sample.brief, FULL_RIG).cueSheet;
+    const at = (t: string) => sheet.indexOf(t);
+    const heads = [
+      '#### Core',
+      '#### Target punches',
+      '#### Side and depth',
+      '#### Colour',
+      '#### Prism and Gobo',
+    ];
+    for (const h of heads) expect(at(h), h).toBeGreaterThan(0);
+    expect(heads.map(at)).toEqual([...heads.map(at)].sort((a, b) => a - b));
   });
 
   it('fires every Hit by Flash and nothing else', () => {

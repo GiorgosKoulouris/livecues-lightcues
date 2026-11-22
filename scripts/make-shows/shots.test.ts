@@ -43,15 +43,16 @@ describe('keyShots', () => {
     expect(find('base')?.scenes).toEqual(['Base']);
   });
 
-  it('builds the chorus combo from Drive Scenes within the cap of 2 dynamic Layers', () => {
+  it('builds the chorus combo from Drive Scenes within the cap of 3 dynamic Layers', () => {
     expect(find('chorus-combo')?.scenes).toEqual([
       'Drive: Chorus',
       'Drive: Fan',
       'Drive: Beat Pulse',
+      'Drive: Back Step',
     ]);
   });
 
-  it('builds the peak combo within the cap of 3 dynamic Layers', () => {
+  it('builds the peak combo within the cap of 4 dynamic Layers', () => {
     expect(find('peak-combo')?.scenes).toEqual([
       'Peak: Everything',
       'Peak: Wide Fan',

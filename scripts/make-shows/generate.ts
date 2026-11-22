@@ -51,6 +51,7 @@ import {
   DYNAMIC_LAYERS,
   dynamicEntries,
   dynamicReleases,
+  hitSkips,
   layersWithScenes,
   LOOK_LAYER,
   type Entry,
@@ -454,7 +455,14 @@ export function generate(brief: Brief, venue: VenueSummary): Generated {
   const omitted = PARTS.filter((p) => !present.includes(p));
   const plan = colourSets(brief);
   const { entries: looks, skipped } = lookEntries(venue, present);
-  const dynamic = dynamicEntries({ present, bpm: fastestBpm(brief), strobeHz: brief.strobeHz });
+  const cx = {
+    present,
+    bpm: fastestBpm(brief),
+    strobeHz: brief.strobeHz,
+    prism: venue.prism,
+    gobo: venue.gobo,
+  };
+  const dynamic = dynamicEntries(cx);
   const entries = [...looks, ...dynamic];
   const base = entries.some((e) => e.scene.id === 'base');
   const triggers: Trigger[] = [
@@ -473,7 +481,14 @@ export function generate(brief: Brief, venue: VenueSummary): Generated {
     })),
     strobeCap: brief.strobeHz,
   };
-  return { show, entries, colourSets: plan, omitted, skipped, venue };
+  return {
+    show,
+    entries,
+    colourSets: plan,
+    omitted,
+    skipped: [...skipped, ...hitSkips(cx)],
+    venue,
+  };
 }
 
 // ---------------------------------------------------------------- Cue Sheet
@@ -531,7 +546,7 @@ function cueSheet(brief: Brief, g: Generated): string {
     ...g.skipped.map((s) => `- Scene left out: ${s}.`),
     ...(g.venue.movingFrontWashes > 0
       ? [
-          `- ${g.venue.movingFrontWashes} front wash${g.venue.movingFrontWashes === 1 ? ' is a mover' : 'es are movers'}. Movement, Pulse and Colour FX leave the front out, so they hold still.`,
+          `- ${g.venue.movingFrontWashes} front wash${g.venue.movingFrontWashes === 1 ? ' is a mover' : 'es are movers'}. Movement leaves them out, so they hold still.`,
         ]
       : []),
   ];
@@ -541,26 +556,35 @@ function cueSheet(brief: Brief, g: Generated): string {
   const hasRelease = (channel: number) =>
     show.triggers.some((t) => t.mode === 'release' && t.channel === channel);
   const noteMap = (channel: number, title: string): string => {
-    const rows = g.entries
-      .filter((e) => e.channel === channel)
-      .sort((a, b) => a.note - b.note)
-      .map((e) => {
-        const s = e.scene;
-        const mode = { go: 'Go', flash: 'Flash', release: 'Release' }[e.mode];
-        return `| ${noteName(e.note)} | ${e.note} | ${s.name} | ${mode} | ${beatsOrSeconds(s.fadeIn, s.fadeUnit)} | ${s.fadeOut === undefined ? 'snap' : beatsOrSeconds(s.fadeOut, s.fadeOutUnit)} | ${e.about} | ${s.tags.join(' ')} |`;
-      });
-    if (rows.length === 0) return '';
+    const entries = g.entries.filter((e) => e.channel === channel).sort((a, b) => a.note - b.note);
+    const row = (e: Entry) => {
+      const s = e.scene;
+      const mode = { go: 'Go', flash: 'Flash', release: 'Release' }[e.mode];
+      return `| ${noteName(e.note)} | ${e.note} | ${s.name} | ${mode} | ${beatsOrSeconds(s.fadeIn, s.fadeUnit)} | ${s.fadeOut === undefined ? 'snap' : beatsOrSeconds(s.fadeOut, s.fadeOutUnit)} | ${e.about} | ${s.tags.join(' ')} |`;
+    };
+    if (entries.length === 0) return '';
     const release = hasRelease(channel)
       ? [
           `| ${noteName(0)} | 0 | — | Release | | | ${channel === CH.look ? 'Release Look: back to the Base Look' : `Release ${title}: no ${title} Effect`} | |`,
         ]
       : [];
-    return `### Channel ${channel}: ${title}
-
-| Note | # | Scene | Mode | Fade in | Fade out | What it does | Tags |
-|---|---|---|---|---|---|---|---|
-${[...release, ...rows].join('\n')}
-`;
+    const head = `| Note | # | Scene | Mode | Fade in | Fade out | What it does | Tags |
+|---|---|---|---|---|---|---|---|`;
+    // Hits are grouped by kind, each kind with its own table.
+    const kinds = [...new Set(entries.map((e) => e.group).filter((k) => k !== undefined))];
+    const tables =
+      kinds.length === 0
+        ? `${head}\n${[...release, ...entries.map(row)].join('\n')}\n`
+        : kinds
+            .map(
+              (kind) =>
+                `#### ${kind}\n\n${head}\n${entries
+                  .filter((e) => e.group === kind)
+                  .map(row)
+                  .join('\n')}\n`,
+            )
+            .join('\n');
+    return `### Channel ${channel}: ${title}\n\n${tables}`;
   };
   const noteMaps = [
     [CH.look, 'Look'],
@@ -581,6 +605,8 @@ ${[...release, ...rows].join('\n')}
       .map((id) => nameOf.get(id)!)
       .join(joiner) || 'none';
   const then = (text: string, suffix: string): string => (text === 'none' ? text : text + suffix);
+  const caps = TIERS.map((t) => TIER_BANDS[t].maxDynamic);
+  const capsText = `Chill ${caps[0]} dynamic Layers, Groove ${caps[1]}, Drive ${caps[2]}, Peak ${caps[3]}`;
   const combos = [
     [
       'Intro',
@@ -593,45 +619,45 @@ ${[...release, ...rows].join('\n')}
       'Verse 1',
       'Chill Looks',
       pick(' or ', 'movement-chill-sway', 'movement-chill-still'),
-      'none (Chill allows 1 dynamic Layer)',
+      then(
+        pick(' or ', 'pulse-chill-back-breathe', 'colour-fx-chill-back-drift'),
+        ' (Chill allows 2)',
+      ),
       'none',
     ],
     [
       'Verse 2+',
       'Groove Looks',
       pick(' or ', 'movement-groove-wave', 'movement-groove-still'),
-      pick(' or ', 'colour-fx-groove-slow-fade'),
+      pick(' + ', 'pulse-groove-back-pulse', 'colour-fx-groove-slow-fade'),
       'none',
     ],
     [
       'Pre-chorus, build',
       'Groove, then Drive',
       pick(' or ', 'movement-groove-still', 'movement-drive-still'),
-      pick(' or ', 'pulse-drive-beat-pulse'),
+      pick(' or ', 'pulse-groove-quick-build', 'pulse-drive-beat-pulse'),
       then(pick(' or ', 'hit-riser'), ' in the last bar'),
     ],
     [
       'Chorus',
       'Drive Looks',
       pick(' or ', 'movement-drive-fan', 'movement-drive-texture'),
-      pick(' or ', 'pulse-drive-beat-pulse', 'pulse-drive-beam-square'),
+      pick(' + ', 'pulse-drive-beat-pulse', 'colour-fx-drive-back-step'),
       then(pick(' or ', 'hit-blinder'), ' on beat 1'),
     ],
     [
       'Last chorus, drop',
       'Peak Looks',
-      pick(' or ', 'movement-peak-wide-fan', 'movement-peak-mirror-circle'),
-      then(
-        pick(' + ', 'pulse-peak-beat-pulse', 'colour-fx-peak-colour-step'),
-        ' (3 Layers at most)',
-      ),
+      pick(' or ', 'movement-peak-fan-pulse', 'movement-peak-wide-fan'),
+      pick(' + ', 'pulse-peak-beat-pulse', 'colour-fx-peak-colour-step'),
       then(pick(' + ', 'hit-blinder', 'hit-strobe'), ' at the end'),
     ],
     [
       'Bridge',
       'Groove Looks, with the Break Colour Set',
       pick(' or ', 'movement-groove-wave'),
-      pick(' or ', 'colour-fx-groove-slow-fade'),
+      pick(' + ', 'pulse-groove-back-pulse', 'colour-fx-groove-slow-fade'),
       'none',
     ],
     [
@@ -693,16 +719,16 @@ Names follow \`<Tier>: <Name>\`. Tiers sit on two octaves each: Chill C1 (24), G
 ## How the Layers combine
 
 - Look (channel ${CH.look}): colour and intensity. Each Layer holds one Scene at a time.
-- Movement (channel ${CH.movement}), Pulse (channel ${CH.pulse}) and Colour FX (channel ${CH.colourfx}) add one kind of Effect each. They leave the front out. Colour FX use slot colours only. Each tier offers them on as many Layers as its stacking cap, so one of each at once stays inside it. A tier's Still Scene runs no Effect and does not count.
+- Movement (channel ${CH.movement}), Pulse (channel ${CH.pulse}) and Colour FX (channel ${CH.colourfx}) add Effects. Every tier offers all three. Movement leaves the front out (M1); Pulse and Colour FX take any part, the front included, or everything. Colour FX use slot colours only. A Move+FX Movement Scene adds an intensity Effect on the beams. A tier's Still Scene runs no Effect and does not count. The stacking cap is per cue: fire one Scene per Layer and add up the Effects.
 - Hit (channel ${CH.hit}): Flash only, held for 2 beats or less. A Hit may flash faster than the cap. Release restores what was under it.
 - Every Look and Effect is built from slots, so a Colour Set change recolours it at once, with the Scenes still active.
-- The front takes slot colours in Looks. Movement, Pulse and Colour FX leave it out for now. Fades are in beats.
+- The front takes slot colours in Looks, Pulse and Colour FX. Fades are in beats.
 - Scenes target Roles and Zones only, so the Show runs in any venue.
 - Movement is stepped up in length so it stays under the Speed limit at ${bpm} BPM, the fastest song.
 
 ## Recommended combos
 
-Fire one Scene per Layer. Keep to the cap for the tier: Chill 1 dynamic Layer, Groove 2, Drive 2, Peak 3.
+Fire one Scene per Layer. Keep to the cap for the tier: ${capsText}.
 
 | Section | Look | Movement | Pulse / Colour FX | Hits |
 |---|---|---|---|---|

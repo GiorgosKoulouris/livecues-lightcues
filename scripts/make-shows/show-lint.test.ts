@@ -47,6 +47,7 @@ function show(scenes: Scene[], extra: Partial<Show> = {}, triggers: Trigger[] = 
       { id: 'look', name: 'Look' },
       { id: 'dyn', name: 'Dyn' },
       { id: 'dyn2', name: 'Dyn 2' },
+      { id: 'dyn3', name: 'Dyn 3' },
     ],
     scenes,
     triggers,
@@ -364,14 +365,39 @@ describe('item 9: stacking', () => {
       { layer },
     );
 
-  it('passes a Groove tier with two dynamic Layers', () => {
-    expect(score(show([pulse('dyn', 'a', 'groove'), pulse('dyn2', 'b', 'groove')]), 9)).toBe(2);
+  it('passes a Groove tier with three dynamic Layers, one Effect each', () => {
+    const s = show([
+      pulse('dyn', 'a', 'groove'),
+      pulse('dyn2', 'b', 'groove'),
+      pulse('dyn3', 'c', 'groove'),
+    ]);
+    expect(score(s, 9)).toBe(2);
   });
 
-  it('fails a Chill tier that can stack two', () => {
-    const s = show([pulse('dyn', 'a', 'chill'), pulse('dyn2', 'b', 'chill')]);
+  it('fails a Chill Scene that runs three Effects at once', () => {
+    const busy = tiered(
+      'chill',
+      'busy',
+      [
+        {
+          target: BEAMS,
+          intensityEffect: { shape: 'Pulse', depth: 0.5, length: 8, spread: 'In sync' },
+          movementEffect: { shape: 'Fan', size: 12, length: 16, spread: 'In sync' },
+          colourEffect: {
+            shape: 'Fade',
+            colours: [{ slot: 'Primary' }, { slot: 'Secondary' }],
+            length: 16,
+            spread: 'In sync',
+          },
+        },
+      ],
+      { layer: 'dyn' },
+    );
+    const s = show([busy]);
     expect(score(s, 9)).toBe(0);
-    expect(offenders(s, 9)[0]).toMatch(/^chill: up to 2/);
+    expect(offenders(s, 9)[0]).toMatch(
+      /^chill: chill: busy runs 3 dynamic Effects at once \(cap 2\)/,
+    );
   });
 });
 

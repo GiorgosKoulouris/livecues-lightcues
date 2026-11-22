@@ -219,13 +219,14 @@ describe('the sample Show', () => {
       expect(line).toContain('strobe approximated (noStrobeChannel) in 1 Scene');
   });
 
-  it('scores every lint item 2 but item 3, so items 4 and 11 pass', () => {
-    // Item 3 (front pale) is superseded by ADR 0023 and leaves the lint with the
-    // Variety work (.scratch/show-variety, issue 05). The front now takes slot colours.
+  it('scores every lint item 2 but items 3 and 7, so items 4 and 11 pass', () => {
+    // Items 3 (front pale) and 7 (no dynamic Scene on the front) are superseded by
+    // ADR 0023 and leave the lint with the Variety work (.scratch/show-variety,
+    // issue 05). The front now takes slot colours, Pulse and Colour FX.
     for (const bpm of [120, 154, 200]) {
       const report = lintShow(show, bpm);
       expect(report.scored).toBe(13);
-      for (const i of report.items.filter((x) => x.item !== 3)) {
+      for (const i of report.items.filter((x) => x.item !== 3 && x.item !== 7)) {
         expect(i.score, `item ${i.item} at ${bpm} BPM`).toBe(2);
       }
     }

@@ -12,7 +12,9 @@ import { SWATCHES, type Swatch } from '../../src/shared/colour';
 import type { Role } from '../../src/shared/fixture-profile';
 import { ROLES } from '../../src/shared/fixture-profile';
 import { inPart, MOODS, STROBE_MAX_HZ, SWATCH_HUE, type Mood } from './rules';
+import { hasGobo, hasPrism } from '../../src/shared/gobo-prism';
 import {
+  fixtureMode,
   fixtureRole,
   fixtureZone,
   isMovingFixture,
@@ -241,6 +243,10 @@ export interface VenueSummary {
   movers: number;
   /** Moving Fixtures in the front part (wash Roles, front rows, Overhead). The generator keeps movement off them. */
   movingFrontWashes: number;
+  /** Whether a beam Fixture has a prism (or prism rotation). Prism Hits need it. */
+  prism: boolean;
+  /** Whether a beam Fixture has a gobo wheel with a gobo on it. Gobo Hits need it. */
+  gobo: boolean;
 }
 
 export interface VenueFilter {
@@ -269,6 +275,8 @@ interface Placed {
   role: Role;
   zone: Zone;
   moving: boolean;
+  prism?: boolean;
+  gobo?: boolean;
 }
 
 function summarise(source: VenueSummary['source'], placed: Placed[]): VenueSummary {
@@ -290,6 +298,8 @@ function summarise(source: VenueSummary['source'], placed: Placed[]): VenueSumma
     fixtures: placed.length,
     movers: placed.filter((p) => p.moving).length,
     movingFrontWashes: placed.filter((p) => p.moving && inPart('front', p.role, p.zone)).length,
+    prism: placed.some((p) => p.prism && inPart('beams', p.role, p.zone)),
+    gobo: placed.some((p) => p.gobo && inPart('beams', p.role, p.zone)),
   };
 }
 
@@ -310,11 +320,16 @@ export function summariseVenue(patch?: VenuePatch): VenueSummary {
   if (!patch) return DEFAULT_RIG;
   return summarise(
     'venue',
-    patch.fixtures.map((f) => ({
-      role: fixtureRole(patch, f),
-      zone: fixtureZone(patch, f),
-      moving: isMovingFixture(patch, f),
-    })),
+    patch.fixtures.map((f) => {
+      const { channels } = fixtureMode(patch, f);
+      return {
+        role: fixtureRole(patch, f),
+        zone: fixtureZone(patch, f),
+        moving: isMovingFixture(patch, f),
+        prism: hasPrism(channels),
+        gobo: hasGobo(channels),
+      };
+    }),
   );
 }
 

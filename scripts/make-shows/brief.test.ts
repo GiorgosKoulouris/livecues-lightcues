@@ -150,6 +150,15 @@ describe('summariseVenue', () => {
     expect(venue.movingFrontWashes).toBe(2);
   });
 
+  it('reports no prism or gobo for the default rig and for beams without them', () => {
+    expect(DEFAULT_RIG.prism).toBe(false);
+    expect(DEFAULT_RIG.gobo).toBe(false);
+    const venue = summariseVenue(patch);
+    // The fixture venue's beams have no prism or gobo wheel.
+    expect(venue.prism).toBe(false);
+    expect(venue.gobo).toBe(false);
+  });
+
   it('counts per Zone', () => {
     const venue = summariseVenue(patch);
     expect(venueCount(venue, { row: 'Front' })).toBe(6);

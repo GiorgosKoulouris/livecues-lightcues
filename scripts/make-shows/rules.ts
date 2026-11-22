@@ -33,7 +33,7 @@ export const TIER_BANDS: Record<Tier, TierBand> = {
   chill: {
     frontMin: 0.35,
     maxParts: 2,
-    maxDynamic: 1,
+    maxDynamic: 2,
     movementLength: [8, 16],
     movementSize: [8, 15],
     intensityLength: [4, 16],
@@ -42,7 +42,7 @@ export const TIER_BANDS: Record<Tier, TierBand> = {
   groove: {
     frontMin: 0.5,
     maxParts: 4,
-    maxDynamic: 2,
+    maxDynamic: 3,
     movementLength: [4, 8],
     movementSize: [15, 25],
     intensityLength: [1, 2],
@@ -51,7 +51,7 @@ export const TIER_BANDS: Record<Tier, TierBand> = {
   drive: {
     frontMin: 0.5,
     maxParts: 5,
-    maxDynamic: 2,
+    maxDynamic: 3,
     movementLength: [2, 4],
     movementSize: [25, 35],
     intensityLength: [0.5, 1],
@@ -60,7 +60,7 @@ export const TIER_BANDS: Record<Tier, TierBand> = {
   peak: {
     frontMin: 0.5,
     maxParts: 5,
-    maxDynamic: 3,
+    maxDynamic: 4,
     movementLength: [1, 4],
     movementSize: [35, 45],
     intensityLength: [0.5, 1],

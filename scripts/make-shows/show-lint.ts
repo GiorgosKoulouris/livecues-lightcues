@@ -480,6 +480,9 @@ function checkClimb(cx: Context): Omit<ItemResult, 'item' | 'title'> {
   return result(worst, offenders);
 }
 
+// A tier offers every dynamic Layer, so what can stack is bounded by the cue
+// (`lights:song` checks each cue against the cap), not by the Show. The Show
+// is held to what one Scene does alone: its Effect kinds may not pass the cap.
 function checkStacking(cx: Context): Omit<ItemResult, 'item' | 'title'> {
   const offenders: string[] = [];
   let tiers = 0;
@@ -487,17 +490,11 @@ function checkStacking(cx: Context): Omit<ItemResult, 'item' | 'title'> {
     const scenes = dynamicScenes(cx).filter((s) => tierOf(s) === tier);
     if (scenes.length === 0) continue;
     tiers++;
-    // The most dynamic Layers that can stack at once: each Layer holds one Scene,
-    // so it adds the kinds of its busiest Scene.
-    const byLayer = new Map<string, Scene[]>();
-    for (const s of scenes) byLayer.set(s.layer, [...(byLayer.get(s.layer) ?? []), s]);
-    let stack = 0;
-    for (const list of byLayer.values()) stack += Math.max(...list.map(dynamicKinds), 1);
     const cap = TIER_BANDS[tier].maxDynamic;
-    if (stack > cap) {
-      offenders.push(
-        `${tier}: up to ${stack} dynamic Effects can stack across ${byLayer.size} Layers (cap ${cap}), e.g. ${scenes[0]!.name}`,
-      );
+    const worst = scenes.reduce((a, b) => (dynamicKinds(b) > dynamicKinds(a) ? b : a));
+    const kinds = dynamicKinds(worst);
+    if (kinds > cap) {
+      offenders.push(`${tier}: ${worst.name} runs ${kinds} dynamic Effects at once (cap ${cap})`);
     }
   }
   return result(
