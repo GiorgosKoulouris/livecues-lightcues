@@ -466,6 +466,9 @@ function checkBasics(cx: Context): Omit<ItemResult, 'item' | 'title'> {
   return result(grade(offenders.length, checks), offenders);
 }
 
+// The dynamic Layers a generated Show has (the generator's Layer ids).
+const GENERATED_LAYERS = ['movement', 'pulse', 'colour-fx'] as const;
+
 /** A song's Colour Set roles, as set names. */
 export interface SongRoles {
   song: string;
@@ -481,8 +484,10 @@ function checkVariety(cx: Context): Omit<ItemResult, 'item' | 'title'> {
   const offenders: string[] = [];
   const dynamic = dynamicScenes(cx).filter((s) => tierOf(s) !== undefined);
   const tiers = TIERS.filter((t) => cx.show.scenes.some((s) => tierOf(s) === t));
-  const layers = [...new Set(dynamic.map((s) => s.layer))];
-  if (layers.length === 0 || tiers.length === 0) {
+  const generated = (cx.show.colourSets?.length ?? 0) > 0;
+  // A generated Show offers every dynamic Layer, so an absent one is a shortfall.
+  const layers = generated ? [...GENERATED_LAYERS] : [...new Set(dynamic.map((s) => s.layer))];
+  if (dynamic.length === 0 || tiers.length === 0) {
     return result(null, [], 'no tiered dynamic Scene');
   }
   let fewest = Infinity;
@@ -506,13 +511,18 @@ function checkVariety(cx: Context): Omit<ItemResult, 'item' | 'title'> {
       offenders.push(`${song}: Main, Break and Swap are not distinct`);
     }
   }
+  const rolesKnown = cx.songs !== undefined || !generated;
   const full = fewest >= VARIETY.scenesPerLayer && hits >= VARIETY.hits;
   const score: Score =
-    full && sets >= VARIETY.colourSets && rolesOk ? 2 : fewest >= VARIETY.partialScenes ? 1 : 0;
+    full && sets >= VARIETY.colourSets && rolesOk && rolesKnown
+      ? 2
+      : fewest >= VARIETY.partialScenes
+        ? 1
+        : 0;
   return result(
     score,
     offenders,
-    cx.songs === undefined ? 'Set roles not checked: no Song sets table' : undefined,
+    rolesKnown ? undefined : 'Set roles unknown (no Song sets table beside the file): at most 1',
   );
 }
 
@@ -600,8 +610,9 @@ export function parseSongSets(markdown: string): SongRoles[] | undefined {
 function songRolesBeside(file: string, read: (path: string) => string): SongRoles[] | undefined {
   try {
     return parseSongSets(read(file.replace(/\.lcshow$/, '') + ' cue sheet.md'));
-  } catch {
-    return undefined;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
+    throw error;
   }
 }
 

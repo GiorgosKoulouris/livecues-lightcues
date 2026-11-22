@@ -7,7 +7,7 @@ The `make-show` skill builds a band's Show from a Brief and checks it. It lives 
 1. Interview (no Front question: the front takes slot colours), then write `bands/<Band>/brief.yaml`.
 2. `npm run show:generate -- <brief.yaml>`, then `npm run show:lint -- <file.lcshow>`.
 3. `npm run show:shots -- <show.lcshow> <venue.lcvenue> --out <folder>`.
-4. Score rubric items 4, 6, 14 and 15 from the PNGs. Add the lint's ten items and report the total out of 28 (pass 23, items 4 and 11 at 2).
+4. Score rubric items 4, 6, 14 and 15 from the PNGs. Add the lint's ten items and report the total.
 5. Hand off to light-song.
 
 ## show:shots

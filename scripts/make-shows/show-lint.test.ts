@@ -378,22 +378,22 @@ describe('Variety (item 17)', () => {
     return show([...dynamics(perLayer), ...h], { colourSets: sets(setCount) }, t);
   };
   const songs = [{ song: 'A', main: 'M', break: 'B', swap: 'S' }];
+  const at = (s: Show) => lintShow(s, 120, songs).items.find((i) => i.item === 17)!;
 
   it('scores 2 with 6 Scenes per Layer per tier, 15 Hits and 6 Colour Sets', () => {
-    expect(score(full(), 17)).toBe(2);
     expect(lintShow(full(), 120, songs).items.find((i) => i.item === 17)!.score).toBe(2);
   });
 
   it('scores 1 with 4 Scenes per Layer, and 0 with 3', () => {
-    expect(score(full(4), 17)).toBe(1);
+    expect(at(full(4)).score).toBe(1);
     const s = full(3);
-    expect(score(s, 17)).toBe(0);
+    expect(at(s).score).toBe(0);
     expect(offenders(s, 17)[0]).toMatch(/^movement in chill: 3 Scenes/);
   });
 
   it('lowers the score for too few Hits or Colour Sets', () => {
-    expect(score(full(6, 14), 17)).toBe(1);
-    expect(score(full(6, 15, 5), 17)).toBe(1);
+    expect(at(full(6, 14)).score).toBe(1);
+    expect(at(full(6, 15, 5)).score).toBe(1);
   });
 
   it('lowers the score for a song whose Break equals its Main', () => {
@@ -401,6 +401,18 @@ describe('Variety (item 17)', () => {
     const r = lintShow(full(), 120, bad).items.find((i) => i.item === 17)!;
     expect(r.score).toBe(1);
     expect(r.offenders).toEqual(['A: Main, Break and Swap are not distinct']);
+  });
+
+  it('caps a generated Show at 1 when the Song sets table is unknown', () => {
+    expect(score(full(), 17)).toBe(1);
+  });
+
+  it('counts a generated Layer with no Scenes as a shortfall', () => {
+    const [h, t] = hits(15);
+    const noPulse = dynamics(6).filter((s) => s.layer !== 'pulse');
+    const s = show([...noPulse, ...h], { colourSets: sets(6) }, t);
+    expect(lintShow(s, 120, songs).items.find((i) => i.item === 17)!.score).toBe(0);
+    expect(offenders(s, 17)).toContain('pulse in chill: 0 Scenes, wants 6');
   });
 
   it('is not scored with no tiered dynamic Scene', () => {
