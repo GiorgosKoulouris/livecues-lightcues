@@ -40,7 +40,6 @@ describe('parseBrief', () => {
       mood: 'upbeat',
       colours: ['Amber', 'Blue'],
       venue: 'sample-venue.lcvenue',
-      front: 'pale',
       strobeHz: 4,
     });
     expect(brief.songs.map((s) => [s.name, s.bpm, s.plan, s.colours])).toEqual([
@@ -50,15 +49,12 @@ describe('parseBrief', () => {
     ]);
   });
 
-  it('defaults front to pale, strobe to the cap and colours to none', () => {
-    expect(parseBrief(base)).toMatchObject({ front: 'pale', strobeHz: 4, colours: [] });
+  it('defaults strobe to the cap and colours to none', () => {
+    expect(parseBrief(base)).toMatchObject({ strobeHz: 4, colours: [] });
   });
 
-  it('reads front colour and a strobe rate', () => {
-    expect(parseBrief(`${base}front: Colour\nstrobe: 8.5\n`)).toMatchObject({
-      front: 'colour',
-      strobeHz: 8.5,
-    });
+  it('reads a strobe rate', () => {
+    expect(parseBrief(`${base}strobe: 8.5\n`)).toMatchObject({ strobeHz: 8.5 });
   });
 
   it('reads swatch names without regard to case', () => {
@@ -80,7 +76,7 @@ describe('parseBrief', () => {
     ['unknown mood', `${base}mood: sad\n`, 'Line 5: mood must be upbeat, melancholy'],
     ['unknown colour', `${base}colours: [Amber, Puce]\n`, "Line 5: colours: 'puce' is not one of"],
     ['empty colours', `${base}colours: []\n`, 'Line 5: colours must have 1 to'],
-    ['bad front', `${base}front: loud\n`, 'Line 5: front must be pale, colour'],
+    ['front, which is gone', `${base}front: pale\n`, "Line 5: 'front' is gone"],
     ['bad strobe word', `${base}strobe: wild\n`, "Line 5: strobe must be 'capped' or a rate"],
     ['zero strobe', `${base}strobe: 0\n`, 'Line 5: strobe must be'],
     ['huge strobe', `${base}strobe: 99\n`, 'Line 5: strobe must be'],

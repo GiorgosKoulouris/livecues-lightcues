@@ -13,5 +13,4 @@ songs:
     bpm: 154
     plan: plans/last-train.yaml
 venue: sample-venue.lcvenue
-front: pale
 strobe: capped

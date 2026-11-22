@@ -18,36 +18,25 @@ import { readFileSync } from 'node:fs';
 import { saveShowFile } from '../../src/engine/show-file';
 import {
   type Colour,
-  type ColourSet,
   type Rule,
   type RuleColour,
   type Scene,
   type Show,
   type Slot,
-  type Swatch,
   type Trigger,
 } from '../../src/shared/show';
 import { loadBrief, type Brief, type VenueSummary } from './brief';
+import { colourSets, type ColourSetPlan } from './colour-sets';
 import {
-  ANALOGOUS_MAX_DEG,
-  ANALOGOUS_MOODS,
   BASE_KELVIN,
   BASE_LEVELS,
-  COLOUR_SET_FADE_S,
-  COMPLEMENTARY_MIN_DEG,
-  DEFAULT_MOOD,
   flashHz,
-  hueGap,
   inPart,
-  MAX_SONGS_PER_COLOUR_SET,
-  MOOD_PRIMARIES,
   partTarget,
   PARTS,
   REFERENCE_BPM,
-  SWATCH_HUE,
   TIER_BASE,
   TIER_FADE_OUT_BEATS,
-  TIER_FRONT_KELVIN,
   TIER_BANDS,
   TIER_LEVELS,
   TIERS,
@@ -68,130 +57,14 @@ import { venueCheckReport, writeShowFiles } from './write';
 
 // ---------------------------------------------------------------- colour
 
-export interface SongColours {
-  song: string;
-  primary: Swatch;
-  secondary: Swatch;
-  accent: Swatch;
-}
-
-export interface ColourSetPlan {
-  sets: ColourSet[];
-  /** Per Colour Set id, the songs that use it. */
-  songs: Record<string, string[]>;
-  /** Things the Cue Sheet says: a repeated primary, for one. */
-  notes: string[];
-}
-
-const hueOf = (swatch: Swatch): number | undefined => SWATCH_HUE[swatch];
-const HUE_SWATCHES = (Object.keys(SWATCH_HUE) as Swatch[]).filter((s) => s !== 'UV');
-
-/** The swatch whose hue gap from `primary` is nearest `target`, among those the `ok` test allows. */
-function nearestGap(
-  primary: Swatch,
-  target: number,
-  ok: (gap: number) => boolean,
-): Swatch | undefined {
-  const from = hueOf(primary);
-  if (from === undefined) return undefined;
-  const options = HUE_SWATCHES.filter((s) => s !== primary && ok(hueGap(from, hueOf(s)!)));
-  options.sort(
-    (a, b) =>
-      Math.abs(hueGap(from, hueOf(a)!) - target) - Math.abs(hueGap(from, hueOf(b)!) - target),
-  );
-  return options[0];
-}
-
-/**
- * P2: a Secondary across the colour wheel (150 degrees or more) or next to the
- * primary. A primary with no neighbour inside 45 degrees (Green, Cyan) takes a
- * complementary one; a white primary takes Blue.
- */
-export function secondaryFor(primary: Swatch, kind: 'complementary' | 'analogous'): Swatch {
-  const across = () => nearestGap(primary, 180, (g) => g >= COMPLEMENTARY_MIN_DEG);
-  const next = () => nearestGap(primary, 30, (g) => g > 0 && g <= ANALOGOUS_MAX_DEG);
-  return (kind === 'analogous' ? (next() ?? across()) : across()) ?? 'Blue';
-}
-
-/** Whether two swatches make a P2 pair: complementary or analogous, not a near miss. */
-function goodPair(a: Swatch, b: Swatch): boolean {
-  const [ha, hb] = [hueOf(a), hueOf(b)];
-  if (ha === undefined || hb === undefined) return false;
-  const gap = hueGap(ha, hb);
-  return gap >= COMPLEMENTARY_MIN_DEG || (gap > 0 && gap <= ANALOGOUS_MAX_DEG);
-}
-
-/** P6: the primaries songs draw on: the band colours, else the mood's. One alone gains its complement. */
-export function primaryPool(brief: Brief): Swatch[] {
-  const own = brief.colours.filter((c) => hueOf(c) !== undefined);
-  const pool = own.length > 0 ? own : [...MOOD_PRIMARIES[brief.mood ?? DEFAULT_MOOD]];
-  return pool.length === 1 ? [...pool, secondaryFor(pool[0]!, 'complementary')] : pool;
-}
-
-/** The colours of each song: P1 (one primary, one secondary, white), P2, P5, P6. */
-export function songColours(brief: Brief): { songs: SongColours[]; notes: string[] } {
-  const pool = primaryPool(brief);
-  const kind = ANALOGOUS_MOODS.includes(brief.mood ?? DEFAULT_MOOD) ? 'analogous' : 'complementary';
-  const notes: string[] = [];
-  const songs: SongColours[] = [];
-  brief.songs.forEach((song, i) => {
-    const previous = songs[i - 1]?.primary;
-    const [given, givenSecondary, givenAccent] = song.colours ?? [];
-    let primary = given;
-    if (primary === undefined) {
-      primary = pool[i % pool.length]!;
-      if (primary === previous) primary = pool[(i + 1) % pool.length]!;
-    } else if (primary === previous) {
-      notes.push(`${song.name} repeats the primary of ${songs[i - 1]!.song} (its brief colours)`);
-    }
-    const secondary =
-      givenSecondary ??
-      brief.colours.find((c) => c !== primary && goodPair(primary, c)) ??
-      secondaryFor(primary, kind);
-    songs.push({ song: song.name, primary, secondary, accent: givenAccent ?? 'White' });
-  });
-  return { songs, notes };
-}
+// The Colour Set pool and each song's Set roles are in `colour-sets.ts`.
+export { colourSets, secondaryFor, type ColourSetPlan, type SongSets } from './colour-sets';
 
 const slugOf = (text: string): string =>
   text
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
-
-/** One Colour Set per song; songs with the same colours share one, three at most. */
-export function colourSets(brief: Brief): ColourSetPlan {
-  const { songs, notes } = songColours(brief);
-  const sets: ColourSet[] = [];
-  const users: Record<string, string[]> = {};
-  const keyOf = (s: SongColours) => `${s.primary}|${s.secondary}|${s.accent}`;
-  const byKey = new Map<string, ColourSet[]>();
-  for (const song of songs) {
-    const open = (byKey.get(keyOf(song)) ?? []).find(
-      (set) => users[set.id]!.length < MAX_SONGS_PER_COLOUR_SET,
-    );
-    if (open) {
-      users[open.id]!.push(song.song);
-      continue;
-    }
-    const set: ColourSet = {
-      id: `set-${sets.length + 1}-${slugOf(song.song)}`,
-      name: song.song,
-      colours: {
-        Primary: { swatch: song.primary },
-        Secondary: { swatch: song.secondary },
-        Accent: { swatch: song.accent },
-      },
-      fade: COLOUR_SET_FADE_S,
-    };
-    sets.push(set);
-    users[set.id] = [song.song];
-    byKey.set(keyOf(song), [...(byKey.get(keyOf(song)) ?? []), set]);
-  }
-  // A shared Colour Set is named for all its songs.
-  for (const set of sets) set.name = users[set.id]!.join(' + ');
-  return { sets, songs: users, notes };
-}
 
 // ---------------------------------------------------------------- rig
 
@@ -207,72 +80,193 @@ export const levelOf = (tier: Tier, part: Part): number => TIER_LEVELS[tier][par
 
 // ---------------------------------------------------------------- composition
 
+/** Which slot each part takes, and the pair a split shares out. */
+export type SlotMap = 'main' | 'swap' | 'accent-back' | 'accent-floor';
+/** Left/right two-tone, or a front-to-back gradient. */
+export type Split = 'lr' | 'fb';
+
 export interface Recipe {
   name: string;
   parts: readonly Part[];
+  map: SlotMap;
+  split?: Split;
 }
 
-// I4, I5: what a tier lights. Chill lights the front and at most one more part;
-// Groove up to four; Drive and Peak everything the rig has (Peak has the one
-// Look, since any other would leave a part dark, I5). The front is in
-// every sung Look (I2), the back carries the Primary and the floor the
-// Secondary (R2, R3), and white beams come in at Drive and Peak (P4).
-export const RECIPES: Record<Tier, Recipe[]> = {
-  chill: [
-    { name: 'Glow', parts: ['front', 'back'] },
-    { name: 'Floor Glow', parts: ['front', 'floor'] },
-    { name: 'Haze Beams', parts: ['front', 'beams'] },
-  ],
-  groove: [
-    { name: 'Steady', parts: ['front', 'back'] },
-    { name: 'Colour', parts: ['front', 'back', 'floor'] },
-    { name: 'Beams', parts: ['front', 'back', 'beams'] },
-    { name: 'Full', parts: ['front', 'back', 'floor', 'beams'] },
-  ],
-  drive: [
-    { name: 'Wide', parts: ['front', 'back', 'floor'] },
-    { name: 'Beams', parts: ['front', 'back', 'beams'] },
-    { name: 'Chorus', parts: ['front', 'back', 'floor', 'beams'] },
-  ],
-  peak: [{ name: 'Everything', parts: ['front', 'back', 'floor', 'beams', 'fx'] }],
+// R2, R3: the back carries the Primary and the floor the Secondary, the beams
+// the Accent. The front takes slot colours like any part. The other maps swap
+// the two, or put the Accent on the back or the floor.
+const SLOT_MAPS: Record<SlotMap, Record<Part, Slot>> = {
+  main: { front: 'Primary', back: 'Primary', floor: 'Secondary', beams: 'Accent', fx: 'Accent' },
+  swap: { front: 'Secondary', back: 'Secondary', floor: 'Primary', beams: 'Accent', fx: 'Accent' },
+  'accent-back': {
+    front: 'Primary',
+    back: 'Accent',
+    floor: 'Secondary',
+    beams: 'Primary',
+    fx: 'Accent',
+  },
+  'accent-floor': {
+    front: 'Primary',
+    back: 'Primary',
+    floor: 'Accent',
+    beams: 'Secondary',
+    fx: 'Accent',
+  },
+};
+// The two slots a split shares out between its sides.
+const SPLIT_PAIR: Record<SlotMap, readonly [Slot, Slot]> = {
+  main: ['Primary', 'Secondary'],
+  swap: ['Secondary', 'Primary'],
+  'accent-back': ['Accent', 'Primary'],
+  'accent-floor': ['Secondary', 'Accent'],
 };
 
-const kelvin = (k: number): Colour => ({ kelvin: k });
+// I4, I5: what a tier lights, and how. Looks vary on three axes: the parts lit,
+// the slot map per part, and from Groove up a left/right or front-to-back
+// split. Chill lights the front and at most one more part; Groove up to four;
+// Drive up to everything; Peak every part, since any other would leave one
+// dark (I5). A rig without a part gets fewer Looks (`tierRecipes`).
+export const RECIPES: Record<Tier, Recipe[]> = {
+  chill: [
+    { name: 'Glow', parts: ['front', 'back'], map: 'main' },
+    { name: 'Glow Swap', parts: ['front', 'back'], map: 'swap' },
+    { name: 'Floor Glow', parts: ['front', 'floor'], map: 'main' },
+    { name: 'Floor Swap', parts: ['front', 'floor'], map: 'swap' },
+    { name: 'Haze Beams', parts: ['front', 'beams'], map: 'main' },
+    { name: 'Back Accent', parts: ['front', 'back'], map: 'accent-back' },
+    { name: 'Front Wash', parts: ['front'], map: 'main' },
+  ],
+  groove: [
+    { name: 'Steady', parts: ['front', 'back'], map: 'main' },
+    { name: 'Colour', parts: ['front', 'back', 'floor'], map: 'main' },
+    { name: 'Colour Swap', parts: ['front', 'back', 'floor'], map: 'swap' },
+    { name: 'Beams', parts: ['front', 'back', 'beams'], map: 'accent-back' },
+    { name: 'Full', parts: ['front', 'back', 'floor', 'beams'], map: 'main' },
+    { name: 'Side Split', parts: ['front', 'back', 'floor', 'beams'], map: 'main', split: 'lr' },
+    { name: 'Depth', parts: ['front', 'back', 'floor', 'beams'], map: 'main', split: 'fb' },
+  ],
+  drive: [
+    { name: 'Wide', parts: ['front', 'back', 'floor'], map: 'main' },
+    { name: 'Beams', parts: ['front', 'back', 'beams'], map: 'main' },
+    { name: 'Chorus', parts: ['front', 'back', 'floor', 'beams'], map: 'main' },
+    { name: 'Chorus Swap', parts: ['front', 'back', 'floor', 'beams'], map: 'swap' },
+    { name: 'Hot Back', parts: ['front', 'back', 'floor', 'beams'], map: 'accent-back' },
+    {
+      name: 'Side Split',
+      parts: ['front', 'back', 'floor', 'beams', 'fx'],
+      map: 'main',
+      split: 'lr',
+    },
+    { name: 'Depth', parts: ['front', 'back', 'floor', 'beams', 'fx'], map: 'swap', split: 'fb' },
+  ],
+  peak: [
+    { name: 'Everything', parts: PARTS, map: 'main' },
+    { name: 'Everything Swap', parts: PARTS, map: 'swap' },
+    { name: 'Hot Back', parts: PARTS, map: 'accent-back' },
+    { name: 'Hot Floor', parts: PARTS, map: 'accent-floor' },
+    { name: 'Side Split', parts: PARTS, map: 'main', split: 'lr' },
+    { name: 'Side Split Swap', parts: PARTS, map: 'swap', split: 'lr' },
+    { name: 'Depth', parts: PARTS, map: 'main', split: 'fb' },
+  ],
+};
+
 const slot = (s: Slot): RuleColour => ({ slot: s });
+const kelvin = (k: number): Colour => ({ kelvin: k });
 
-/** P3, R1-R3: a part's colour. Front is pale kelvin and steady unless the brief lets it take colour. */
-export function colourOf(part: Part, tier: Tier, front: Brief['front']): RuleColour {
-  switch (part) {
-    case 'front':
-      return front === 'colour' ? slot('Primary') : kelvin(TIER_FRONT_KELVIN[tier]);
-    case 'back':
-      return slot('Primary');
-    case 'floor':
-      return slot('Secondary');
-    default:
-      return slot('Accent');
+/** R2, R3: the slot colour a part takes under a slot map. */
+export function colourOf(part: Part, map: SlotMap): RuleColour {
+  return slot(SLOT_MAPS[map][part]);
+}
+
+// The columns and rows each side of a split covers. Centre goes with the left.
+type Cut = NonNullable<Parameters<typeof partTarget>[1]>;
+const LEFT: Cut = { columns: ['Stage Left', 'Centre'] };
+const RIGHT: Cut = { columns: ['Stage Right'] };
+const FRONT_HALF: Cut = { rows: ['Front', 'Downstage'] };
+const BACK_HALF: Cut = { rows: ['Midstage', 'Upstage'] };
+
+/** Whether the rig has a Fixture in `part` inside `cut`. With no rig, it does. */
+function hasFixtures(part: Part, cut: Cut, venue?: VenueSummary): boolean {
+  return (
+    venue === undefined ||
+    venue.groups.some(
+      (g) =>
+        inPart(part, g.role, g.zone) &&
+        (cut.columns === undefined || cut.columns.includes(g.zone.column)) &&
+        (cut.rows === undefined || cut.rows.includes(g.zone.row)),
+    )
+  );
+}
+
+/** The sides a wash part takes in a split, with the slot each wears. Beams and fx take no split. */
+function splitSides(
+  part: Part,
+  split: Split,
+  [first, second]: readonly [Slot, Slot],
+): { cut: Cut; slot: Slot }[] | undefined {
+  if (part !== 'front' && part !== 'back' && part !== 'floor') return undefined;
+  if (split === 'lr') {
+    return [
+      { cut: LEFT, slot: first },
+      { cut: RIGHT, slot: second },
+    ];
   }
+  // Front-to-back: the front wash is the first slot, the back wash the second, the floor both.
+  if (part === 'front') return [{ cut: {}, slot: first }];
+  if (part === 'back') return [{ cut: {}, slot: second }];
+  return [
+    { cut: FRONT_HALF, slot: first },
+    { cut: BACK_HALF, slot: second },
+  ];
 }
 
-/** The Rules of a Look: each lit part at its tier level, in its colour. */
-export function composeLook(tier: Tier, parts: readonly Part[], front: Brief['front']): Rule[] {
-  return parts.map((part) => ({
-    target: partTarget(part),
+/** The Rules of a Look: each lit part at its tier level, in its slot colour, split if the recipe says. A side the rig has no Fixture for is left to the other. */
+export function composeLook(
+  tier: Tier,
+  recipe: Pick<Recipe, 'parts' | 'map' | 'split'>,
+  venue?: VenueSummary,
+): Rule[] {
+  const { parts, map, split } = recipe;
+  const rule = (part: Part, colour: RuleColour, cut: Cut = {}): Rule => ({
+    target: partTarget(part, cut),
     intensity: levelOf(tier, part),
-    colour: colourOf(part, tier, front),
-  }));
+    colour,
+  });
+  return parts.flatMap((part): Rule[] => {
+    const sides = split ? splitSides(part, split, SPLIT_PAIR[map]) : undefined;
+    if (sides === undefined) return [rule(part, colourOf(part, map))];
+    const present = sides.filter((side) => hasFixtures(part, side.cut, venue));
+    if (present.length === sides.length) return sides.map((s) => rule(part, slot(s.slot), s.cut));
+    // One side is empty: the part takes the other side's colour whole.
+    return [rule(part, slot((present[0] ?? sides[0]!).slot))];
+  });
 }
 
-/** A tier's Looks for a rig: the recipes cut to the parts present, empty and repeated ones dropped. */
-export function tierRecipes(tier: Tier, present: readonly Part[]): Recipe[] {
+/** Whether a split Look still shows two tones on this rig. */
+function splitShows(recipe: Recipe, venue?: VenueSummary): boolean {
+  if (recipe.split === undefined) return true;
+  const pair = SPLIT_PAIR[recipe.map];
+  const tones = new Set<Slot>();
+  for (const part of recipe.parts) {
+    const sides = splitSides(part, recipe.split, pair);
+    for (const side of sides ?? []) {
+      if (hasFixtures(part, side.cut, venue)) tones.add(side.slot);
+    }
+  }
+  return tones.size > 1 || [...tones].some((t) => !pair.includes(t));
+}
+
+/** A tier's Looks for a rig: the recipes cut to the parts present, empty, repeated and unsplittable ones dropped. */
+export function tierRecipes(tier: Tier, present: readonly Part[], venue?: VenueSummary): Recipe[] {
   const seen = new Set<string>();
   const out: Recipe[] = [];
   for (const recipe of RECIPES[tier]) {
     const parts = recipe.parts.filter((p) => present.includes(p));
-    const key = parts.join();
-    if (parts.length === 0 || seen.has(key)) continue;
+    const cut: Recipe = { ...recipe, parts };
+    const key = `${parts.join()}|${recipe.map}|${recipe.split ?? ''}`;
+    if (parts.length === 0 || seen.has(key) || !splitShows(cut, venue)) continue;
     seen.add(key);
-    out.push({ name: recipe.name, parts });
+    out.push(cut);
   }
   return out;
 }
@@ -298,17 +292,22 @@ export interface Generated {
 
 const titleCase = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-function lookScene(tier: Tier, recipe: Recipe, front: Brief['front']): Scene {
+function lookScene(tier: Tier, recipe: Recipe, venue: VenueSummary): Scene {
   return {
     id: `${tier}-${slugOf(recipe.name)}`,
     name: `${titleCase(tier)}: ${recipe.name}`,
-    tags: ['look', `tier:${tier}`, ...recipe.parts.map((p) => `part:${p}`)],
+    tags: [
+      'look',
+      `tier:${tier}`,
+      ...recipe.parts.map((p) => `part:${p}`),
+      ...(recipe.split ? [`split:${recipe.split}`] : []),
+    ],
     layer: LOOK_LAYER.id,
     fadeIn: tierFadeIn(tier),
     fadeUnit: 'beats',
     fadeOut: TIER_FADE_OUT_BEATS[tier],
     fadeOutUnit: 'beats',
-    rules: composeLook(tier, recipe.parts, front),
+    rules: composeLook(tier, recipe, venue),
   };
 }
 
@@ -419,7 +418,10 @@ function utilityScene(spec: UtilitySpec, present: readonly Part[]): Scene | unde
 }
 
 /** Looks and utilities for the Look Layer. */
-function lookEntries(brief: Brief, present: Part[]): { entries: Entry[]; skipped: string[] } {
+function lookEntries(
+  venue: VenueSummary,
+  present: Part[],
+): { entries: Entry[]; skipped: string[] } {
   const entries: Entry[] = [];
   const skipped: string[] = [];
   UTILITIES.forEach((spec, i) => {
@@ -436,13 +438,13 @@ function lookEntries(brief: Brief, present: Part[]): { entries: Entry[]; skipped
       });
   });
   for (const tier of TIERS) {
-    tierRecipes(tier, present).forEach((recipe, i) => {
+    tierRecipes(tier, present, venue).forEach((recipe, i) => {
       entries.push({
-        scene: lookScene(tier, recipe, brief.front),
+        scene: lookScene(tier, recipe, venue),
         channel: CH.look,
         note: TIER_BASE[tier] + i,
         mode: 'go',
-        about: `${recipe.parts.join(', ')}`,
+        about: `${recipe.parts.join(', ')}${recipe.split ? `, ${recipe.split === 'lr' ? 'left/right split' : 'front-to-back split'}` : ''}${recipe.map === 'main' ? '' : `, ${recipe.map.replace('-', ' ')} map`}`,
       });
     });
   }
@@ -458,7 +460,7 @@ export function generate(brief: Brief, venue: VenueSummary): Generated {
   const present = presentParts(venue);
   const omitted = PARTS.filter((p) => !present.includes(p));
   const plan = colourSets(brief);
-  const { entries: looks, skipped } = lookEntries(brief, present);
+  const { entries: looks, skipped } = lookEntries(venue, present);
   const dynamic = dynamicEntries({ present, bpm: fastestBpm(brief), strobeHz: brief.strobeHz });
   const entries = [...looks, ...dynamic];
   const base = entries.some((e) => e.scene.id === 'base');
@@ -511,8 +513,15 @@ function cueSheet(brief: Brief, g: Generated): string {
   const setRows = sets.map((set) => {
     const n = set.note?.note ?? 0;
     const c = set.colours;
-    return `| ${noteName(n)} | ${n} | ${set.name} | ${colourText(c.Primary)} | ${colourText(c.Secondary)} | ${colourText(c.Accent)} | ${g.colourSets.songs[set.id]!.join(', ')} | ${set.fade}s |`;
+    return `| ${noteName(n)} | ${n} | ${set.name} | ${colourText(c.Primary)} | ${colourText(c.Secondary)} | ${colourText(c.Accent)} | ${set.fade}s |`;
   });
+  const setLabel = (id: string): string => {
+    const set = sets.find((x) => x.id === id)!;
+    return `${set.name} (${noteName(set.note?.note ?? 0)})`;
+  };
+  const songRows = g.colourSets.songs.map(
+    (s) => `| ${s.song} | ${setLabel(s.main)} | ${setLabel(s.break)} | ${setLabel(s.swap)} |`,
+  );
   const present = presentParts(g.venue);
   const rig =
     g.venue.source === 'venue'
@@ -627,7 +636,7 @@ ${[...release, ...rows].join('\n')}
     ],
     [
       'Bridge',
-      'Groove Looks, the other Colour Set slot swapped',
+      'Groove Looks, with the Break Colour Set',
       pick(' or ', 'movement-groove-wave'),
       pick(' or ', 'colour-fx-groove-slow-fade'),
       'none',
@@ -661,12 +670,22 @@ Built for ${rig}. Parts lit: ${present.join(', ') || 'none'}.
 ${left.length > 0 ? `\n${left.join('\n')}\n` : ''}
 ## Colour Sets
 
-Fire one at bar 1 of each song. Rules take their colours from the held set by slot: Primary on the back, Secondary on the floor, Accent (white) on the beams. The first holds when the Show opens. The front is ${brief.front === 'pale' ? 'pale kelvin white and steady' : 'the Primary colour (the brief lets the front take colour)'}.
+Rules take their colours from the held set by slot. Looks put Primary on the back, Secondary on the floor and Accent on the beams, and the front takes slot colours like any part. The first set holds when the Show opens. Names describe the colours (Primary / Secondary / Accent). Each song has three roles:
 
-| Note | # | Colour Set | Primary | Secondary | Accent | Songs | Fade |
-|---|---|---|---|---|---|---|---|
+- Main: fire at bar 1. Held through verses and choruses.
+- Break: fire on a bridge or breakdown, then Main again. Leads with a contrast hue.
+- Swap: fire on the last chorus. The Main with Primary and Secondary exchanged.
+
+| Note | # | Colour Set | Primary | Secondary | Accent | Fade |
+|---|---|---|---|---|---|---|
 ${setRows.join('\n')}
 ${g.colourSets.notes.length > 0 ? `\n${g.colourSets.notes.map((n) => `- ${n}`).join('\n')}\n` : ''}
+### Song sets
+
+| Song | Main | Break | Swap |
+|---|---|---|---|
+${songRows.join('\n')}
+
 ## Tier guide
 
 Names follow \`<Tier>: <Name>\`. Tiers sit on two octaves each: Chill C1 (24), Groove C3 (48), Drive C5 (72), Peak C7 (96), on every Layer that has tier Scenes. Utilities are on notes 12–23 of the Look channel, Hits on notes 12 and up of channel ${CH.hit}. Note 0 releases a Layer.
@@ -681,10 +700,10 @@ Names follow \`<Tier>: <Name>\`. Tiers sit on two octaves each: Chill C1 (24), G
 ## How the Layers combine
 
 - Look (channel ${CH.look}): colour and intensity. Each Layer holds one Scene at a time.
-- Movement (channel ${CH.movement}), Pulse (channel ${CH.pulse}) and Colour FX (channel ${CH.colourfx}) add one kind of Effect each. They never touch the front. Colour FX use slot colours only. Each tier offers them on as many Layers as its stacking cap, so one of each at once stays inside it. A tier's Still Scene runs no Effect and does not count.
+- Movement (channel ${CH.movement}), Pulse (channel ${CH.pulse}) and Colour FX (channel ${CH.colourfx}) add one kind of Effect each. They leave the front out. Colour FX use slot colours only. Each tier offers them on as many Layers as its stacking cap, so one of each at once stays inside it. A tier's Still Scene runs no Effect and does not count.
 - Hit (channel ${CH.hit}): Flash only, held for 2 beats or less. A Hit may flash faster than the cap. Release restores what was under it.
 - Every Look and Effect is built from slots, so a Colour Set change recolours it at once, with the Scenes still active.
-- The front is steady and never moves or pulses. Fades are in beats.
+- The front takes slot colours in Looks. Movement, Pulse and Colour FX leave it out for now. Fades are in beats.
 - Scenes target Roles and Zones only, so the Show runs in any venue.
 - Movement is stepped up in length so it stays under the Speed limit at ${bpm} BPM, the fastest song.
 

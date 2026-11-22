@@ -78,6 +78,10 @@ _Avoid_: Palette, colour scheme
 A reference in a Rule's colour, or in a Step or Fade colour Effect, to one of a Colour Set's three Colours (`{ slot: 'Primary' }`) in place of a Colour. It shows the held Colour Set's colour for that slot.
 _Avoid_: Palette colour, swatch
 
+**Set role**:
+The part a Colour Set plays in one song: Main (verses and choruses, held from bar 1), Break (bridges and breakdowns, led by a contrast hue) or Swap (the last chorus, Main's Primary and Secondary exchanged). A role belongs to the song, not the set: one Colour Set can be one song's Main and another's Break or Swap. Neighbouring songs never share a Main.
+_Avoid_: Variant, alt set
+
 ### Visualiser
 
 **Visualiser**:
@@ -107,7 +111,7 @@ A reusable look or effect that targets Zones rather than specific Fixtures. Seve
 _Avoid_: Cue, preset
 
 **Brief**:
-The file `bands/<Band>/brief.yaml` that tells the Show generator what to build: the band, genre and mood, band colours, each song's name and BPM (with an optional Plan and Colour Set override), the venue, the front-wash policy (pale or colour) and the strobe cap. `bands/` is not committed. The Brief points at a Venue Patch for its Roles, Zones and movers but never copies it; with no venue the generator assumes a default rig. Not a Plan's `brief:` key, which is notes for the lighting designer.
+The file `bands/<Band>/brief.yaml` that tells the Show generator what to build: the band, genre and mood, band colours, each song's name and BPM (with an optional Plan and Colour Set override), the venue and the strobe cap. `bands/` is not committed. The Brief points at a Venue Patch for its Roles, Zones and movers but never copies it; with no venue the generator assumes a default rig. Not a Plan's `brief:` key, which is notes for the lighting designer.
 _Avoid_: Spec, config
 
 **Cue Sheet**:

@@ -125,13 +125,23 @@ export function inPart(part: Part, role: Role, zone: Zone): boolean {
   );
 }
 
-/** The Roles and Zones a Rule targets to light `part`. Never a Fixture. */
-export function partTarget(part: Part): RuleTarget {
+/** The Roles and Zones a Rule targets to light `part`, or the `columns` and `rows` of it. Never a Fixture. */
+export function partTarget(
+  part: Part,
+  cut: { columns?: readonly (typeof COLUMNS)[number][]; rows?: readonly ZoneRow[] } = {},
+): RuleTarget {
   const { roles, rows, level } = PART_DEFS[part];
+  const useRows = (rows ?? []).filter((row) => cut.rows === undefined || cut.rows.includes(row));
   return {
     roles: [...roles],
     ...(rows !== undefined && level !== undefined
-      ? { zones: rows.flatMap((row) => COLUMNS.map((column) => ({ row, column, level }))) }
+      ? {
+          zones: useRows.flatMap((row) =>
+            COLUMNS.filter((c) => cut.columns === undefined || cut.columns.includes(c)).map(
+              (column) => ({ row, column, level }),
+            ),
+          ),
+        }
       : {}),
   };
 }
@@ -223,14 +233,6 @@ export const TIER_LEVELS: Record<Tier, Record<Part, number>> = {
   peak: { front: 0.7, back: 1, floor: 1, beams: 1, fx: 1 },
 };
 
-// P3: the colour temperature of the pale front light, in kelvin, warmer when quiet.
-export const TIER_FRONT_KELVIN: Record<Tier, number> = {
-  chill: 3000,
-  groove: 3400,
-  drive: 3800,
-  peak: 4200,
-};
-
 // T2: a Look's fade-out, in beats. A release is slower than the fade-in snaps.
 export const TIER_FADE_OUT_BEATS: Record<Tier, number> = {
   chill: 4,
@@ -251,8 +253,12 @@ export const BASE_LEVELS = { front: 0.6, back: 0.5 } as const;
 // Tiers sit on two octaves each: C1, C3, C5, C7.
 export const TIER_BASE: Record<Tier, number> = { chill: 24, groove: 48, drive: 72, peak: 96 };
 
-// Seconds a Colour Set takes to crossfade the slot colours (set between songs).
-export const COLOUR_SET_FADE_S = 2;
+// Seconds a Colour Set takes to crossfade the slot colours. Short, so a change
+// lands on a section downbeat.
+export const COLOUR_SET_FADE_S = 1;
+
+// The Colour Set pool: `clamp(ceil(songs x 2 / 3), min, max)` sets.
+export const COLOUR_SET_POOL = { min: 6, max: 8 } as const;
 
 // P6: the primary hues a mood suggests when the brief gives no band colours.
 export const MOODS = ['upbeat', 'melancholy', 'aggressive', 'calm', 'dreamy'] as const;
@@ -269,5 +275,14 @@ export const DEFAULT_MOOD: Mood = 'upbeat';
 // P2: calm moods take an analogous Secondary, the others a complementary one.
 export const ANALOGOUS_MOODS: readonly Mood[] = ['melancholy', 'calm', 'dreamy'];
 
-// R5, P4: the most songs that may share one Colour Set.
-export const MAX_SONGS_PER_COLOUR_SET = 3;
+// The contrast hue a mood adds to the Colour Set pool, for Break sets.
+export const MOOD_CONTRAST: Record<Mood, Swatch> = {
+  aggressive: 'Blue',
+  melancholy: 'Lavender',
+  upbeat: 'Magenta',
+  calm: 'Green',
+  dreamy: 'UV',
+};
+
+// P5: the most songs that may hold one Colour Set in one Set role.
+export const MAX_SONGS_PER_ROLE = 3;

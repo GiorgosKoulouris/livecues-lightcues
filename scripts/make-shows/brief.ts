@@ -21,9 +21,6 @@ import {
   type ZoneRow,
 } from '../../src/shared/venue-patch';
 
-export const FRONT_POLICIES = ['pale', 'colour'] as const;
-export type FrontPolicy = (typeof FRONT_POLICIES)[number];
-
 export const BPM_RANGE = [90, 200] as const;
 /** The fastest strobe a Brief may ask for, in Hz. */
 export const MAX_STROBE_HZ = 25;
@@ -57,12 +54,11 @@ export interface Brief {
   /** The `.lcvenue` path as written, relative to the brief. */
   venue?: string;
   venueLine?: number;
-  front: FrontPolicy;
   /** The strobe cap in Hz: `STROBE_MAX_HZ` for `capped`. */
   strobeHz: number;
 }
 
-const TOP = ['band', 'genre', 'mood', 'colours', 'songs', 'venue', 'front', 'strobe'];
+const TOP = ['band', 'genre', 'mood', 'colours', 'songs', 'venue', 'strobe'];
 const SONG = ['name', 'bpm', 'plan', 'colours'];
 
 class Reader {
@@ -140,11 +136,13 @@ export function parseBrief(text: string): Brief {
     band: '',
     colours: [],
     songs: [],
-    front: 'pale',
     strobeHz: STROBE_MAX_HZ,
   };
   const seen = new Set<string>();
   for (const { key, value, line } of r.entries(top)) {
+    if (key === 'front') {
+      throw new BriefError("'front' is gone: the front takes slot colours like any part", line);
+    }
     if (!TOP.includes(key)) throw new BriefError(`Unknown key '${key}'`, line);
     seen.add(key);
     if (key === 'band') brief.band = r.text(value, 'band', value);
@@ -156,8 +154,7 @@ export function parseBrief(text: string): Brief {
     else if (key === 'venue') {
       brief.venue = r.text(value, 'venue', value);
       brief.venueLine = r.line(value) ?? line;
-    } else if (key === 'front') brief.front = r.oneOf(value, 'front', FRONT_POLICIES, value);
-    else brief.strobeHz = readStrobe(r, value);
+    } else brief.strobeHz = readStrobe(r, value);
   }
   if (!seen.has('band')) throw new BriefError("The brief needs a 'band'", r.line(top));
   if (!seen.has('songs')) throw new BriefError("The brief needs 'songs'", r.line(top));

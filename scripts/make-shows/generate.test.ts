@@ -3,11 +3,10 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { loadShowFile } from '../../src/engine/show-file';
 import { loadVenueFile } from '../../src/engine/venue-file';
-import { validateShow, type Scene } from '../../src/shared/show';
-import { DEFAULT_RIG, loadBrief, parseBrief, type Brief } from './brief';
+import { validateShow, type Rule, type Scene } from '../../src/shared/show';
+import { DEFAULT_RIG, loadBrief } from './brief';
 import {
   colourOf,
-  colourSets,
   composeLook,
   fileName,
   flashingScenes,
@@ -15,13 +14,10 @@ import {
   generateFiles,
   levelOf,
   presentParts,
-  primaryPool,
   RECIPES,
-  secondaryFor,
-  songColours,
   tierRecipes,
 } from './generate';
-import { hueGap, SWATCH_HUE, TIER_BANDS, TIERS } from './rules';
+import { TIER_BANDS, TIERS } from './rules';
 import { lintShow, tierOf } from './show-lint';
 import { venueCheckLines } from './write';
 
@@ -31,77 +27,6 @@ const files = generateFiles(sample.brief, sample.venue);
 const show = loadShowFile(files.show);
 const scene = (id: string): Scene => show.scenes.find((s) => s.id === id)!;
 const looks = show.scenes.filter((s) => s.layer === 'look' && tierOf(s) !== undefined);
-
-const brief = (text: string): Brief => parseBrief(`band: X\n${text}`);
-const songs = (n: number) =>
-  `songs:\n${Array.from({ length: n }, (_, i) => `  - name: S${i + 1}\n    bpm: 120`).join('\n')}\n`;
-
-describe('palette rules (P1, P2, P5, P6)', () => {
-  it('takes the primary from the band colours and a good secondary from them too', () => {
-    const { songs: out } = songColours(brief(`colours: [Amber, Blue]\n${songs(2)}`));
-    expect(out.map((s) => s.primary)).toEqual(['Amber', 'Blue']);
-    expect(out[0]).toMatchObject({ secondary: 'Blue', accent: 'White' });
-  });
-
-  it('falls back to the mood primaries when there are no band colours (P6)', () => {
-    expect(primaryPool(brief(`mood: calm\n${songs(1)}`))).toEqual(['Cyan', 'Green']);
-    expect(primaryPool(brief(`mood: aggressive\n${songs(1)}`))[0]).toBe('Red');
-    expect(primaryPool(brief(songs(1)))[0]).toBe('Amber');
-  });
-
-  it('gives a lone colour its complement so songs can differ (P5)', () => {
-    const out = songColours(brief(`colours: [Red]\n${songs(3)}`)).songs;
-    expect(out[0]!.primary).not.toBe(out[1]!.primary);
-    expect(out[1]!.primary).not.toBe(out[2]!.primary);
-  });
-
-  it('never repeats a primary on the next song', () => {
-    const out = songColours(brief(`colours: [Red, Green, Blue]\n${songs(7)}`)).songs;
-    out.slice(1).forEach((s, i) => expect(s.primary).not.toBe(out[i]!.primary));
-  });
-
-  it('makes the secondary complementary or analogous, never a near miss (P2)', () => {
-    for (const primary of Object.keys(SWATCH_HUE).filter((s) => s !== 'UV')) {
-      for (const kind of ['complementary', 'analogous'] as const) {
-        const secondary = secondaryFor(primary as never, kind);
-        const gap = hueGap(SWATCH_HUE[primary as never]!, SWATCH_HUE[secondary]!);
-        // Green and Cyan have no neighbour inside 45 degrees, so analogous falls back.
-        const analogous = gap > 0 && gap <= 45;
-        expect(kind === 'complementary' ? gap >= 150 : analogous || gap >= 150).toBe(true);
-      }
-    }
-  });
-
-  it('uses analogous secondaries for calm moods', () => {
-    const [song] = songColours(brief(`mood: melancholy\n${songs(1)}`)).songs;
-    expect(hueGap(SWATCH_HUE[song!.primary]!, SWATCH_HUE[song!.secondary]!)).toBeLessThanOrEqual(
-      45,
-    );
-  });
-
-  it('takes a song override as given and notes a repeated primary', () => {
-    const text = `${songs(2)}`.replace(
-      '    bpm: 120\n  - name: S2\n    bpm: 120',
-      '    bpm: 120\n    colours: [Red, Cyan, Warm White]\n  - name: S2\n    bpm: 120\n    colours: [Red]',
-    );
-    const { songs: out, notes } = songColours(brief(text));
-    expect(out[0]).toMatchObject({ primary: 'Red', secondary: 'Cyan', accent: 'Warm White' });
-    expect(out[1]!.primary).toBe('Red');
-    expect(notes).toEqual([expect.stringContaining('S2 repeats the primary of S1')]);
-  });
-
-  it('shares a Colour Set between songs with the same colours, three at most', () => {
-    // Two colours rotate, so songs 1, 3, 5 match and so do 2, 4, 6: 7 songs make 3 sets.
-    const plan = colourSets(brief(`colours: [Amber, Blue]\n${songs(7)}`));
-    expect(Object.values(plan.songs).map((s) => s.length)).toEqual([3, 3, 1]);
-    expect(plan.sets.every((s) => s.colours.Accent && 'swatch' in s.colours.Accent)).toBe(true);
-  });
-
-  it('gives each song its own set when the colours differ', () => {
-    const plan = colourSets(brief(`colours: [Red, Green, Blue]\n${songs(3)}`));
-    expect(plan.sets).toHaveLength(3);
-  });
-});
 
 describe('intensity rules (I1, I2)', () => {
   it('climbs by tier on the back and keeps it inside the I1 bands', () => {
@@ -123,65 +48,106 @@ describe('intensity rules (I1, I2)', () => {
   });
 });
 
-describe('composition rules (P3, P4, R1-R3, I4, I5)', () => {
-  it('lights the front pale and steady, with kelvin white', () => {
-    for (const tier of TIERS) {
-      expect(colourOf('front', tier, 'pale')).toMatchObject({ kelvin: expect.any(Number) });
-    }
+describe('composition rules (R1-R3, I4, I5)', () => {
+  const all = [...presentParts(DEFAULT_RIG), 'fx' as const];
+  const partsOf = (s: Scene) => s.tags.filter((t) => t.startsWith('part:')).map((t) => t.slice(5));
+
+  it('takes slot colours on every part, the front included, with no kelvin', () => {
     for (const rule of looks.flatMap((s) => s.rules)) {
-      if (rule.target === undefined) continue;
+      expect(rule.colour).toHaveProperty('slot');
       expect(rule.movementEffect).toBeUndefined();
       expect(rule.intensityEffect).toBeUndefined();
     }
   });
 
-  it('puts the Primary on the back, the Secondary on the floor and white on beams', () => {
-    expect(colourOf('back', 'groove', 'pale')).toEqual({ slot: 'Primary' });
-    expect(colourOf('floor', 'groove', 'pale')).toEqual({ slot: 'Secondary' });
-    expect(colourOf('beams', 'peak', 'pale')).toEqual({ slot: 'Accent' });
+  it('puts the Primary on the back, the Secondary on the floor and the Accent on the beams', () => {
+    expect(colourOf('front', 'main')).toEqual({ slot: 'Primary' });
+    expect(colourOf('back', 'main')).toEqual({ slot: 'Primary' });
+    expect(colourOf('floor', 'main')).toEqual({ slot: 'Secondary' });
+    expect(colourOf('beams', 'main')).toEqual({ slot: 'Accent' });
   });
 
-  it('lets the front take the Primary only when the brief says colour', () => {
-    expect(colourOf('front', 'drive', 'colour')).toEqual({ slot: 'Primary' });
+  it('has the swap, accent-back and accent-floor maps', () => {
+    expect(colourOf('back', 'swap')).toEqual({ slot: 'Secondary' });
+    expect(colourOf('floor', 'swap')).toEqual({ slot: 'Primary' });
+    expect(colourOf('back', 'accent-back')).toEqual({ slot: 'Accent' });
+    expect(colourOf('floor', 'accent-floor')).toEqual({ slot: 'Accent' });
   });
 
-  it('lights at most two parts in Chill and everything the rig has in Peak', () => {
-    for (const recipe of RECIPES.chill) expect(recipe.parts.length).toBeLessThanOrEqual(2);
-    const all = presentParts(DEFAULT_RIG);
-    for (const recipe of tierRecipes('peak', [...all, 'fx'])) {
-      expect(recipe.parts).toContain('front');
+  it('gives each tier 6-7 Looks, none sharing parts, slot map and split', () => {
+    for (const tier of TIERS) {
+      const recipes = tierRecipes(tier, all);
+      expect(recipes.length).toBeGreaterThanOrEqual(6);
+      expect(recipes.length).toBeLessThanOrEqual(7);
+      const keys = recipes.map((r) => `${r.parts.join()}|${r.map}|${r.split ?? ''}`);
+      expect(new Set(keys).size).toBe(keys.length);
+      expect(new Set(recipes.map((r) => r.name)).size).toBe(recipes.length);
     }
-    expect(tierRecipes('peak', [...all, 'fx'])[0]!.parts).toEqual([
-      'front',
-      'back',
-      'floor',
-      'beams',
-      'fx',
-    ]);
   });
 
-  it('lights every part the rig has in every Peak Look (I1, I5)', () => {
-    const all = [...presentParts(DEFAULT_RIG), 'fx' as const];
-    for (const present of [all, all.filter((p) => p !== 'floor'), all.filter((p) => p !== 'fx')]) {
-      for (const recipe of tierRecipes('peak', present)) expect(recipe.parts).toEqual(present);
-    }
-    const parts = (s: Scene) => s.tags.filter((t) => t.startsWith('part:')).map((t) => t.slice(5));
-    const peak = looks.filter((s) => tierOf(s) === 'peak');
-    expect(peak.length).toBeGreaterThan(0);
-    for (const s of peak) expect(parts(s).sort()).toEqual([...presentParts(sample.venue)].sort());
+  it('lights at most two parts in Chill and every part in a Peak Look', () => {
+    for (const recipe of tierRecipes('chill', all))
+      expect(recipe.parts.length).toBeLessThanOrEqual(2);
+    for (const recipe of tierRecipes('peak', all)) expect(recipe.parts).toEqual(all);
   });
 
-  it('puts the front in every sung Look and the beams in Drive and Peak only above Chill', () => {
+  it('puts the front in every sung Look', () => {
     for (const tier of TIERS) {
       for (const recipe of RECIPES[tier]) expect(recipe.parts).toContain('front');
     }
-    const rules = composeLook('chill', ['front', 'beams'], 'pale');
-    expect(rules.find((r) => r.target.roles?.includes('Spot/Beam'))!.intensity).toBe(0.3);
   });
 
-  it('drops parts the rig lacks, and Looks that become empty or repeat', () => {
-    const recipes = tierRecipes('groove', ['front', 'back']);
-    expect(recipes.map((r) => r.name)).toEqual(['Steady']);
+  it('splits left/right and front-to-back from Groove up', () => {
+    for (const tier of ['groove', 'drive', 'peak'] as const) {
+      const splits = tierRecipes(tier, all).map((r) => r.split);
+      expect(splits).toContain('lr');
+      expect(splits).toContain('fb');
+    }
+    for (const r of tierRecipes('chill', all)) expect(r.split).toBeUndefined();
+  });
+
+  it('cuts a left/right split by column and a front-to-back one by row', () => {
+    const columns = (r: Rule) => new Set(r.target.zones?.map((z) => z.column));
+    const rows = (r: Rule) => new Set(r.target.zones?.map((z) => z.row));
+    const lr = composeLook('peak', { parts: ['back'], map: 'main', split: 'lr' });
+    expect(lr.map((r) => r.colour)).toEqual([{ slot: 'Primary' }, { slot: 'Secondary' }]);
+    expect([...columns(lr[0]!)].sort()).toEqual(['Centre', 'Stage Left']);
+    expect([...columns(lr[1]!)]).toEqual(['Stage Right']);
+    const fb = composeLook('peak', { parts: ['front', 'back', 'floor'], map: 'main', split: 'fb' });
+    expect(fb.map((r) => r.colour)).toEqual([
+      { slot: 'Primary' },
+      { slot: 'Secondary' },
+      { slot: 'Primary' },
+      { slot: 'Secondary' },
+    ]);
+    expect([...rows(fb[2]!)]).toEqual(['Front', 'Downstage']);
+    expect([...rows(fb[3]!)]).toEqual(['Midstage', 'Upstage']);
+  });
+
+  it('lights every part the rig has in every Peak Look (I1, I5)', () => {
+    for (const present of [all, all.filter((p) => p !== 'floor'), all.filter((p) => p !== 'fx')]) {
+      for (const recipe of tierRecipes('peak', present)) expect(recipe.parts).toEqual(present);
+    }
+    const peak = looks.filter((s) => tierOf(s) === 'peak');
+    expect(peak.length).toBeGreaterThan(0);
+    for (const s of peak) expect(partsOf(s).sort()).toEqual([...presentParts(sample.venue)].sort());
+  });
+
+  it('gives a venue without a part fewer Looks, never one targeting the part', () => {
+    for (const missing of ['beams', 'floor', 'fx', 'back'] as const) {
+      const present = all.filter((p) => p !== missing);
+      for (const tier of TIERS) {
+        const recipes = tierRecipes(tier, present);
+        expect(recipes.length).toBeGreaterThan(0);
+        expect(recipes.length).toBeLessThanOrEqual(tierRecipes(tier, all).length);
+        for (const r of recipes) expect(r.parts).not.toContain(missing);
+        const keys = recipes.map((r) => `${r.parts.join()}|${r.map}|${r.split ?? ''}`);
+        expect(new Set(keys).size).toBe(keys.length);
+      }
+    }
+    expect(tierRecipes('groove', ['front', 'back']).length).toBeLessThan(
+      tierRecipes('groove', all).length,
+    );
     expect(tierRecipes('chill', [])).toEqual([]);
   });
 
@@ -231,8 +197,11 @@ describe('the sample Show', () => {
     }
   });
 
-  it('has one Colour Set per distinct song colours, with notes, and the Strobe cap', () => {
-    expect(show.colourSets?.map((c) => c.name)).toEqual(['Opener + Last Train', 'Slow Tide']);
+  it('has the Colour Set pool on channel 6, the override as a Main, and the Strobe cap', () => {
+    const names = show.colourSets?.map((c) => c.name);
+    expect(names).toContain('Blue / Lavender / White');
+    expect(names).toContain('Lavender / Blue / White');
+    expect(new Set(names).size).toBe(names?.length);
     expect(show.colourSets?.every((c) => c.note?.channel === 6)).toBe(true);
     expect(show.strobeCap).toBe(4);
     expect(
@@ -250,13 +219,15 @@ describe('the sample Show', () => {
       expect(line).toContain('strobe approximated (noStrobeChannel) in 1 Scene');
   });
 
-  it('scores every lint item 2, so items 3, 4 and 11 pass and the total clears the pass mark', () => {
+  it('scores every lint item 2 but item 3, so items 4 and 11 pass', () => {
+    // Item 3 (front pale) is superseded by ADR 0023 and leaves the lint with the
+    // Variety work (.scratch/show-variety, issue 05). The front now takes slot colours.
     for (const bpm of [120, 154, 200]) {
       const report = lintShow(show, bpm);
       expect(report.scored).toBe(13);
-      for (const i of report.items) expect(i.score, `item ${i.item} at ${bpm} BPM`).toBe(2);
-      // The lint can score 26 of the rubric's 34 points. 28 of 34 is 22 of 26 pro rata.
-      expect(report.total).toBeGreaterThanOrEqual((28 / 34) * report.max);
+      for (const i of report.items.filter((x) => x.item !== 3)) {
+        expect(i.score, `item ${i.item} at ${bpm} BPM`).toBe(2);
+      }
     }
   });
 
@@ -293,7 +264,8 @@ describe('the sample Show', () => {
       '## Colour Sets',
       '## Note map',
       '### Channel 1: Look',
-      'Opener + Last Train',
+      '### Song sets',
+      '| Opener | ',
       'tier:chill',
       'part:front',
     ]) {
@@ -302,17 +274,26 @@ describe('the sample Show', () => {
   });
 });
 
-describe('the brief changes the Show', () => {
-  it('lets the front take slot colour with front: colour, and lint item 3 reports it', () => {
-    const coloured = loadShowFile(
-      generateFiles({ ...sample.brief, front: 'colour' }, sample.venue).show,
+describe('the Cue Sheet colour tables', () => {
+  it('lists the Colour Sets without a Songs column, then each song’s Main, Break and Swap', () => {
+    expect(files.cueSheet).toContain(
+      '| Note | # | Colour Set | Primary | Secondary | Accent | Fade |',
     );
-    const item = lintShow(coloured).items.find((i) => i.item === 3)!;
-    expect(item.score).toBe(0);
-    expect(item.offenders[0]).toContain('saturated front');
-    expect(files.cueSheet).not.toContain('lets the front take colour');
+    expect(files.cueSheet).toContain('| Song | Main | Break | Swap |');
+    expect(files.cueSheet).not.toContain('| Songs |');
+    for (const name of ['Opener', 'Slow Tide', 'Last Train']) {
+      expect(files.cueSheet).toMatch(new RegExp(`\\| ${name} \\| .+ \\| .+ \\| .+ \\|`));
+    }
   });
 
+  it('puts the Show’s Colour Sets at 1 s fades', () => {
+    // 3 songs make 6 sets, and the one colour override adds its Main and Swap.
+    expect(show.colourSets).toHaveLength(8);
+    for (const set of show.colourSets ?? []) expect(set.fade).toBe(1);
+  });
+});
+
+describe('the brief changes the Show', () => {
   it('leaves out a part the venue lacks and says so in the Cue Sheet', () => {
     const venue = {
       ...DEFAULT_RIG,
