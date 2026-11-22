@@ -28,6 +28,7 @@ import {
   type Trigger,
 } from '../../src/shared/show';
 import {
+  slugOf,
   partTarget,
   TIER_BASE,
   TIER_FADE_OUT_BEATS,
@@ -277,11 +278,6 @@ const COLOUR_FX: Partial<Record<Tier, ColourFxOption[]>> = {
 
 // ---------------------------------------------------------------- Scenes
 
-const slugOf = (text: string): string =>
-  text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
 const titleCase = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** A tier's dynamic Scene on `layer`, one Rule per part present. Undefined when the rig has none of its parts. */

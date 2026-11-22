@@ -28,11 +28,13 @@ import {
 import { loadBrief, type Brief, type VenueSummary } from './brief';
 import { colourSets, type ColourSetPlan } from './colour-sets';
 import {
+  slugOf,
   BASE_KELVIN,
   BASE_LEVELS,
   flashHz,
   inPart,
   partTarget,
+  type PartCut,
   PARTS,
   REFERENCE_BPM,
   TIER_BASE,
@@ -56,15 +58,6 @@ import {
 import { venueCheckReport, writeShowFiles } from './write';
 
 // ---------------------------------------------------------------- colour
-
-// The Colour Set pool and each song's Set roles are in `colour-sets.ts`.
-export { colourSets, secondaryFor, type ColourSetPlan, type SongSets } from './colour-sets';
-
-const slugOf = (text: string): string =>
-  text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
 
 // ---------------------------------------------------------------- rig
 
@@ -179,7 +172,7 @@ export function colourOf(part: Part, map: SlotMap): RuleColour {
 }
 
 // The columns and rows each side of a split covers. Centre goes with the left.
-type Cut = NonNullable<Parameters<typeof partTarget>[1]>;
+type Cut = PartCut;
 const LEFT: Cut = { columns: ['Stage Left', 'Centre'] };
 const RIGHT: Cut = { columns: ['Stage Right'] };
 const FRONT_HALF: Cut = { rows: ['Front', 'Downstage'] };

@@ -80,6 +80,13 @@ export const DARK_NAME = /(^|[^a-z])dark([^a-z]|$)/i;
 // D11, D12: Looks a tier offers to pick from.
 export const MAX_LOOKS_PER_TIER = 8;
 
+/** A lower-case, hyphenated form of `text`, for Scene and Colour Set ids. */
+export const slugOf = (text: string): string =>
+  text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+
 // ---------------------------------------------------------------- stage parts
 
 export const PARTS = ['front', 'back', 'floor', 'beams', 'fx'] as const;
@@ -125,11 +132,14 @@ export function inPart(part: Part, role: Role, zone: Zone): boolean {
   );
 }
 
+/** A slice of a part: only these stage columns and rows. An absent list takes all. */
+export interface PartCut {
+  columns?: readonly (typeof COLUMNS)[number][];
+  rows?: readonly ZoneRow[];
+}
+
 /** The Roles and Zones a Rule targets to light `part`, or the `columns` and `rows` of it. Never a Fixture. */
-export function partTarget(
-  part: Part,
-  cut: { columns?: readonly (typeof COLUMNS)[number][]; rows?: readonly ZoneRow[] } = {},
-): RuleTarget {
+export function partTarget(part: Part, cut: PartCut = {}): RuleTarget {
   const { roles, rows, level } = PART_DEFS[part];
   const useRows = (rows ?? []).filter((row) => cut.rows === undefined || cut.rows.includes(row));
   return {

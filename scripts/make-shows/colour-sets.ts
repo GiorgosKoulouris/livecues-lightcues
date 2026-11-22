@@ -1,5 +1,5 @@
 // The Colour Set pool of a generated Show and each song's Set roles (Main,
-// Break, Swap). See `.scratch/show-variety/spec.md` and ADR 0023.
+// Break, Swap). See ADR 0023.
 //
 //   pool    `clamp(ceil(songs x 2/3), 6, 8)` sets. Main sets come in exchanged
 //           pairs, so a Swap is another song's Main. Break sets lead with a
@@ -10,6 +10,7 @@ import type { Swatch } from '../../src/shared/colour';
 import type { ColourSet } from '../../src/shared/show';
 import type { Brief } from './brief';
 import {
+  slugOf,
   ANALOGOUS_MAX_DEG,
   ANALOGOUS_MOODS,
   COLOUR_SET_FADE_S,
@@ -119,12 +120,6 @@ export function contrastHues(brief: Brief): [Swatch, Swatch] {
 const keyOf = (t: Triple) => `${t.primary}|${t.secondary}|${t.accent}`;
 const exchanged = (t: Triple): Triple => ({ ...t, primary: t.secondary, secondary: t.primary });
 const nameOf = (t: Triple) => `${t.primary} / ${t.secondary} / ${t.accent}`;
-const slugOf = (text: string): string =>
-  text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
-
 /** The Secondary a Primary takes: a band colour that pairs well, else the mood's kind of pair. */
 function partnerFor(brief: Brief, primary: Swatch): Swatch {
   const kind = ANALOGOUS_MOODS.includes(brief.mood ?? DEFAULT_MOOD) ? 'analogous' : 'complementary';
