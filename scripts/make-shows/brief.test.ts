@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { loadVenueFile } from '../../src/engine/venue-file';
 import {
@@ -202,11 +203,11 @@ describe('summariseVenue', () => {
 
 describe('loadBrief', () => {
   it('reads the sample brief and its venue beside it', () => {
-    const { brief, venue, dir } = loadBrief(sample.pathname);
+    const { brief, venue, dir } = loadBrief(fileURLToPath(sample));
     expect(brief.band).toBe('Neon Harbour');
     expect(venue.source).toBe('venue');
     expect(venue.movingFrontWashes).toBe(2);
-    expect(dir).toBe(new URL('./fixtures', import.meta.url).pathname);
+    expect(dir).toBe(fileURLToPath(new URL('./fixtures', import.meta.url)));
   });
 
   it('gives the default rig for a brief with no venue', () => {

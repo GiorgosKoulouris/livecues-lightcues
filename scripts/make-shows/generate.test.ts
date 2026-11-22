@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { loadShowFile } from '../../src/engine/show-file';
 import { loadVenueFile } from '../../src/engine/venue-file';
@@ -25,7 +26,7 @@ import { lintShow, tierOf } from './show-lint';
 import { venueCheckLines } from './write';
 
 const fixture = (name: string) => new URL(`./fixtures/${name}`, import.meta.url);
-const sample = loadBrief(fixture('sample-brief.yaml').pathname);
+const sample = loadBrief(fileURLToPath(fixture('sample-brief.yaml')));
 const files = generateFiles(sample.brief, sample.venue);
 const show = loadShowFile(files.show);
 const scene = (id: string): Scene => show.scenes.find((s) => s.id === id)!;
