@@ -1,8 +1,10 @@
-// `npm run lights:song -- <subcommand> ...`: `inspect`, `analyse`, `render` and `write`.
+// `npm run lights:song -- <subcommand> ...`: `inspect`, `analyse`, `generate`, `render` and `write`.
 import { readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { parseArgs } from 'node:util';
 import { analyseRegion, formatAnalysis } from './analyse';
 import { LightsError } from './errors';
+import { generateLights } from './generate';
 import { findRegion, readProject, type Region, type RppProject } from './rpp';
 import { formatBarBeat, regionTimeline } from './timeline';
 import { renderLights } from './render';
@@ -13,6 +15,7 @@ export class UsageError extends LightsError {}
 const USAGE = [
   'Usage: npm run lights:song -- inspect <project.rpp> <region>',
   '       npm run lights:song -- analyse <project.rpp> <region>',
+  '       npm run lights:song -- generate <project.rpp> <region> --show <file.lcshow> --sections <file> [--force]',
   '       npm run lights:song -- render <project.rpp> <plan.lights.yaml>',
   '       npm run lights:song -- write <project.rpp> <plan.lights.yaml> [--force] [--allow-stack]',
 ].join('\n');
@@ -71,6 +74,29 @@ export function inspect(raw: string, regionName: string): string {
   return lines.join('\n');
 }
 
+/** `generate <project.rpp> <region> --show <file> --sections <file> [--force]`. */
+function generate(file: string, args: string[]): string {
+  let parsed;
+  try {
+    parsed = parseArgs({
+      args,
+      options: {
+        show: { type: 'string' },
+        sections: { type: 'string' },
+        force: { type: 'boolean' },
+      },
+      allowPositionals: true,
+    });
+  } catch {
+    throw new UsageError(USAGE);
+  }
+  const { values, positionals } = parsed;
+  const { show, sections, force = false } = values;
+  if (positionals.length === 0 || !show || !sections) throw new UsageError(USAGE);
+  const r = generateLights({ rpp: file, region: positionals.join(' '), show, sections, force });
+  return [...r.warnings.map((w) => `Warning: ${w}`), ...r.notes, `Wrote: ${r.output}`].join('\n');
+}
+
 /** Runs the command line and returns what to print. */
 export function run(
   argv: string[],
@@ -78,6 +104,7 @@ export function run(
 ): string {
   const [command, file, ...rest] = argv;
   if (command === 'inspect' && file && rest.length > 0) return inspect(read(file), rest.join(' '));
+  if (command === 'generate' && file) return generate(file, rest);
   if (command === 'render' && file && rest.length === 1) {
     const warnings: string[] = [];
     const output = renderLights({

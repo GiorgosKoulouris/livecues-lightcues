@@ -73,7 +73,8 @@ export interface Plan {
   end?: Record<string, ScenePick>;
 }
 
-class Reader {
+/** A YAML file whose errors name the line. */
+export class Reader {
   private readonly lines = new LineCounter();
   private readonly doc;
 

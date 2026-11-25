@@ -52,7 +52,7 @@ npm test
 | `npm run show:palette` | Write the Palette Show and its Cue Sheet to `shows/`. Options: `-- --out <folder>` to write elsewhere, `--venue <file.lcvenue>` to print the Venue Check. See [Palette Show](#palette-show). |
 | `npm run show:generate` | Generate a Show and its Cue Sheet from a Brief: `-- <brief.yaml> [--out <folder>] [--venue <file.lcvenue>]`. Writes beside the brief and prints the Venue Check against its venue. See [Show generator](#show-generator). |
 | `npm run show:energy` | Write the Energy Show and its Cue Sheet to `shows/`. Same options as `show:palette`. See [Energy Show](#energy-show). |
-| `npm run lights:song` | Reaper Lights: `inspect <project.rpp> <region>` prints a song's span, tempo and markers; `analyse <project.rpp> <region>` prints RMS and onsets per bar from the WAV stems; `render <project.rpp> <plan>` writes the timeline page; `write <project.rpp> <plan> [--force] [--allow-stack]` saves a Plan's MIDI into `<name>.lights.rpp`. `render` warns, and `write` refuses, when a cue stacks more `dynamic` Scenes than its tier allows (M4); `--allow-stack` writes anyway. On a tagged Show, `render` also prints [Density](agents/shows.md#density-lint) warnings and draws a Density row; `write` ignores them. See [Reaper Lights](#reaper-lights). |
+| `npm run lights:song` | Reaper Lights: `inspect <project.rpp> <region>` prints a song's span, tempo and markers; `analyse <project.rpp> <region>` prints RMS and onsets per bar from the WAV stems; `generate <project.rpp> <region> --show <file.lcshow> --sections <file> [--force]` writes a Plan filled to its [Density](agents/shows.md#density-lint) (see [Plan generator](#plan-generator)); `render <project.rpp> <plan>` writes the timeline page; `write <project.rpp> <plan> [--force] [--allow-stack]` saves a Plan's MIDI into `<name>.lights.rpp`. `render` warns, and `write` refuses, when a cue stacks more `dynamic` Scenes than its tier allows (M4); `--allow-stack` writes anyway. On a tagged Show, `render` also prints [Density](agents/shows.md#density-lint) warnings and draws a Density row; `write` ignores them. See [Reaper Lights](#reaper-lights). |
 | `npm test` | Run the test suite (Vitest). |
 | `npm run test:watch` | Run Vitest in watch mode. |
 | `npm run coverage` | Run the tests with coverage. Prints a summary and writes an HTML report and `coverage-summary.json` to `coverage/`. CI runs it too: see [CI](#ci). Not part of `check`. |
@@ -125,6 +125,31 @@ Turns one song (a Region) of a Reaper project into MIDI that fires the Energy Sh
 - `write` compiles a Plan (`<Song>.lights.yaml`, with the Show at `shows/Energy.lcshow` unless it names one; a relative `show:` path is found from the working directory, then from the Plan's folder) and saves one MIDI item, `lights:<region>`, on lane 1 of the `MidiToLights` track. It never edits the original `.rpp`: it writes `<name>.lights.rpp` next to it. An existing `.lights.rpp` is the base, so other Regions' items stay; delete it to start again from the original. The file is written to a temp file and renamed, then a per-Region hash goes beside the Plan.
 - If the item's MIDI was edited in Reaper (it matches neither the stored hash nor what the Plan would write), `write` stops. Fold the edits into the Plan, or pass `--force`.
 - Errors in a Plan name the line. Run `npm test` for the tests. The fixture `scripts/reaper-lights/fixtures/lantern.rpp` is force-added to git (`fixtures/` is git-ignored).
+
+### Plan generator
+
+`npm run lights:song -- generate <project.rpp> <region> --show <file.lcshow> --sections <file>` writes `Lights/<Region>.lights.yaml` beside the project ([ADR 0024](adr/0024-plans-generated-to-a-density.md)). It does not overwrite an existing Plan without `--force`. The Show must carry `tier:` tags (a generated band Show). A relative `--show` is found as a Plan's `show:` is. Edit the Plan by hand, then `render` and `write` as usual.
+
+The sections file holds the sections and tiers the user confirmed. Errors name its line.
+
+```yaml
+sections:
+  - { bar: 1, label: intro, tier: chill }
+  - { bar: 9, label: verse1, tier: groove }
+  - { bar: 25, label: chorus1, tier: drive }
+  - { bar: 41, label: stop }
+  - { bar: 42, label: breakdown }
+```
+
+| Key     | Value                                                                                                      |
+| ------- | ---------------------------------------------------------------------------------------------------------- |
+| `bar`   | A whole song bar from 1, inside the Region, rising down the list. A section ends where the next one starts. |
+| `label` | A Marker vocabulary label; trailing numbers allowed. Not `roll`, `endroll` or `hit`.                       |
+| `tier`  | `chill`, `groove`, `drive` or `peak`. Optional on `stop` and `blackout`. A `breakdown` without one is Peak. |
+
+- **Looks and Effects.** Each section picks Scenes of its tier. Looks change on its bar 1, and each 8 bars where the Density asks (Drive and Peak aim for the target; Chill and Groove only meet the floor). Movement, Pulse and Colour FX swap on 4-bar steps. A swap never repeats the Layer's last Scene. A Layer the section does not use is released. A running Colour FX is fired again beside each new Look. Chill gives up a Pulse or Colour FX to stay inside its stacking cap. `stop` and `blackout` hold Dark with every Effect released.
+- **Same inputs, same Plan.** Picks are seeded by the Region name and the section.
+- **Markers.** `render` scores [Density](agents/shows.md#density-lint) per project marker, so put a marker at each section. `generate` warns where the markers and the sections differ.
 
 ## CI
 

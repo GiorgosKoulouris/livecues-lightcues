@@ -153,12 +153,12 @@ function tierAt(
 }
 
 /**
- * The band scaled to the section's bars, in whole events. A section shorter than
+ * The band scaled to a section's bars, in whole events. A section shorter than
  * a phrase rounds outward, so that one event is not judged as a rate. A longer one
  * compares the exact rate, its floor over the whole bars and its ceiling over the
  * bars rounded up, so that part of a bar asks for no more.
  */
-function score(count: number, tier: Tier, metric: DensityMetric, bars: number) {
+export function densityRange(tier: Tier, metric: DensityMetric, bars: number) {
   const [floor, , ceiling] = DENSITY[tier][metric];
   const short = bars < PHRASE_BARS - EPS;
   const min = short
@@ -167,6 +167,11 @@ function score(count: number, tier: Tier, metric: DensityMetric, bars: number) {
   const max = short
     ? Math.ceil((ceiling * bars) / PHRASE_BARS - EPS)
     : Math.floor((ceiling * Math.ceil(bars - EPS)) / PHRASE_BARS + EPS);
+  return { min, max };
+}
+
+function score(count: number, tier: Tier, metric: DensityMetric, bars: number) {
+  const { min, max } = densityRange(tier, metric, bars);
   const value: DensityScore = count < min ? 0 : count > max ? 1 : 2;
   return { value, min, max };
 }

@@ -163,14 +163,14 @@ export class SongTimeline {
   }
 
   /**
-   * Seconds for a plan time. `5` and `5.3` are song bar and beat. `Chorus1`
-   * is a marker, and `Chorus1 +4` or `Chorus1 -1.2` move it by whole bars and
+   * Seconds for a plan time. `5` and `5.3` are song bar and beat, and `5.3.5`
+   * is half a beat later. `Chorus1` is a marker, and `Chorus1 +4` or `Chorus1 -1.2` move it by whole bars and
    * beats (an offset of `4.3` is 4 bars and 3 beats). Markers match
    * case-insensitively, and a label that names several markers is an error.
    */
   resolve(ref: string): number {
     const text = ref.trim();
-    const abs = /^(\d+)(?:\.(\d+))?$/.exec(text);
+    const abs = /^(\d+)(?:\.(\d+(?:\.\d+)?))?$/.exec(text);
     if (abs) return this.timeAt({ bar: Number(abs[1]), beat: abs[2] ? Number(abs[2]) : 1 });
     const rel = /^(.+?)(?:\s+([+-])(\d+)(?:\.(\d+))?)?$/.exec(text);
     if (!rel) throw new TimelineError(`Cannot read the time '${ref}'`);
