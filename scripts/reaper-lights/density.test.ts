@@ -134,6 +134,17 @@ events:
     expect(report.warnings[0]).toContain('Hits 1 (min 2)');
   });
 
+  it('asks no more of a section for part of a bar past a phrase', () => {
+    // Peak per phrase: Looks 1 to 2, Hits 8 to 16.
+    const peak = (looks: string, bars: number) =>
+      lint(`cues:\n${looks}events:\n${hits(...Array<string>(8).fill('Riser'))}\n`, [['drop', 1]], {
+        bars,
+      })!.sections[0]!.scores;
+    expect(peak('  - { at: 1, look: peak red }\n', 8.25)).toMatchObject({ look: 2, hits: 2 });
+    const twice = '  - { at: 1, look: peak red }\n  - { at: 9, look: peak blue }\n';
+    expect(peak(twice, 16.25)).toMatchObject({ look: 2 });
+  });
+
   it('leaves a section without a tier unscored', () => {
     const report = lint('cues:\n  - { at: 1, look: Dark }\n')!;
     expect(report.sections[0]!.scores).toBeUndefined();
@@ -151,6 +162,17 @@ events:
     expect(report.sections.map((s) => s.name)).toEqual(['verse', 'stop']);
   });
 
+  it('drops a section with no length and says so', () => {
+    const report = lint('cues:\n  - { at: 1, look: drive red }\n', [
+      ['verse', 1],
+      ['chorus', 1],
+    ])!;
+    expect(report.sections.map((s) => s.name)).toEqual(['chorus']);
+    expect(report.warnings).toContain(
+      'Bar 1.1: verse starts at the same time as chorus, so it has no length and is not scored',
+    );
+  });
+
   it('says so when no marker starts a section', () => {
     expect(lint('', [])!.warnings).toEqual([
       'The Region has no section markers, so no section is scored for Density',
@@ -166,6 +188,13 @@ events:
 end: { look: drive blue }
 `;
     expect(lint(body)!.sections[0]!.counts).toMatchObject({ look: 2, colourfx: 1 });
+  });
+
+  it('counts nothing for the reset, with or without start overrides', () => {
+    const start = 'start: { look: chill red, movement: Fan }\n';
+    for (const body of ['', start]) {
+      expect(lint(body)!.sections[0]!.counts).toMatchObject({ look: 0, movement: 0, colour: 0 });
+    }
   });
 
   it('counts colour changes from Looks, Colour FX, Colour Sets and colour Hits', () => {

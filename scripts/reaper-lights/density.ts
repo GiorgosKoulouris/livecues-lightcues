@@ -85,12 +85,15 @@ type Tally = Partial<Record<DensityMetric, number>>;
  * Each event with what it counts. A swap is a Layer firing another Scene than its
  * last one, so a release or a re-fire is none.
  */
-function tally(events: readonly MidiEvent[], show: ShowMap, lookKey: string) {
+function tally(
+  events: readonly MidiEvent[],
+  show: ShowMap,
+  lookKey: string,
+  isReset: (e: MidiEvent) => boolean,
+) {
   const last = new Map<string, string>();
   return events.map((e) => {
     const add: Tally = {};
-    // The default reset sets the stage and asks for nothing: it has no plan line.
-    const asked = e.line !== undefined;
     if (e.kind === 'flash') {
       add.hits = 1;
       if (COLOUR_HIT.test(e.scene ?? '')) add.colour = 1;
@@ -110,7 +113,7 @@ function tally(events: readonly MidiEvent[], show: ShowMap, lookKey: string) {
         }
       }
     }
-    return { event: e, add: asked ? add : {} };
+    return { event: e, add: isReset(e) ? {} : add };
   });
 }
 
@@ -146,16 +149,19 @@ function tierAt(
 
 /**
  * The band scaled to the section's bars, in whole events. A section shorter than
- * a phrase rounds outward, so that one event is not judged as a rate.
+ * a phrase rounds outward, so that one event is not judged as a rate. A longer one
+ * compares the exact rate, its floor over the whole bars and its ceiling over the
+ * bars rounded up, so that part of a bar asks for no more.
  */
 function score(count: number, tier: Tier, metric: DensityMetric, bars: number) {
   const [floor, , ceiling] = DENSITY[tier][metric];
-  const phrases = bars / PHRASE_BARS;
-  const short = phrases < 1 - EPS;
-  const low = floor * phrases;
-  const high = ceiling * phrases;
-  const min = short ? Math.floor(low + EPS) : Math.ceil(low - EPS);
-  const max = short ? Math.ceil(high - EPS) : Math.floor(high + EPS);
+  const short = bars < PHRASE_BARS - EPS;
+  const min = short
+    ? Math.floor((floor * bars) / PHRASE_BARS + EPS)
+    : Math.ceil((floor * Math.floor(bars + EPS)) / PHRASE_BARS - EPS);
+  const max = short
+    ? Math.ceil((ceiling * bars) / PHRASE_BARS - EPS)
+    : Math.floor((ceiling * Math.ceil(bars - EPS)) / PHRASE_BARS + EPS);
   const value: DensityScore = count < min ? 0 : count > max ? 1 : 2;
   return { value, min, max };
 }
@@ -205,7 +211,11 @@ export function densityReport(
   const endLines = new Set(Object.values(plan.end ?? {}).map((p) => p.line));
   const isEnd = (e: MidiEvent) => (e.line === undefined ? e.time > EPS : endLines.has(e.line));
   const own = events.filter((e) => !isEnd(e));
-  const counted = tally(own, show, lookKey);
+  // The reset sets the stage and asks for nothing, whether by default (no plan
+  // line) or from the plan's start overrides.
+  const startLines = new Set(Object.values(plan.start).map((p) => p.line));
+  const isReset = (e: MidiEvent) => e.line === undefined || startLines.has(e.line);
+  const counted = tally(own, show, lookKey, isReset);
 
   const markers = timeline.markers
     .filter((m) => !EVENT_MARKERS.some((k) => k === matchMarker(m.name)))
@@ -213,17 +223,25 @@ export function densityReport(
   const warnings: string[] = [];
   const previous = new Map<string, { name: string; bar: string; count: number }>();
 
-  const sections = markers.map((marker, i): SectionDensity => {
+  const sections = markers.flatMap((marker, i): SectionDensity[] => {
     const next = markers[i + 1]?.time ?? timeline.end;
     const from = marker.time - timeline.start;
     const to = next - timeline.start;
+    const bar = formatBarBeat(timeline.barBeatAt(marker.time));
+    if (to - from < SNAP) {
+      const other = markers[i + 1]?.name ?? 'the Region end';
+      warnings.push(
+        `Bar ${bar}: ${marker.name} starts at the same time as ${other}, ` +
+          'so it has no length and is not scored',
+      );
+      return [];
+    }
     const inside = counted.filter((c) => c.event.time >= from - SNAP && c.event.time < to - SNAP);
     const counts = zeroCounts();
     for (const { add } of inside) {
       for (const m of DENSITY_METRICS) counts[m] += add[m] ?? 0;
     }
     const bars = timeline.barsAt(next) - timeline.barsAt(marker.time);
-    const bar = formatBarBeat(timeline.barBeatAt(marker.time));
     const tier = tierAt(own, from, show, lookKey);
     const section: SectionDensity = {
       name: marker.name,
@@ -269,7 +287,7 @@ export function densityReport(
       );
     }
     previous.set(label, { name: marker.name, bar, count });
-    return section;
+    return [section];
   });
 
   if (sections.length === 0) {
