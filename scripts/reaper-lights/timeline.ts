@@ -14,8 +14,9 @@ export interface BarBeat {
   beat: number;
 }
 
-// Tolerance in quarter notes when snapping a position onto a beat line.
-const EPS = 1e-6;
+// Tolerance in quarter notes when snapping a position onto a beat line: half a
+// MIDI tick. Reaper's tempo points can sit microseconds off the grid.
+const EPS = 0.5 / 960;
 
 interface Segment {
   time: number;
@@ -117,7 +118,7 @@ export class SongTimeline {
       const qn = i === 0 ? 0 : tempo.quarterNotesAt(time) - this.startQn;
       const prev = this.measures[i - 1];
       // A signature that starts mid-bar closes the previous bar early.
-      if (prev) bars = prev.bars + Math.ceil((qn - prev.qn) / prev.barQn - EPS);
+      if (prev) bars = prev.bars + Math.ceil((qn - prev.qn - EPS) / prev.barQn);
       const beatQn = 4 / sig.den;
       this.measures.push({ qn, bars, num: sig.num, beatQn, barQn: sig.num * beatQn });
     });
@@ -128,11 +129,11 @@ export class SongTimeline {
     const qn = this.tempo.quarterNotesAt(time) - this.startQn;
     let m = this.measures[0] as Measures;
     for (const s of this.measures) if (s.qn <= qn + EPS) m = s;
-    const bars = Math.floor((qn - m.qn) / m.barQn + EPS);
+    const bars = Math.floor((qn - m.qn + EPS) / m.barQn);
     const beat = (qn - m.qn - bars * m.barQn) / m.beatQn + 1;
     return {
       bar: m.bars + bars + 1,
-      beat: Math.abs(beat - Math.round(beat)) < EPS ? Math.round(beat) : beat,
+      beat: Math.abs(beat - Math.round(beat)) * m.beatQn < EPS ? Math.round(beat) : beat,
     };
   }
 
