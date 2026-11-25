@@ -148,7 +148,10 @@ sections:
 | `tier`  | `chill`, `groove`, `drive` or `peak`. Optional on `stop` and `blackout`. A `breakdown` without one is Peak. |
 
 - **Looks and Effects.** Each section picks Scenes of its tier. Looks change on its bar 1, and each 8 bars where the Density asks (Drive and Peak aim for the target; Chill and Groove only meet the floor). Movement, Pulse and Colour FX swap on 4-bar steps. A swap never repeats the Layer's last Scene. A Layer the section does not use is released. A running Colour FX is fired again beside each new Look. Chill gives up a Pulse or Colour FX to stay inside its stacking cap. `stop` and `blackout` hold Dark with every Effect released.
-- **Same inputs, same Plan.** Picks are seeded by the Region name and the section.
+- **Hits.** Each section takes its tier's Hit Density as `events`. Its bar 1 takes a turn Hit: a Blinder on up to 2 sections (Peak first), a full-area Hit on other Drive and Peak turns while the colour ceiling has room, else a partial one. The last bar of a `build` or `pre`, or of a section before a higher tier, holds a Riser (never before a stop). `stop` is a 1-beat Strobe, then Blackout to the next section; `blackout` is the Blackout alone.
+- **Body Hits** keep a beat from every other Hit and rotate through the partial Hits. They sit on onsets from the WAV items on the Drums, KickBand and Snare tracks (muted items and MP3 are skipped, as in `analyse`). A bar with more than 3 onsets a beat in a stem is too dense for that stem. Where no onset fits, they sit on the beat grid: downbeats first, then backbeats. A `breakdown` takes onsets on or off the beat, the KickBand stem's first, at its tier's rate (Peak unless given).
+- **Full-area rate.** A Show with no partial Hit uses full-area ones, at least 1/3 s apart, so above 180 BPM they sit 2 beats apart.
+- **Same inputs, same Plan.** Picks are seeded by the Region name and the section. The stem audio is an input too.
 - **Markers.** `render` scores [Density](agents/shows.md#density-lint) per project marker, so put a marker at each section. `generate` warns where the markers and the sections differ.
 
 ## CI

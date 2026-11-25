@@ -4,19 +4,14 @@
 // The same inputs give the same Plan.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import {
-  DARK_NAME,
-  DENSITY,
-  PHRASE_BARS,
-  TIER_BANDS,
-  type DensityMetric,
-  type Tier,
-} from '../make-shows/rules';
-import { densityRange } from './density';
+import { DARK_NAME, TIER_BANDS, type Tier } from '../make-shows/rules';
+import { analyseRegion, isDrumStem } from './analyse';
+import { aim, densityRange } from './density';
 import { LightsError } from './errors';
 import { PlanError, type Plan } from './plan';
-import { findRegion, readProject } from './rpp';
-import { isStop, parseSections, type Section } from './sections';
+import { placeHits, type HitEvent, type Hits } from './hits';
+import { findRegion, readProject, type Region, type RppProject } from './rpp';
+import { isStop, parseSections, type Section, type Span } from './sections';
 import { seededIndex } from './seed';
 import { loadShowFor, tierTag, type ShowMap, type ShowScene } from './show';
 import { EVENT_MARKERS, matchMarker } from './vocabulary';
@@ -36,11 +31,6 @@ type Effect = (typeof EFFECTS)[number];
 /** The Effects a cue gives up, in this order, to stay inside the stacking cap. */
 const DROP_ORDER: readonly Effect[] = ['pulse', 'colourfx'];
 const RELEASE = 'release';
-
-/** A section with its length in bars, fractional where the song ends mid-bar. */
-export interface Span extends Section {
-  bars: number;
-}
 
 /** A Layer key to a Scene name, or `release`. */
 type Picks = Record<string, string>;
@@ -65,13 +55,6 @@ function places(bars: number, step: number): number[] {
 const spread = (all: number[], count: number): number[] =>
   Array.from({ length: count }, (_, i) => all[Math.floor((i * all.length) / count)] as number);
 
-/** The swaps a tier aims for over a section, kept inside the band the lint scores. */
-export function aim(tier: Tier, metric: DensityMetric, bars: number): number {
-  const { min, max } = densityRange(tier, metric, bars);
-  const target = Math.round((DENSITY[tier][metric][1] * bars) / PHRASE_BARS);
-  return Math.min(max, Math.max(min, target));
-}
-
 class Looks {
   private readonly lookKey: string;
   private readonly dark: ShowScene | undefined;
@@ -80,6 +63,8 @@ class Looks {
   /** The Scene each Layer fired last, a release or not. A swap never repeats it. */
   private readonly last = new Map<string, string>();
   readonly cues: CueDraft[] = [];
+  /** Per section, the colour changes its Looks and Colour FX leave under the ceiling. */
+  readonly colourRoom: number[] = [];
 
   constructor(
     private readonly song: string,
@@ -106,6 +91,7 @@ class Looks {
     if (this.show.layer(layer)?.releaseNote !== undefined) picks[layer] = RELEASE;
   }
 
+  /** Swaps a Layer to another Scene of the section's tier, if it has one. */
   private fire(section: Span, offset: number, layer: string, picks: Picks): void {
     const pool = this.pool(layer, section.tier as Tier).filter(
       (s) => s.name !== this.last.get(layer),
@@ -162,8 +148,14 @@ class Looks {
   }
 
   section(section: Span): void {
-    if (isStop(section.kind)) return this.stop(section);
-    const offsets = this.offsets(section, section.tier as Tier);
+    if (isStop(section.kind)) {
+      this.colourRoom.push(0);
+      return this.stop(section);
+    }
+    const tier = section.tier as Tier;
+    const offsets = this.offsets(section, tier);
+    const used = [this.lookKey, 'colourfx'].reduce((n, l) => n + (offsets.get(l)?.length ?? 0), 0);
+    this.colourRoom.push(densityRange(tier, 'colour', section.bars).max - used);
     const all = [...new Set([...offsets.values()].flat())].sort((a, b) => a - b);
     for (const offset of all) {
       const picks: Picks = {};
@@ -237,8 +229,17 @@ const flow = (picks: Picks): string =>
     .join(', ')} }`;
 const tierName = (s: Section): string => (s.tier && !isStop(s.kind) ? `, ${cap(s.tier)}` : '');
 
-/** The Plan as text: one line per pick, with a comment at each section. */
-function planText(song: string, show: string, sections: Span[], looks: Looks): string {
+/** The Hit events as lines, one each, with a comment at each section. */
+function eventLines(events: HitEvent[]): string[] {
+  return events.flatMap((e, i) => {
+    const span = e.until ? `until: ${quote(e.until)}` : `length: ${quote(e.length ?? '')}`;
+    const line = `  - { at: ${quote(e.at)}, scene: ${quote(e.scene)}, ${span} }`;
+    return e.section === events[i - 1]?.section ? [line] : [`  # ${e.section.label}`, line];
+  });
+}
+
+/** The Plan as text: one line per pick and Hit, with a comment at each section. */
+function planText(song: string, show: string, sections: Span[], looks: Looks, hits: Hits): string {
   const cues = looks.cues.flatMap((cue) => [
     ...(cue.section ? [`  # ${cue.section.label}${tierName(cue.section)}`] : []),
     `  - at: ${quote(String(cue.bar))}`,
@@ -254,6 +255,7 @@ function planText(song: string, show: string, sections: Span[], looks: Looks): s
     ...sections.map((s) => `    - ${quote(`Bar ${s.bar}: ${s.label}${tierName(s)}`)}`),
     'cues:',
     ...cues,
+    ...(hits.events.length > 0 ? ['events:', ...eventLines(hits.events)] : []),
     `end: ${flow(looks.end())}`,
     '',
   ].join('\n');
@@ -292,6 +294,12 @@ function planPathFor(rpp: string, song: string): string {
   return join(dirname(rpp), 'Lights', `${file}.lights.yaml`);
 }
 
+/** The onsets of the Region's drum stems, and why any file was skipped. */
+function drumStems(project: RppProject, region: Region, dir: string) {
+  const tracks = project.tracks.filter((t) => isDrumStem(t.name));
+  return analyseRegion({ ...project, tracks }, region, { dir });
+}
+
 /** Writes the Plan of one song. It never writes over a Plan without `force`. */
 export function generateLights(options: GenerateOptions): Generated {
   const project = readProject(readFileSync(options.rpp, 'utf8'));
@@ -313,9 +321,30 @@ export function generateLights(options: GenerateOptions): Generated {
   const looks = new Looks(region.name, show);
   for (const section of sections) looks.section(section);
 
+  const drums = drumStems(project, region, dirname(options.rpp));
+  const hits = placeHits({
+    song: region.name,
+    sections,
+    colourRoom: looks.colourRoom,
+    show,
+    timeline,
+    stems: drums.stems,
+  });
+
   mkdirSync(dirname(output), { recursive: true });
-  writeFileSync(output, planText(region.name, options.show, sections, looks), {
+  writeFileSync(output, planText(region.name, options.show, sections, looks, hits), {
     flag: options.force ? 'w' : 'wx',
   });
-  return { output, warnings: markerWarnings(sections, timeline), notes: [] };
+  const stems = drums.stems.map((s) => s.name).join(', ') || 'no drum stem found';
+  const warnings = [
+    ...markerWarnings(sections, timeline),
+    ...drums.warnings,
+    ...(show.scenes.some((s) => s.mode === 'flash')
+      ? []
+      : ['The Show has no Hit Scenes, so no Hit is placed']),
+  ];
+  const notes = [
+    `Body Hits: ${hits.onStem} on drum stem onsets (${stems}), ${hits.onGrid} on the beat grid`,
+  ];
+  return { output, warnings, notes };
 }

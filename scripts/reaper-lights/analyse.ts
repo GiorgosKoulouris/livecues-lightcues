@@ -195,6 +195,9 @@ function isStemTrack(track: Track, region: Region): boolean {
   );
 }
 
+/** Whether a track is a drum stem by its name: Drums, KickBand or Snare. */
+export const isDrumStem = (name: string): boolean => STEM_NAME.test(name);
+
 const trackName = (track: Track, index: number) => track.name || `Track ${index + 1}`;
 
 /** RMS per song bar and onsets for every stem track (Drums, KickBand, Snare, the full mix) with audio in the region. */

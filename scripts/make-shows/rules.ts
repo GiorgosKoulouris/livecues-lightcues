@@ -144,6 +144,12 @@ export const COLOUR_HIT = /^Hit: Colour /i;
 // `windowSeconds`, except in a burst of `burstBeats` or less.
 export const FULL_AREA_LIMIT = { maxStarts: 3, windowSeconds: 1, burstBeats: 2 } as const;
 
+// The Plan generator's Hits. A bar where a drum stem has more onsets than this
+// per beat is too dense to pick accents from.
+export const STEM_MAX_ONSETS_PER_BEAT = 3;
+// The most Blinder Hits in one song: an audience accent, not a downbeat habit.
+export const BLINDERS_PER_SONG = 2;
+
 // ADR 0023: what the Variety lint asks of a generated Show. 2 needs
 // `scenesPerLayer` Scenes on every dynamic Layer in every tier, `hits` Hits,
 // `colourSets` Colour Sets and a distinct Main, Break and Swap per song. 1 needs

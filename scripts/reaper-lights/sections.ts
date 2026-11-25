@@ -24,6 +24,11 @@ export interface Section {
   tier?: Tier;
 }
 
+/** A section with its length in bars, fractional where the song ends mid-bar. */
+export interface Span extends Section {
+  bars: number;
+}
+
 /** The sections that hold the stage dark and need no tier. */
 export const isStop = (kind: MarkerKind): boolean => kind === 'stop' || kind === 'blackout';
 

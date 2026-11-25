@@ -170,6 +170,13 @@ export function densityRange(tier: Tier, metric: DensityMetric, bars: number) {
   return { min, max };
 }
 
+/** The count a tier aims for over a section, kept inside the band the lint scores. */
+export function aim(tier: Tier, metric: DensityMetric, bars: number): number {
+  const { min, max } = densityRange(tier, metric, bars);
+  const target = Math.round((DENSITY[tier][metric][1] * bars) / PHRASE_BARS);
+  return Math.min(max, Math.max(min, target));
+}
+
 function score(count: number, tier: Tier, metric: DensityMetric, bars: number) {
   const { min, max } = densityRange(tier, metric, bars);
   const value: DensityScore = count < min ? 0 : count > max ? 1 : 2;
