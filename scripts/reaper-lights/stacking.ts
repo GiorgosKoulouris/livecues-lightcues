@@ -4,7 +4,7 @@
 import { TIER_BANDS, TIERS } from '../make-shows/rules';
 import type { MidiEvent } from './compile';
 import type { Plan } from './plan';
-import type { ShowMap } from './show';
+import { tierTag, type ShowMap } from './show';
 import { formatBarBeat, type SongTimeline } from './timeline';
 
 /** Dynamic Layers allowed at once per tier: the generator's M4 thresholds. */
@@ -21,7 +21,6 @@ export interface StackWarning {
 }
 
 const EPS = 1e-6;
-const TIER_TAG = 'tier:';
 const cap = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
 
 /** The Go Scenes each Layer holds at a time: a later Go replaces, a Release clears. */
@@ -40,7 +39,7 @@ function tierOf(plan: Plan['cues'][number], layers: Map<string, string>, show: S
   if (plan.tier) return plan.tier;
   const look = show.baseLook?.layer ?? 'look';
   const tags = show.scene(layers.get(look) ?? '')?.tags ?? [];
-  return tags.find((t) => t.startsWith(TIER_TAG))?.slice(TIER_TAG.length) ?? '';
+  return tierTag(tags) ?? '';
 }
 
 /** One warning for each cue that holds more dynamic Layers than its tier allows. */

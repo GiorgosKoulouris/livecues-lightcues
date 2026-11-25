@@ -77,6 +77,72 @@ export const UNLIT_FRONT_NAME = /silhouette|dark|walk-on|blackout/i;
 // L3, M5: the Dark Scene.
 export const DARK_NAME = /(^|[^a-z])dark([^a-z]|$)/i;
 
+// ---------------------------------------------------------------- Density
+
+// ADR 0024: how busy a Plan is. Swaps are a Layer changing to a different Scene.
+// `colour` overlaps the others: Look changes that change colour, Colour FX
+// swaps, Colour Set cues and colour Hits.
+export const DENSITY_METRICS = ['look', 'movement', 'pulse', 'colourfx', 'hits', 'colour'] as const;
+export type DensityMetric = (typeof DENSITY_METRICS)[number];
+
+/** Floor, target and ceiling. */
+export type DensityBand = readonly [number, number, number];
+
+/** The written bars a Density figure counts over. */
+export const PHRASE_BARS = 8;
+
+// Per phrase, for one section of the tier. Starting values (plan-density
+// research §3), to be tuned after the first songs are watched.
+export const DENSITY: Record<Tier, Record<DensityMetric, DensityBand>> = {
+  chill: {
+    look: [0.25, 0.5, 1],
+    movement: [0.25, 0.5, 1],
+    pulse: [0, 0.25, 0.5],
+    colourfx: [0, 0.5, 1],
+    hits: [0, 0.5, 2],
+    colour: [0.25, 0.5, 1],
+  },
+  groove: {
+    look: [0.5, 0.75, 1],
+    movement: [0.5, 1, 2],
+    pulse: [0.5, 0.75, 1],
+    colourfx: [0.25, 0.5, 1],
+    hits: [1, 3, 6],
+    colour: [0.5, 1, 2],
+  },
+  drive: {
+    look: [0.5, 1, 2],
+    movement: [1, 1.5, 2],
+    pulse: [0.5, 1, 2],
+    colourfx: [0.5, 1, 2],
+    hits: [4, 6, 10],
+    colour: [1, 1.5, 3],
+  },
+  peak: {
+    look: [1, 1.5, 2],
+    movement: [1, 2, 4],
+    pulse: [1, 1.5, 2],
+    colourfx: [1, 1.5, 2],
+    hits: [8, 12, 16],
+    colour: [1, 2, 4],
+  },
+};
+
+// Per song: Colour Set cues (Main, Break, Main, Swap, plus at most two more).
+export const COLOUR_SET_CUES = { min: 4, max: 6 } as const;
+
+// The distinct Hit Scenes a section of at least one phrase needs.
+export const HIT_KINDS_MIN: Partial<Record<Tier, number>> = { drive: 4, peak: 6 };
+
+// The Hits that flash the whole stage: Full white, Blinder, Strobe, and a colour
+// on everything (Colour Split is not).
+export const FULL_AREA_HIT = /^Hit: (Full white|Blinder|Strobe|Colour (?!Split$).+)$/i;
+export const COLOUR_HIT = /^Hit: Colour /i;
+
+// Photosensitivity: at most `maxStarts` full-area Hits start in any
+// `windowSeconds`, except in a burst of `burstBeats` or less.
+export const FULL_AREA_LIMIT = { maxStarts: 3, windowSeconds: 1, burstBeats: 2 } as const;
+
 // ADR 0023: what the Variety lint asks of a generated Show. 2 needs
 // `scenesPerLayer` Scenes on every dynamic Layer in every tier, `hits` Hits,
 // `colourSets` Colour Sets and a distinct Main, Break and Swap per song. 1 needs

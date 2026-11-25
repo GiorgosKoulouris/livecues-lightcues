@@ -31,6 +31,8 @@ export interface ShowScene {
   colours: string[];
   /** The Scene's tags (`dynamic`, `tier:drive`). Empty for a Show that has none. */
   tags: string[];
+  /** The colour each lit Rule target takes, to tell whether a Look changes colour. */
+  paint?: Record<string, string>;
 }
 
 /** A Colour Set: Go only. It has a MIDI note only when the Show gives it one. */
@@ -52,8 +54,15 @@ export interface ShowLayer {
 
 export class ShowError extends LightsError {}
 
+const TIER_TAG = 'tier:';
+/** The tier a Scene's `tier:` tag names. A Show with no such tag is untagged. */
+export const tierTag = (tags: readonly string[]): string | undefined =>
+  tags.find((t) => t.startsWith(TIER_TAG))?.slice(TIER_TAG.length);
+
 type RawColour = { swatch: string } | { hue: number; saturation: number };
 interface RawRule {
+  target?: unknown;
+  intensity?: number;
   colour?: RawColour;
   colourEffect?: { colours?: RawColour[] };
 }
@@ -86,6 +95,17 @@ function sceneColours(rules: RawRule[] = []): string[] {
     for (const c of [rule.colour, ...(rule.colourEffect?.colours ?? [])]) {
       const css = c && cssColour(c);
       if (css && !out.includes(css)) out.push(css);
+    }
+  }
+  return out;
+}
+
+function scenePaint(rules: RawRule[] = []): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const rule of rules) {
+    const colour = rule.colour ?? rule.colourEffect?.colours;
+    if (colour && rule.intensity !== 0) {
+      out[JSON.stringify(rule.target ?? {})] = JSON.stringify(colour);
     }
   }
   return out;
@@ -125,6 +145,7 @@ export class ShowMap {
         mode: t.mode as SceneMode,
         colours: sceneColours(scene.rules),
         tags: scene.tags ?? [],
+        paint: scenePaint(scene.rules),
       });
     }
     for (const set of raw.colourSets ?? []) {

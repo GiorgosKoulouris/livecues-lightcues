@@ -146,7 +146,12 @@ export class SongTimeline {
 
   /** The region's length in bars, fractional when it ends mid-bar. */
   get lengthInBars(): number {
-    const { bar, beat } = this.barBeatAt(this.end);
+    return this.barsAt(this.end);
+  }
+
+  /** The written bars from the region start to a time, fractional inside a bar. */
+  barsAt(time: number): number {
+    const { bar, beat } = this.barBeatAt(time);
     const m =
       [...this.measures].reverse().find((s) => s.bars <= bar - 1) ?? (this.measures[0] as Measures);
     return bar - 1 + (beat - 1) / m.num;

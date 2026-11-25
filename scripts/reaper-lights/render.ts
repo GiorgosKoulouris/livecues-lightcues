@@ -1,9 +1,12 @@
 // The timeline page: a plan and its compiled events as one self-contained HTML
 // file. Section bands, a bar ruler and a lane per Layer with Scene names, hit
-// ticks and the Scenes' colours from the Show. Read-only; nothing in it is saved.
+// ticks and the Scenes' colours from the Show, and a Density row for a tagged
+// Show. Read-only; nothing in it is saved.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
+import { DENSITY_METRICS, PHRASE_BARS } from '../make-shows/rules';
 import { compilePlan, type MidiEvent } from './compile';
+import { densityReport, METRIC_NAMES, type SectionDensity } from './density';
 import { parsePlan, type Plan } from './plan';
 import { findRegion, readProject } from './rpp';
 import { loadShowFor, type ShowLayer, type ShowMap } from './show';
@@ -110,6 +113,36 @@ function lane(layer: ShowLayer, events: MidiEvent[], input: RenderInput): string
   return `<div class="row lane" data-lane="${escapeHtml(layer.name)}"><div class="label">${escapeHtml(layer.name)}</div><div class="track">${items.join('')}</div></div>`;
 }
 
+/** The Density row's colours: below a floor, above a ceiling, within, not scored. */
+const DENSITY_FILL = { below: '#9b2c2c', above: '#8a6416', within: '#2f6b3c', none: NEUTRAL };
+
+function densityBlock(s: SectionDensity): string {
+  const off = DENSITY_METRICS.filter((m) => s.scores && s.scores[m] !== 2);
+  const state = !s.scores
+    ? 'none'
+    : off.some((m) => s.scores?.[m] === 0)
+      ? 'below'
+      : off.length > 0
+        ? 'above'
+        : 'within';
+  const marks = off.map((m) => `${METRIC_NAMES[m]}${s.scores?.[m] === 0 ? '↓' : '↑'}`);
+  const tier = s.tier ? s.tier.charAt(0).toUpperCase() + s.tier.slice(1) : undefined;
+  const text = tier ? `${tier}: ${marks.join(' ') || 'ok'}` : 'Not scored';
+  const rates = DENSITY_METRICS.map((m) => {
+    const rate = Number(((s.counts[m] * PHRASE_BARS) / s.bars).toFixed(2));
+    return `${METRIC_NAMES[m]} ${s.counts[m]} (${rate} per ${PHRASE_BARS} bars)`;
+  });
+  const title = [`${s.name} at ${s.bar}: ${text}`, ...rates].join('\n');
+  return `<div class="scene" style="left:${px(s.time)};width:${px(s.duration)};background:${DENSITY_FILL[state]}" title="${escapeHtml(title)}"><span>${escapeHtml(text)}</span></div>`;
+}
+
+/** A block per section with its Density scores. Empty for a Show that is not scored. */
+function densityRow({ plan, events, show, timeline }: RenderInput): string {
+  const sections = densityReport(plan, events, show, timeline)?.sections ?? [];
+  if (sections.length === 0) return '';
+  return `\n<div class="row lane" data-lane="Density"><div class="label">Density</div><div class="track">${sections.map(densityBlock).join('')}</div></div>`;
+}
+
 const STYLE = `
 :root{color-scheme:dark;--bg:#14161a;--fg:#e6e8ec;--muted:#98a0ad;--line:#2b2f37;--lane:#1c1f25;--b0:#232833;--b1:#2c3240;--label:150px}
 @media (prefers-color-scheme:light){:root{color-scheme:light;--bg:#f6f7f9;--fg:#1b1e24;--muted:#5d6572;--line:#d3d7de;--lane:#ffffff;--b0:#e4e8ef;--b1:#d6dce7}}
@@ -157,7 +190,7 @@ export function renderTimeline(input: RenderInput): string {
 <p>${barCount} bars, ${events.length} MIDI events</p>
 <div class="scroll" style="--width:${px(total)}">
 <div class="row sections"><div class="label">Sections</div><div class="track">${bands(timeline)}</div></div>
-<div class="row ruler"><div class="label">Bar</div><div class="track">${ruler(timeline)}</div></div>
+<div class="row ruler"><div class="label">Bar</div><div class="track">${ruler(timeline)}</div></div>${densityRow(input)}
 ${lanes}
 </div>
 </body>
@@ -176,7 +209,7 @@ export function htmlPathFor(planPath: string): string {
 export interface RenderOptions {
   rpp: string;
   plan: string;
-  /** Called with each stacking warning (M4). The page is written either way. */
+  /** Called with each stacking (M4) and Density warning. The page is written either way. */
   onWarning?: (message: string) => void;
 }
 
@@ -188,6 +221,7 @@ export function renderLights(opts: RenderOptions): string {
   const show = loadShowFor(plan, opts.plan);
   const events = compilePlan(plan, show, timeline);
   for (const w of stackingWarnings(plan, events, show, timeline)) opts.onWarning?.(w.message);
+  for (const w of densityReport(plan, events, show, timeline)?.warnings ?? []) opts.onWarning?.(w);
   const output = htmlPathFor(opts.plan);
   writeFileSync(output, renderTimeline({ plan, events, timeline, show }));
   return output;

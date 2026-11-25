@@ -21,6 +21,9 @@ export const MARKER_VOCABULARY = [
 
 export type MarkerKind = (typeof MARKER_VOCABULARY)[number];
 
+/** The markers that place an event inside a section and start none. */
+export const EVENT_MARKERS: readonly MarkerKind[] = ['roll', 'endroll', 'hit'];
+
 /** The label lower-cased, trimmed, without trailing digits: `Chorus2` is `chorus`. */
 export function normaliseLabel(label: string): string {
   return label
