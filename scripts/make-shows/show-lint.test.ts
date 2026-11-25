@@ -2,15 +2,8 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { saveShowFile } from '../../src/engine/show-file';
 import type { Colour, Rule, RuleTarget, Scene, Show, Trigger } from '../../src/shared/show';
-import {
-  failsStrict,
-  grade,
-  lintShow,
-  parseSongSets,
-  runLint,
-  tierOf,
-  type Score,
-} from './show-lint';
+import { failsStrict, grade, lintShow, runLint, tierOf, type Score } from './show-lint';
+import { parseSongSets } from './song-sets';
 
 const FRONT: RuleTarget = {
   roles: ['Wash'],

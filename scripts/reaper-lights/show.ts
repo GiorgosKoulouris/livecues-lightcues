@@ -31,6 +31,8 @@ export interface ShowScene {
   colours: string[];
   /** The Scene's tags (`dynamic`, `tier:drive`). Empty for a Show that has none. */
   tags: string[];
+  /** The shape of its movement Effect, e.g. `Circle`: its Movement family. */
+  shape?: string;
   /** The colour each lit Rule target takes, to tell whether a Look changes colour. */
   paint?: Record<string, string>;
 }
@@ -65,6 +67,8 @@ interface RawRule {
   intensity?: number;
   colour?: RawColour;
   colourEffect?: { colours?: RawColour[] };
+  /** A movement Effect, or `None`. */
+  movementEffect?: { shape?: string } | string;
 }
 
 /** Display colours for the Show's swatches. */
@@ -98,6 +102,13 @@ function sceneColours(rules: RawRule[] = []): string[] {
     }
   }
   return out;
+}
+
+function movementShape(rules: RawRule[] = []): string | undefined {
+  for (const { movementEffect } of rules) {
+    if (typeof movementEffect === 'object') return movementEffect.shape;
+  }
+  return undefined;
 }
 
 function scenePaint(rules: RawRule[] = []): Record<string, string> {
@@ -145,6 +156,7 @@ export class ShowMap {
         mode: t.mode as SceneMode,
         colours: sceneColours(scene.rules),
         tags: scene.tags ?? [],
+        shape: movementShape(scene.rules),
         paint: scenePaint(scene.rules),
       });
     }
@@ -207,10 +219,14 @@ export function loadShow(json: string): ShowMap {
 
 export const DEFAULT_SHOW = 'shows/Energy.lcshow';
 
-/** The Show a plan names (default `shows/Energy.lcshow`), found from the cwd or the plan's folder. */
+/** Where a Show a Plan names is: found from the cwd or the Plan's folder. */
+export function showPathFor(show: string, planPath: string): string {
+  const found = [resolve(show), resolve(dirname(planPath), show)].find(existsSync);
+  if (!found) throw new ShowError(`Show file not found: ${show}`);
+  return found;
+}
+
+/** The Show a plan names (default `shows/Energy.lcshow`). */
 export function loadShowFor(plan: Plan, planPath: string): ShowMap {
-  const showRel = plan.show ?? DEFAULT_SHOW;
-  const showPath = [resolve(showRel), resolve(dirname(planPath), showRel)].find(existsSync);
-  if (!showPath) throw new ShowError(`Show file not found: ${showRel}`);
-  return loadShow(readFileSync(showPath, 'utf8'));
+  return loadShow(readFileSync(showPathFor(plan.show ?? DEFAULT_SHOW, planPath), 'utf8'));
 }

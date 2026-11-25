@@ -4,189 +4,21 @@
 // The same inputs give the same Plan.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { DARK_NAME, TIER_BANDS, type Tier } from '../make-shows/rules';
+import { cueSheetPath, songRolesBeside } from '../make-shows/song-sets';
 import { analyseRegion, isDrumStem } from './analyse';
-import { aim, densityRange } from './density';
-import { LightsError } from './errors';
-import { PlanError, type Plan } from './plan';
+import { GenerateError } from './errors';
+import { PlanError } from './plan';
 import { placeHits, type HitEvent, type Hits } from './hits';
+import { cap, Looks, RELEASE, type Picks } from './looks';
 import { findRegion, readProject, type Region, type RppProject } from './rpp';
-import { isStop, parseSections, type Section, type Span } from './sections';
-import { seededIndex } from './seed';
-import { loadShowFor, tierTag, type ShowMap, type ShowScene } from './show';
+import { isStop, lastChorus, parseSections, type Section, type Span } from './sections';
+import { planSetCues, type SetRole } from './set-cues';
+import { loadShow, showPathFor, tierTag, type ShowMap } from './show';
 import { EVENT_MARKERS, matchMarker } from './vocabulary';
 import { regionTimeline, type SongTimeline } from './timeline';
 
-export class GenerateError extends LightsError {}
-
-const EPS = 1e-6;
-/** The bars between the places a Look may change. */
-const LOOK_STEP = 8;
-/** The bars between the places an Effect may swap. */
-const EFFECT_STEP = 4;
 /** A section needs at least this many bars of song to start in. */
 const MIN_SECTION_BARS = 0.25;
-const EFFECTS = ['movement', 'pulse', 'colourfx'] as const;
-type Effect = (typeof EFFECTS)[number];
-/** The Effects a cue gives up, in this order, to stay inside the stacking cap. */
-const DROP_ORDER: readonly Effect[] = ['pulse', 'colourfx'];
-const RELEASE = 'release';
-
-/** A Layer key to a Scene name, or `release`. */
-type Picks = Record<string, string>;
-
-interface CueDraft {
-  bar: number;
-  /** Set on a section's first cue. */
-  section?: Span;
-  picks: Picks;
-}
-
-const cap = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
-
-/** The bar offsets inside a section a change may land on: 0, then each full-bar step. */
-function places(bars: number, step: number): number[] {
-  const out = [0];
-  for (let at = step; at + 1 <= bars + EPS; at += step) out.push(at);
-  return out;
-}
-
-/** `count` of the places, spread over the section from its first bar. */
-const spread = (all: number[], count: number): number[] =>
-  Array.from({ length: count }, (_, i) => all[Math.floor((i * all.length) / count)] as number);
-
-class Looks {
-  private readonly lookKey: string;
-  private readonly dark: ShowScene | undefined;
-  /** The Scene each Layer is running. */
-  private readonly held = new Map<string, string>();
-  /** The Scene each Layer fired last, a release or not. A swap never repeats it. */
-  private readonly last = new Map<string, string>();
-  readonly cues: CueDraft[] = [];
-  /** Per section, the colour changes its Looks and Colour FX leave under the ceiling. */
-  readonly colourRoom: number[] = [];
-
-  constructor(
-    private readonly song: string,
-    private readonly show: ShowMap,
-  ) {
-    this.lookKey = show.baseLook?.layer ?? 'look';
-    this.dark = show.scenes.find(
-      (s) => s.layer === this.lookKey && s.mode === 'go' && DARK_NAME.test(s.name),
-    );
-    if (show.baseLook) this.last.set(this.lookKey, show.baseLook.name);
-  }
-
-  /** The tier's Go Scenes on a Layer. A still Scene is picked only when no other is there. */
-  private pool(layer: string, tier: Tier): ShowScene[] {
-    const all = this.show.scenes.filter(
-      (s) => s.layer === layer && s.mode === 'go' && tierTag(s.tags) === tier,
-    );
-    const moving = all.filter((s) => s.tags.includes('dynamic'));
-    return moving.length > 0 ? moving : all;
-  }
-
-  private release(layer: string, picks: Picks): void {
-    if (!this.held.delete(layer)) return;
-    if (this.show.layer(layer)?.releaseNote !== undefined) picks[layer] = RELEASE;
-  }
-
-  /** Swaps a Layer to another Scene of the section's tier, if it has one. */
-  private fire(section: Span, offset: number, layer: string, picks: Picks): void {
-    const pool = this.pool(layer, section.tier as Tier).filter(
-      (s) => s.name !== this.last.get(layer),
-    );
-    if (pool.length === 0) return;
-    const seed = `${this.song}|${section.label}|${section.bar}|${layer}|${offset}`;
-    const { name } = pool[seededIndex(seed, pool.length)] as ShowScene;
-    picks[layer] = name;
-    this.held.set(layer, name);
-    this.last.set(layer, name);
-  }
-
-  /** The Dark Look with every Effect off. */
-  private stop(section: Span): void {
-    const picks: Picks = {};
-    if (this.dark) {
-      picks[this.lookKey] = this.dark.name;
-      this.last.set(this.lookKey, this.dark.name);
-    }
-    for (const layer of EFFECTS) this.release(layer, picks);
-    if (Object.keys(picks).length > 0) this.cues.push({ bar: section.bar, section, picks });
-  }
-
-  /** How often each Layer changes in a section: the bar offsets of its swaps. */
-  private offsets(section: Span, tier: Tier): Map<string, number[]> {
-    const { bars } = section;
-    if (this.pool(this.lookKey, tier).length === 0) {
-      throw new GenerateError(`The Show has no ${cap(tier)} Look`);
-    }
-    // Chill and Groove change Look again only where the floor asks for it.
-    const busy = tier === 'drive' || tier === 'peak';
-    const looks = busy ? aim(tier, 'look', bars) : densityRange(tier, 'look', bars).min;
-    const lookPlaces = places(bars, LOOK_STEP);
-    const out = new Map([
-      [this.lookKey, spread(lookPlaces, Math.min(lookPlaces.length, Math.max(1, looks)))],
-    ]);
-
-    const effectPlaces = places(bars, EFFECT_STEP);
-    const counts = new Map(
-      EFFECTS.map((layer) => {
-        // Every section moves: Movement swaps at least on its first bar.
-        const wanted = Math.max(layer === 'movement' ? 1 : 0, aim(tier, layer, bars));
-        const there = this.pool(layer, tier).length > 0;
-        return [layer, there ? Math.min(effectPlaces.length, wanted) : 0];
-      }),
-    );
-    for (const layer of DROP_ORDER) {
-      const running = [...counts.values()].filter((n) => n > 0).length;
-      if (running <= TIER_BANDS[tier].maxDynamic) break;
-      if (densityRange(tier, layer, bars).min === 0) counts.set(layer, 0);
-    }
-    for (const [layer, count] of counts) out.set(layer, spread(effectPlaces, count));
-    return out;
-  }
-
-  section(section: Span): void {
-    if (isStop(section.kind)) {
-      this.colourRoom.push(0);
-      return this.stop(section);
-    }
-    const tier = section.tier as Tier;
-    const offsets = this.offsets(section, tier);
-    const used = [this.lookKey, 'colourfx'].reduce((n, l) => n + (offsets.get(l)?.length ?? 0), 0);
-    this.colourRoom.push(densityRange(tier, 'colour', section.bars).max - used);
-    const all = [...new Set([...offsets.values()].flat())].sort((a, b) => a - b);
-    for (const offset of all) {
-      const picks: Picks = {};
-      for (const [layer, at] of offsets) {
-        if (at.includes(offset)) this.fire(section, offset, layer, picks);
-        // A Layer the section does not use goes quiet on its first bar.
-        else if (offset === 0 && at.length === 0) this.release(layer, picks);
-      }
-      // A Look stops the Colour FX under it, so the running one is fired again.
-      const colour = this.held.get('colourfx');
-      if (picks[this.lookKey] && colour) picks.colourfx = colour;
-      if (Object.keys(picks).length === 0) continue;
-      this.cues.push({
-        bar: section.bar + offset,
-        ...(offset === 0 ? { section } : {}),
-        picks,
-      });
-    }
-  }
-
-  /** The end cue: the Base Look, else Dark, with every Effect released. */
-  end(): Picks {
-    const picks: Picks = {};
-    const rest = this.show.baseLook ?? this.dark;
-    picks[this.lookKey] = rest?.name ?? RELEASE;
-    for (const layer of EFFECTS) {
-      if (this.show.layer(layer)?.releaseNote !== undefined) picks[layer] = RELEASE;
-    }
-    return picks;
-  }
-}
 
 /** The sections with their lengths, checked against the song's. */
 function spans(sections: Section[], timeline: SongTimeline): Span[] {
@@ -202,6 +34,17 @@ function spans(sections: Section[], timeline: SongTimeline): Span[] {
     const to = next ? Math.min(next.bar - 1, total) : total;
     return { ...section, bars: to - (section.bar - 1) };
   });
+}
+
+/** The sections with the last chorus raised to Peak, and what was raised. */
+function peakAtTheEnd(sections: Span[]): { sections: Span[]; notes: string[] } {
+  const last = lastChorus(sections);
+  if (!last || last.tier === 'peak') return { sections, notes: [] };
+  const from = last.tier ? cap(last.tier) : 'no tier';
+  return {
+    sections: sections.map((s) => (s === last ? { ...s, tier: 'peak' } : s)),
+    notes: [`Bar ${last.bar}: ${last.label} raised from ${from} to Peak (the last chorus)`],
+  };
 }
 
 /** Where the sections and the project markers disagree: `render` scores by marker. */
@@ -300,6 +143,44 @@ function drumStems(project: RppProject, region: Region, dir: string) {
   return analyseRegion({ ...project, tracks }, region, { dir });
 }
 
+interface ColourSetCues {
+  /** Colour Set names by the bar they are cued on. */
+  byBar: Map<number, string>;
+  notes: string[];
+  warnings: string[];
+}
+
+/** The Colour Sets the song's Cue Sheet row gives each role, cued where the sections ask. */
+function colourSetCues(
+  show: ShowMap,
+  showFile: string,
+  song: string,
+  sections: Span[],
+): ColourSetCues {
+  if (show.colourSets.length === 0) {
+    const none = 'The Show has no Colour Sets, so none is cued';
+    return { byBar: new Map(), notes: [], warnings: [none] };
+  }
+  const sheet = cueSheetPath(showFile);
+  const rows = songRolesBeside(showFile, (path) => readFileSync(path, 'utf8'));
+  if (!rows) throw new GenerateError(`No Song sets table: generate needs it in ${sheet}`);
+  const row = rows.find((r) => r.song.toLowerCase() === song.toLowerCase());
+  if (!row) {
+    const listed = rows.map((r) => r.song).join(', ');
+    throw new GenerateError(`No Song sets row for '${song}' in ${sheet}. It lists: ${listed}`);
+  }
+  const names: Record<SetRole, string> = { main: row.main, break: row.break, swap: row.swap };
+  for (const name of Object.values(names)) {
+    const set = show.colourSet(name);
+    if (!set) throw new GenerateError(`Colour Set '${name}' is not in the Show. Rebuild ${sheet}`);
+    if (set.note === undefined) {
+      throw new GenerateError(`Colour Set '${name}' has no MIDI note in the Show`);
+    }
+  }
+  const { cues, notes, warnings } = planSetCues(sections);
+  return { byBar: new Map(cues.map((c) => [c.bar, names[c.role]])), notes, warnings };
+}
+
 /** Writes the Plan of one song. It never writes over a Plan without `force`. */
 export function generateLights(options: GenerateOptions): Generated {
   const project = readProject(readFileSync(options.rpp, 'utf8'));
@@ -309,17 +190,19 @@ export function generateLights(options: GenerateOptions): Generated {
   if (!options.force && existsSync(output)) {
     throw new GenerateError(`${output} already exists. Pass --force to write over it`);
   }
-  const show = loadShowFor({ show: options.show } as Plan, output);
+  const showFile = showPathFor(options.show, output);
+  const show = loadShow(readFileSync(showFile, 'utf8'));
   if (!show.scenes.some((s) => tierTag(s.tags) !== undefined)) {
     throw new GenerateError(
       `${options.show} is untagged: generate needs a Show with tier: tags (a generated band Show)`,
     );
   }
   const text = readFileSync(options.sections, 'utf8');
-  const sections = fromSectionsFile(() => spans(parseSections(text), timeline));
+  const confirmed = fromSectionsFile(() => spans(parseSections(text), timeline));
+  const { sections, notes: raised } = peakAtTheEnd(confirmed);
 
-  const looks = new Looks(region.name, show);
-  for (const section of sections) looks.section(section);
+  const sets = colourSetCues(show, showFile, region.name, sections);
+  const looks = new Looks(region.name, show, sections, sets.byBar);
 
   const drums = drumStems(project, region, dirname(options.rpp));
   const hits = placeHits({
@@ -329,6 +212,7 @@ export function generateLights(options: GenerateOptions): Generated {
     show,
     timeline,
     stems: drums.stems,
+    elementsOf: (section, bars) => looks.elementsOf(section, bars),
   });
 
   mkdirSync(dirname(output), { recursive: true });
@@ -339,11 +223,14 @@ export function generateLights(options: GenerateOptions): Generated {
   const warnings = [
     ...markerWarnings(sections, timeline),
     ...drums.warnings,
+    ...sets.warnings,
     ...(show.scenes.some((s) => s.mode === 'flash')
       ? []
       : ['The Show has no Hit Scenes, so no Hit is placed']),
   ];
   const notes = [
+    ...raised,
+    ...sets.notes,
     `Body Hits: ${hits.onStem} on drum stem onsets (${stems}), ${hits.onGrid} on the beat grid`,
   ];
   return { output, warnings, notes };

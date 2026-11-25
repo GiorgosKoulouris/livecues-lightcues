@@ -1,11 +1,15 @@
 // The Hits of a generated Plan (spec: Plan generator, Hits). Each section takes
 // its tier's Density of Hits: a turn Hit on its bar 1, a Riser on the bar before
 // a build turns, a Strobe burst and a Blackout on a stop, and body Hits on the
-// drum stem's onsets, or on the beat grid where the stem gives none.
+// drum stem's onsets, or on the beat grid where the stem gives none. The last
+// chorus adds the prism Hits and every backbeat; a repeated section takes more
+// Hit kinds where its Looks and Effects add no element.
 import {
   BLINDERS_PER_SONG,
+  COLOUR_HIT,
   FULL_AREA_HIT,
   FULL_AREA_LIMIT,
+  HIT_KINDS_MIN,
   PHRASE_BARS,
   STEM_MAX_ONSETS_PER_BEAT,
   TIERS,
@@ -14,7 +18,7 @@ import {
 import type { StemAnalysis } from './analyse';
 import { aim, densityRange } from './density';
 import { seededIndex } from './seed';
-import { isStop, type Span } from './sections';
+import { earlierPasses, isStop, lastChorus, type Span } from './sections';
 import type { ShowMap } from './show';
 import { formatBarBeat, type BarBeat, type SongTimeline } from './timeline';
 
@@ -81,6 +85,10 @@ export interface HitEvent {
   time: number;
   /** Whether it flashes the whole stage. */
   full: boolean;
+  /** Written bars from the section start. */
+  offset: number;
+  /** Whether it is a body Hit, and so may take another kind. */
+  body: boolean;
   section: Span;
   at: string;
   scene: string;
@@ -99,6 +107,8 @@ export interface HitInput {
   timeline: SongTimeline;
   /** The drum stems' onsets. */
   stems: readonly StemAnalysis[];
+  /** The elements other than Hits in a section's first `bars` bars. */
+  elementsOf: (section: Span, bars: number) => number;
 }
 
 export interface Hits {
@@ -115,10 +125,25 @@ class Placer {
   private readonly events: HitEvent[] = [];
   private onStem = 0;
   private onGrid = 0;
+  private readonly last: Span | undefined;
 
   constructor(private readonly input: HitInput) {
     this.kit = hitKit(input.show);
     this.bodyIsFull = this.kit.body.every((n) => FULL_AREA_HIT.test(n));
+    this.last = lastChorus(input.sections);
+  }
+
+  /**
+   * The body Hits a section rotates through. The prism Hits are the last
+   * chorus's own, unless the other sections would then run short of kinds.
+   */
+  private kinds(section: Span): string[] {
+    const { body } = this.kit;
+    const prism = body.filter((n) => /prism/i.test(n));
+    const others = body.filter((n) => !prism.includes(n));
+    if (section === this.last) return [...prism, ...others];
+    const spare = others.length >= (HIT_KINDS_MIN.peak ?? 0);
+    return prism.length > 0 && spare ? others : body;
   }
 
   private spot(section: Span, at: BarBeat, rank: number): Spot {
@@ -133,6 +158,8 @@ class Placer {
     this.events.push({
       time: spot.time,
       full,
+      offset: spot.offset,
+      body: span.length === BODY_LENGTH,
       section,
       at: formatBarBeat(spot.at),
       scene,
@@ -185,10 +212,14 @@ class Placer {
     return section.kind === 'build' || section.kind === 'pre' || level(next) > level(section);
   }
 
-  /** The Hits a section takes: its tier's aim, and at least the Riser it needs. */
+  /**
+   * The Hits a section takes: its tier's aim, and at least the Riser it needs.
+   * The last chorus takes the ceiling, which holds its backbeats.
+   */
   private count(section: Span, riser: boolean): number {
     const tier = section.tier as Tier;
     const { max } = densityRange(tier, 'hits', section.bars);
+    if (section === this.last) return max;
     return Math.min(max, Math.max(riser ? 1 : 0, aim(tier, 'hits', section.bars)));
   }
 
@@ -268,49 +299,146 @@ class Placer {
     return [...out.values()];
   }
 
+  /** The spots body Hits may take before `until` bars in: the onsets, then the grid. */
+  private spots(section: Span, until: number): Spot[][] {
+    const byRank = (a: Spot, b: Spot) => a.rank - b.rank || a.time - b.time;
+    return [this.onsets(section, until), this.grid(section, until)].map((s) => s.toSorted(byRank));
+  }
+
+  private usable(spot: Spot): boolean {
+    return this.free(spot) && (!this.bodyIsFull || this.clearOfFullArea(spot.time));
+  }
+
+  /** Adds a body Hit on the first usable spot that `fits`, an onset before a grid beat. */
+  private takeBody(
+    section: Span,
+    spots: Spot[][],
+    fits: (spot: Spot) => boolean,
+    scene = '',
+  ): boolean {
+    for (const [i, list] of spots.entries()) {
+      const spot = list.find((s) => fits(s) && this.usable(s));
+      if (!spot) continue;
+      this.add(section, spot, scene, { length: BODY_LENGTH });
+      if (i === 0) this.onStem++;
+      else this.onGrid++;
+      return true;
+    }
+    return false;
+  }
+
+  /** The last chorus's pattern: every downbeat, then each phrase's second-half backbeats. */
+  private pattern(section: Span, until: number): BarBeat[] {
+    const downbeats: BarBeat[] = [];
+    const backbeats: BarBeat[] = [];
+    for (let bar = section.bar; bar - section.bar < until - EPS; bar++) {
+      downbeats.push({ bar, beat: 1 });
+      if ((bar - section.bar) % PHRASE_BARS < PHRASE_BARS / 2) continue;
+      for (let beat = 2; beat <= this.beatsIn(bar); beat += 2) backbeats.push({ bar, beat });
+    }
+    return [...downbeats, ...backbeats];
+  }
+
   /**
-   * Places `count` body Hits, unnamed. The section is cut into equal stretches, one
-   * per Hit, and each takes its best free onset, else its best free grid beat.
-   * Stretches that had neither are made up from anywhere in the section.
+   * Places `count` body Hits, unnamed. The last chorus takes its pattern first.
+   * Otherwise the section is cut into equal stretches, one per Hit, and each
+   * takes its best free onset, else its best free grid beat. Stretches that had
+   * neither are made up from anywhere in the section.
    */
   private placeBody(section: Span, until: number, count: number, taken: number): void {
-    const onsets = this.onsets(section, until);
-    const grid = this.grid(section, until);
-    const byRank = (a: Spot, b: Spot) => a.rank - b.rank || a.time - b.time;
-    const sorted = [onsets.toSorted(byRank), grid.toSorted(byRank)];
-    const usable = (s: Spot) => this.free(s) && (!this.bodyIsFull || this.clearOfFullArea(s.time));
+    const spots = this.spots(section, until);
     let placed = 0;
     // A Hit is added as it is picked, so that the next keeps its beat from it.
-    const take = (from: number, to: number): boolean => {
-      for (const [i, spots] of sorted.entries()) {
-        const spot = spots.find((s) => s.offset >= from - EPS && s.offset < to - EPS && usable(s));
-        if (!spot) continue;
-        placed++;
-        this.add(section, spot, '', { length: BODY_LENGTH });
-        if (i === 0) this.onStem++;
-        else this.onGrid++;
-        return true;
-      }
-      return false;
+    const take = (fits: (spot: Spot) => boolean): void => {
+      if (this.takeBody(section, spots, fits)) placed++;
     };
-    // The turn Hit takes the first stretch.
-    const stretches = count + taken;
-    for (let i = taken; i < stretches; i++) {
-      take((i * until) / stretches, ((i + 1) * until) / stretches);
+    const within = (from: number, to: number) => (s: Spot) =>
+      s.offset >= from - EPS && s.offset < to - EPS;
+    if (section === this.last) {
+      const [onsets] = spots as [Spot[], Spot[]];
+      for (const at of this.pattern(section, until)) {
+        const on = (s: Spot) => s.at.bar === at.bar && Math.abs(s.at.beat - at.beat) < EPS;
+        // A bar the stems play in takes the pattern's beat only on an onset.
+        const played = onsets.some((s) => s.at.bar === at.bar);
+        if (placed < count) take((s) => on(s) && (!played || onsets.includes(s)));
+      }
+    } else {
+      // The turn Hit takes the first stretch.
+      const stretches = count + taken;
+      for (let i = taken; i < stretches; i++) {
+        take(within((i * until) / stretches, ((i + 1) * until) / stretches));
+      }
     }
-    while (placed < count && take(0, until));
+    for (let before = -1; placed < count && placed > before;) {
+      before = placed;
+      take(within(0, until));
+    }
   }
 
   /** Names the body Hits of a section in time order, rotating through the kinds. */
   private nameBody(section: Span): void {
-    const { body } = this.kit;
-    let next = seededIndex(this.seed(section, 'hits'), body.length);
+    const body = this.kinds(section);
+    // The last chorus starts at the head of its list, where the prism Hits are.
+    let next = section === this.last ? 0 : seededIndex(this.seed(section, 'hits'), body.length);
     const unnamed = this.events
       .filter((e) => e.section === section && e.scene === '')
       .toSorted((a, b) => a.time - b.time);
     for (const event of unnamed) {
       event.scene = body[next % body.length] as string;
       next++;
+    }
+  }
+
+  /** The distinct Hit Scenes a section fires in its first `bars` bars. */
+  private fired(section: Span, bars: number): Set<string> {
+    const inside = this.events.filter((e) => e.section === section && e.offset < bars - EPS);
+    return new Set(inside.map((e) => e.scene));
+  }
+
+  /**
+   * Gives a section one more Hit kind in its first `bars` bars: a body Hit that
+   * doubles another takes it, else an added body Hit does. A kind the body
+   * rotates through comes before a colour Hit, which flashes the whole stage.
+   */
+  private addKind(section: Span, bars: number): boolean {
+    const have = this.fired(section, bars);
+    const unused = (names: string[]) => names.filter((n) => !have.has(n));
+    // A colour Hit counts as a colour change too, so those come last.
+    const body = unused(this.kinds(section)).toSorted(
+      (a, b) => Number(COLOUR_HIT.test(a)) - Number(COLOUR_HIT.test(b)),
+    );
+    const inside = this.events.filter((e) => e.section === section && e.offset < bars - EPS);
+    const doubles = inside.filter(
+      (e) => e.body && inside.some((other) => other !== e && other.scene === e.scene),
+    );
+    const all = this.events.filter((e) => e.section === section);
+    const room = all.length < densityRange(section.tier as Tier, 'hits', section.bars).max;
+    const riser = all.some((e) => e.scene === this.kit.riser);
+    const until = Math.min(bars, riser ? section.bars - 1 : section.bars);
+    return [...new Set([...body, ...unused(this.kit.colours)])].some((kind) => {
+      const full = FULL_AREA_HIT.test(kind);
+      const double = doubles.findLast((e) => !full || this.clearOfFullArea(e.time));
+      if (double) {
+        double.scene = kind;
+        double.full = full;
+        return true;
+      }
+      if (!room) return false;
+      const fits = (s: Spot) => s.offset < until - EPS && this.clearFor(kind, s.time);
+      return this.takeBody(section, this.spots(section, until), fits, kind);
+    });
+  }
+
+  /** Adds Hit kinds to each repeat until it has more elements than the pass before it. */
+  private stepUpRepeats(): void {
+    const { sections, elementsOf } = this.input;
+    for (const section of sections) {
+      const previous = earlierPasses(sections, section).at(-1);
+      if (isStop(section.kind) || !previous) continue;
+      const bars = Math.min(section.bars, previous.bars);
+      const count = (s: Span) => elementsOf(s, bars) + this.fired(s, bars).size;
+      const target = count(previous);
+      while (count(section) <= target && this.addKind(section, bars));
     }
   }
 
@@ -351,12 +479,13 @@ class Placer {
       // A turn too close to another full-area Hit takes the first body Hit, if
       // that one is clear; else its place goes to the body.
       const start = this.spot(section, { bar: section.bar, beat: 1 }, 0);
-      const scene = [named, this.kit.body[0]].find(
+      const fallback = this.kinds(section)[0];
+      const scene = [named, fallback].find(
         (s): s is string => s !== undefined && this.clearFor(s, start.time),
       );
       if (scene) {
         this.add(section, start, scene, { length: TURN_LENGTH });
-      } else if (named ?? this.kit.body[0]) {
+      } else if (named ?? fallback) {
         plan.turn = false;
         plan.body++;
       }
@@ -368,6 +497,7 @@ class Placer {
       this.placeBody(section, until, body, turn ? 1 : 0);
       this.nameBody(section);
     }
+    this.stepUpRepeats();
     return {
       events: this.events.toSorted((a, b) => a.time - b.time),
       onStem: this.onStem,

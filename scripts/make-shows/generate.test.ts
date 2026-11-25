@@ -18,7 +18,8 @@ import {
   tierRecipes,
 } from './generate';
 import { TIER_BANDS, TIERS } from './rules';
-import { lintShow, parseSongSets, tierOf } from './show-lint';
+import { lintShow, tierOf } from './show-lint';
+import { parseSongSets } from './song-sets';
 import { venueCheckLines } from './write';
 
 const fixture = (name: string) => new URL(`./fixtures/${name}`, import.meta.url);

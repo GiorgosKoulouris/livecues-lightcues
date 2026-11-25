@@ -11,7 +11,13 @@
 import { isSeq } from 'yaml';
 import { TIERS, type Tier } from '../make-shows/rules';
 import { PlanError, Reader } from './plan';
-import { EVENT_MARKERS, MARKER_VOCABULARY, matchMarker, type MarkerKind } from './vocabulary';
+import {
+  EVENT_MARKERS,
+  MARKER_VOCABULARY,
+  matchMarker,
+  normaliseLabel,
+  type MarkerKind,
+} from './vocabulary';
 
 export interface Section {
   /** The line in the sections file. */
@@ -31,6 +37,25 @@ export interface Span extends Section {
 
 /** The sections that hold the stage dark and need no tier. */
 export const isStop = (kind: MarkerKind): boolean => kind === 'stop' || kind === 'blackout';
+
+/** The sections that take the Break Colour Set. */
+export const isBreak = (kind: MarkerKind): boolean =>
+  kind === 'break' || kind === 'breakdown' || kind === 'bridge';
+
+/**
+ * The passes of a section's label before it, in song order: `chorus1` and
+ * `chorus2` before `chorus3`. A stop is no pass.
+ */
+export function earlierPasses<S extends Section>(sections: readonly S[], section: S): S[] {
+  const label = normaliseLabel(section.label);
+  return sections
+    .slice(0, sections.indexOf(section))
+    .filter((s) => !isStop(s.kind) && normaliseLabel(s.label) === label);
+}
+
+/** The last chorus of a song, else its last drop. */
+export const lastChorus = <S extends Section>(sections: readonly S[]): S | undefined =>
+  sections.findLast((s) => s.kind === 'chorus') ?? sections.findLast((s) => s.kind === 'drop');
 
 const KEYS = ['bar', 'label', 'tier'];
 

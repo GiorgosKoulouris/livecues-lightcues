@@ -40,6 +40,7 @@ import {
   type Part,
   type Tier,
 } from './rules';
+import { songRolesBeside, type SongRoles } from './song-sets';
 
 export type Score = 0 | 1 | 2;
 
@@ -469,14 +470,6 @@ function checkBasics(cx: Context): Omit<ItemResult, 'item' | 'title'> {
 // The dynamic Layers a generated Show has (the generator's Layer ids).
 const GENERATED_LAYERS = ['movement', 'pulse', 'colour-fx'] as const;
 
-/** A song's Colour Set roles, as set names. */
-export interface SongRoles {
-  song: string;
-  main: string;
-  break: string;
-  swap: string;
-}
-
 // Variety: the tier Scenes each dynamic Layer offers, the Hits, the Colour Sets
 // and, when the Cue Sheet's songs are known, a distinct Main, Break and Swap per
 // song. Counts are targets: a venue without a part gets fewer Scenes.
@@ -581,39 +574,6 @@ export function formatReport(name: string, report: LintReport): string {
   lines.push(`Strobe rates read at ${report.bpm} BPM (item 11). Use --bpm <n> for a song's tempo.`);
   lines.push('Items 13-16 need a Plan or screenshots and are not linted here.');
   return lines.join('\n');
-}
-
-/** The Song sets table of the Cue Sheet beside `file` (`<name> cue sheet.md`), if there is one. */
-export function parseSongSets(markdown: string): SongRoles[] | undefined {
-  const lines = markdown.split('\n');
-  const at = lines.findIndex((l) => /^#+\s*Song sets\s*$/i.test(l));
-  if (at < 0) return undefined;
-  const label = (cell: string): string => cell.replace(/\s*\([A-G][#b]?-?\d+\)\s*$/, '').trim();
-  const rows: SongRoles[] = [];
-  for (const line of lines.slice(at + 1)) {
-    if (/^#/.test(line)) break;
-    const cells = line
-      .split('|')
-      .slice(1, -1)
-      .map((c) => c.trim());
-    if (cells.length !== 4 || /^-+$/.test(cells[0]!) || cells[0] === 'Song') continue;
-    rows.push({
-      song: cells[0]!,
-      main: label(cells[1]!),
-      break: label(cells[2]!),
-      swap: label(cells[3]!),
-    });
-  }
-  return rows;
-}
-
-function songRolesBeside(file: string, read: (path: string) => string): SongRoles[] | undefined {
-  try {
-    return parseSongSets(read(file.replace(/\.lcshow$/, '') + ' cue sheet.md'));
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
-    throw error;
-  }
 }
 
 const USAGE = 'Usage: npm run show:lint -- <file.lcshow> [--strict] [--bpm <n>]';
