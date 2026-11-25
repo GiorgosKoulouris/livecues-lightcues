@@ -1,6 +1,6 @@
 # light-song
 
-The `light-song` skill turns one song of a Reaper project into MIDI that fires its Show. It lives in `.claude/skills/light-song/SKILL.md`. `.claude/` is gitignored, so the skill is local to each checkout.
+The `light-song` skill turns one song of a Reaper project into MIDI that fires its Show. It lives in `.claude/skills/light-song/SKILL.md`. Git tracks it; the rest of `.claude/` is ignored.
 
 ## Flow
 

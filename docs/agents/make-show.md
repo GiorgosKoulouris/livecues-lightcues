@@ -1,6 +1,6 @@
 # make-show
 
-The `make-show` skill builds a band's Show from a Brief and checks it. It lives in `.claude/skills/make-show/SKILL.md`. `.claude/` is gitignored, so the skill is local to each checkout.
+The `make-show` skill builds a band's Show from a Brief and checks it. It lives in `.claude/skills/make-show/SKILL.md`. Git tracks it; the rest of `.claude/` is ignored.
 
 ## Flow
 

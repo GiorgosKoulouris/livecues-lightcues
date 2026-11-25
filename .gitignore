@@ -1,4 +1,9 @@
-.claude/
+.claude/*
+# Only the project's own skills are tracked.
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/make-show/
+!.claude/skills/light-song/
 node_modules/
 out/
 dist/
@@ -11,7 +16,7 @@ test-results/
 
 temp/
 
-# Impeccable skill install (local tooling; .claude/ is ignored above).
+# Impeccable skill install (local tooling; its .claude/ part is ignored above).
 .github/skills/impeccable/
 .github/agents/impeccable-*.agent.md
 .github/hooks/impeccable.json
