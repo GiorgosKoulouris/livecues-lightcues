@@ -230,12 +230,20 @@ A report, produced when a Show is combined with a Venue Patch, listing Scenes wh
 A YAML file per song (`<Song>.lights.yaml`) that names the Scenes a song plays and when: a Colour Set, a palette per tier, section cues, timed events and patterns. `lights:song` lints it for over-stacked dynamic Layers. `lights:song write` compiles it to MIDI on the Show's note map. It holds Scene names, never notes. Not a Show.
 _Avoid_: Cue list, script
 
+**Density**:
+A tier's targets for how busy a Plan is, per 8-bar phrase: how often the Look changes, how often each dynamic Layer swaps its Effect Scene, how many Hits fire, and how often the colour changes (Colour Sets and Colour FX). Higher tiers are denser. Repeated sections reuse their Scenes and step up one element each time. Density never raises a Go Scene's strobe above the Strobe cap.
+_Avoid_: Busyness, cue rate
+
+**Plan generator**:
+Fills a Plan's sections to their tier's Density, from the sections and tiers the user confirmed, the song's Show and its drum stem. Claude edits the result by hand. Not the Show generator, which builds the Show the Plan picks Scenes from.
+_Avoid_: Plan filler, auto-Plan
+
 **Region**:
 A named span of the Reaper project that is one song. Its start is bar 1 beat 1 of the song, and the MIDI item written for it is named `lights:<region>`. Matched by name, ignoring case.
 _Avoid_: Song marker, section
 
 **Marker vocabulary**:
-The section labels a Plan's markers are matched against, ignoring case and trailing numbers: intro, verse, pre, build, chorus, drop, break, bridge, solo, outro, roll, endroll, hit, blackout, stop. Each has a default treatment that the brief and the Plan override. An unknown label is allowed; Claude asks what it means.
+The section labels a Plan's markers are matched against, ignoring case and trailing numbers: intro, verse, pre, build, chorus, drop, break, breakdown, bridge, solo, outro, roll, endroll, hit, blackout, stop. Each has a default treatment that the brief and the Plan override. A break is quiet; a breakdown is the heavy, riff-locked section of metal, lit at Peak with its Hits on the riff. An unknown label is allowed; Claude asks what it means.
 _Avoid_: Section names
 
 **End cue**:
