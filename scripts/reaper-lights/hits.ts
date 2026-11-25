@@ -152,13 +152,21 @@ class Placer {
     return this.events.every((e) => !e.full || Math.abs(e.time - time) >= FULL_AREA_GAP - EPS);
   }
 
-  /** The Strobe burst and Blackout of a stop; a blackout takes no Strobe. */
+  /** Whether a Hit of `scene` may start here, given the full-area rate. */
+  private clearFor(scene: string, time: number): boolean {
+    return !FULL_AREA_HIT.test(scene) || this.clearOfFullArea(time);
+  }
+
+  /**
+   * The Strobe burst and Blackout of a stop; a blackout takes no Strobe. A Strobe
+   * too close to another full-area Hit is left out.
+   */
   private stop(section: Span, next: Span | undefined): void {
     const { strobe, blackout } = this.kit;
     let beat = 1;
-    if (section.kind === 'stop' && strobe) {
-      const start = this.spot(section, { bar: section.bar, beat }, 0);
-      this.add(section, start, strobe, { length: STROBE_LENGTH });
+    const first = this.spot(section, { bar: section.bar, beat }, 0);
+    if (section.kind === 'stop' && strobe && this.clearFor(strobe, first.time)) {
+      this.add(section, first, strobe, { length: STROBE_LENGTH });
       beat = 2;
     }
     if (!blackout) return;
@@ -327,21 +335,31 @@ class Placer {
       if (isStop(section.kind)) this.stop(section, next);
     }
     const blinders = this.blinderSections(plans.filter((p) => p.turn).map((p) => p.section));
-    plans.forEach(({ section, next, riser, turn }, i) => {
+    plans.forEach((plan, i) => {
+      const { section, next, riser } = plan;
       if (riser && next) {
         const start = this.spot(section, { bar: next.bar - 1, beat: 1 }, 0);
         this.add(section, start, this.kit.riser as string, { length: RISER_LENGTH });
       }
-      if (!turn) return;
+      if (!plan.turn) return;
       const loud = section.tier === 'drive' || section.tier === 'peak';
       const named = blinders.has(section)
         ? this.kit.blinder
         : loud
           ? this.loudTurn(section, colourRoom[i] ?? 0)
           : undefined;
-      const scene = named ?? this.kit.body[0];
+      // A turn too close to another full-area Hit takes the first body Hit, if
+      // that one is clear; else its place goes to the body.
       const start = this.spot(section, { bar: section.bar, beat: 1 }, 0);
-      if (scene) this.add(section, start, scene, { length: TURN_LENGTH });
+      const scene = [named, this.kit.body[0]].find(
+        (s): s is string => s !== undefined && this.clearFor(s, start.time),
+      );
+      if (scene) {
+        this.add(section, start, scene, { length: TURN_LENGTH });
+      } else if (named ?? this.kit.body[0]) {
+        plan.turn = false;
+        plan.body++;
+      }
     });
 
     for (const { section, riser, turn, body } of plans) {
