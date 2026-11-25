@@ -1,10 +1,9 @@
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { loadShowFile } from '../../../src/engine/show-file';
 import { loadVenueFile } from '../../../src/engine/venue-file';
 import { validateShow, type Rule, type Scene } from '../../../src/shared/show';
-import { DEFAULT_RIG, loadBrief } from './brief';
+import { DEFAULT_RIG } from './brief';
 import {
   colourOf,
   composeLook,
@@ -18,13 +17,11 @@ import {
   tierRecipes,
 } from './generate';
 import { TIER_BANDS, TIERS } from './rules';
+import { FIXTURES, sample, sampleFiles as files } from './sample-fixture';
 import { lintShow, tierOf } from './show-lint';
 import { parseSongSets } from './song-sets';
 import { venueCheckLines } from './write';
 
-const fixture = (name: string) => new URL(`./fixtures/${name}`, import.meta.url);
-const sample = loadBrief(fileURLToPath(fixture('sample-brief.yaml')));
-const files = generateFiles(sample.brief, sample.venue);
 const show = loadShowFile(files.show);
 const scene = (id: string): Scene => show.scenes.find((s) => s.id === id)!;
 const looks = show.scenes.filter((s) => s.layer === 'look' && tierOf(s) !== undefined);
@@ -190,6 +187,24 @@ describe('the sample Show', () => {
     expect(show.triggers.find((t) => t.mode === 'release')).toMatchObject({ channel: 1, note: 0 });
   });
 
+  it('has the Scenes of each tier on each Layer', () => {
+    const counts: Record<string, Record<string, number>> = {};
+    for (const s of show.scenes) {
+      const layers = (counts[tierOf(s) ?? 'none'] ??= {});
+      layers[s.layer] = (layers[s.layer] ?? 0) + 1;
+    }
+    // The sample venue lacks a part, so most tiers have 5 Colour FX, not 6.
+    const tier = { look: 7, movement: 7, pulse: 8, 'colour-fx': 5 };
+    expect(counts).toEqual({
+      chill: tier,
+      groove: { ...tier, 'colour-fx': 6 },
+      drive: tier,
+      peak: tier,
+      // The utilities and the Hits.
+      none: { look: 7, hit: 17 },
+    });
+  });
+
   it('keeps every note unique and fires each Scene once, by Go', () => {
     const keys = show.triggers.map((t) => `${t.channel}:${t.note}`);
     expect(new Set(keys).size).toBe(keys.length);
@@ -211,7 +226,7 @@ describe('the sample Show', () => {
   });
 
   it('passes the Venue Check on the fixture venue, but for the Strobe Hit', () => {
-    const patch = loadVenueFile(readFileSync(fixture('sample-venue.lcvenue'), 'utf8'));
+    const patch = loadVenueFile(readFileSync(`${FIXTURES}/sample-venue.lcvenue`, 'utf8'));
     // The sample washes and beams have no strobe channel, so the one Scene that
     // strobes, the Hit, is approximated on them. Nothing else is reported.
     const lines = venueCheckLines(show, patch);
@@ -320,15 +335,5 @@ describe('the brief changes the Show', () => {
   it('names the files after the band, safely', () => {
     expect(fileName('Neon Harbour')).toBe('Neon Harbour');
     expect(fileName('AC/DC: Live')).toBe('ACDC Live');
-  });
-});
-
-describe('the committed sample output', () => {
-  it('is what show:generate writes (run npm run show:generate -- tools/shows/make-shows/fixtures/sample-brief.yaml)', () => {
-    const read = (name: string) => readFileSync(fixture(name), 'utf8');
-    expect(files).toEqual({
-      show: read('Neon Harbour.lcshow'),
-      cueSheet: read('Neon Harbour cue sheet.md'),
-    });
   });
 });

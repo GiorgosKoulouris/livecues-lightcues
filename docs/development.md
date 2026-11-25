@@ -112,7 +112,7 @@ Don't edit the output files by hand. They are overwritten on the next run, and a
 - One Colour Set per song, on channel 6. Looks per tier and the utilities (Base, Dark, Silhouette, Shafts, Walk-on, Reveal, Bow) are on channel 1, built from slots. Scenes carry `tier:`, `part:` and `dynamic` tags for the lint.
 - Parts the venue has no Fixtures for are left out, and the Cue Sheet says so. With no venue it builds for the default rig.
 - Movement, Pulse, Colour FX and Hits are not built yet (`dynamicEntries` is the seam).
-- The sample brief's output is committed in `tools/shows/make-shows/fixtures/`. After a change to the generator or the app models, run `npm run show:generate -- tools/shows/make-shows/fixtures/sample-brief.yaml` and commit it (`git add -f`, as `fixtures/` is ignored). `npm test` fails while it is stale. Never commit a real Venue Patch.
+- Tests generate the Show of `tools/shows/make-shows/fixtures/sample-brief.yaml` in memory and check its structure. Do not commit generated output. Never commit a real Venue Patch.
 
 ## Reaper Lights
 

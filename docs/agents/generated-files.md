@@ -44,7 +44,6 @@ Files that break the rule today are under [Exceptions](#exceptions).
 | --- | --- | --- | --- |
 | `tools/shows/Palette.lcshow`, `tools/shows/Palette cue sheet.md` | `npm run show:palette` | Users load it in the app | `tools/shows/make-shows/palette.test.ts` |
 | `tools/shows/Energy.lcshow`, `tools/shows/Energy cue sheet.md` | `npm run show:energy` | Reaper Lights default Show, users load it in the app | `tools/shows/make-shows/energy.test.ts` |
-| `Neon Harbour.lcshow` and `Neon Harbour cue sheet.md` in `tools/shows/make-shows/fixtures/` | `npm run show:generate` on `sample-brief.yaml` | Generator, shots, Reaper Lights and e2e tests | `tools/shows/make-shows/generate.test.ts` |
 | `tools/shows/reaper-lights/__snapshots__/render.test.ts.snap` | Vitest | `render.test.ts` | The test itself |
 
 Rules for editing and regenerating Shows: [shows.md](shows.md).
@@ -79,6 +78,5 @@ Not generated, so outside the rule. `.gitignore` ignores every `fixtures/` folde
 
 As of 2026-11-25:
 
-- **Neon Harbour fixtures** are tracked with `git add -f`. The installer does not ship them and no tool loads them by default. `.scratch/repo-debloat/issues/03-drop-neon-harbour-golden.md` removes them.
 - **Palette** is tracked by choice, so users get a ready file. No tool loads it by default.
 - **No staleness test in `npm test`:** `build/icon.ico`, `CHANGELOG.md`, `package-lock.json` (`npm ci` checks it), `PRODUCT.md`, `DESIGN.md` and `.impeccable/design.json`.

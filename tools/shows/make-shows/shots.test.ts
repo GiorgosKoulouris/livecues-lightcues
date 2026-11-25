@@ -1,11 +1,9 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { loadShowFile } from '../../../src/engine/show-file';
+import { sampleFiles } from './sample-fixture';
 import { keyShots, parseShotArgs, shotFile } from './shots';
 
-const sample = loadShowFile(
-  readFileSync('tools/shows/make-shows/fixtures/Neon Harbour.lcshow', 'utf8'),
-);
+const sample = loadShowFile(sampleFiles.show);
 
 describe('parseShotArgs', () => {
   it('reads the show, the venue and --out', () => {
@@ -41,6 +39,20 @@ describe('keyShots', () => {
 
   it('uses the Show Base Look', () => {
     expect(find('base')?.scenes).toEqual(['Base']);
+  });
+
+  it('picks one Look per tier, and Silhouette', () => {
+    expect(
+      ['chill-look', 'groove-look', 'drive-look', 'peak-look', 'silhouette'].map(
+        (name) => find(name)?.scenes,
+      ),
+    ).toEqual([
+      ['Chill: Glow'],
+      ['Groove: Steady'],
+      ['Drive: Wide'],
+      ['Peak: Everything'],
+      ['Silhouette'],
+    ]);
   });
 
   it('builds the chorus combo from Drive Scenes within the cap of 3 dynamic Layers', () => {
