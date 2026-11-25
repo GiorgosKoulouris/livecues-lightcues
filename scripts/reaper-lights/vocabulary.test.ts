@@ -10,6 +10,14 @@ describe('matchMarker', () => {
     expect(matchMarker('endroll')).toBe('endroll');
   });
 
+  it('tells a heavy breakdown from a quiet break', () => {
+    expect(matchMarker('breakdown')).toBe('breakdown');
+    expect(matchMarker('Breakdown2')).toBe('breakdown');
+    expect(matchMarker('BREAKDOWN 3')).toBe('breakdown');
+    expect(matchMarker('break')).toBe('break');
+    expect(matchMarker('Break2')).toBe('break');
+  });
+
   it('returns undefined for unknown labels', () => {
     expect(matchMarker('Pebbles')).toBeUndefined();
     expect(matchMarker('1')).toBeUndefined();

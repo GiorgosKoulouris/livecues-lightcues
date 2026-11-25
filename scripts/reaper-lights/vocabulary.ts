@@ -8,6 +8,7 @@ export const MARKER_VOCABULARY = [
   'chorus',
   'drop',
   'break',
+  'breakdown',
   'bridge',
   'solo',
   'outro',
