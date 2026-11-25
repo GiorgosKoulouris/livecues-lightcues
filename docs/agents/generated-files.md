@@ -19,7 +19,7 @@ Files that break the rule today are under [Exceptions](#exceptions).
 | `build/icon.ico` | `npm run icon`, from `build/icon.svg` | Installer, dev window | None |
 | `CHANGELOG.md` | `/branch-flow` | GitHub Release notes | None. The release fails without a section for its version |
 | `package-lock.json` | npm | `npm ci`, security scan | `npm ci` fails when it differs from `package.json` |
-| `DESIGN.md`, `.impeccable/design.json` | `impeccable` skill | `impeccable` skill | None |
+| `PRODUCT.md`, `DESIGN.md`, `.impeccable/design.json` | `impeccable` skill | `impeccable` skill | None |
 
 ## App: ignored
 
@@ -32,7 +32,8 @@ Files that break the rule today are under [Exceptions](#exceptions).
 | `coverage/` | `npm run coverage` | The user, `coverage.yml` |
 | `test-results/` | Playwright (`npm run e2e`) | The user |
 | `reports/` | `npm run security:scan` and its triage, other reports | The user |
-| `.impeccable/hook.cache.json`, `.impeccable/hook.pending.json` | `impeccable` hook | `impeccable` hook |
+| `.impeccable/hook.cache.json`, `.impeccable/hook.pending.json`, `.impeccable/config.local.json` | `impeccable` | `impeccable` |
+| `fixtures/GeneratedForImports/` | Local conversion of Fixture manuals | Fixture import in the app |
 
 `coverage.yml` also commits `coverage.json` to the orphan `badges` branch, for the README badge.
 
@@ -56,15 +57,22 @@ Rules for editing and regenerating Shows: [shows.md](shows.md).
 | `.scratch/` | Agents and the user | Issue tracker |
 | `temp/` | The user | Local working files |
 
-Reaper Lights writes beside the Reaper project, normally outside the repo:
+Reaper Lights files sit with the Reaper project, normally outside the repo. `.lights.rpp` is beside the project. The rest sit beside the Plan, by default in `Lights/`.
 
 | Files | Made by | Used by |
 | --- | --- | --- |
-| `Lights/<Song>.sections.yaml` | `light-song` skill | `lights:song generate` |
-| `Lights/<Song>.lights.yaml` (the Plan) | `lights:song generate`, or by hand | `render`, `write` |
+| `<Song>.sections.yaml` | `light-song` skill | `lights:song generate` |
+| `<Song>.lights.yaml` (the Plan) | `lights:song generate`, or by hand | `render`, `write` |
 | `<Song>.lights.html` | `lights:song render` | The user |
 | `<name>.lights.rpp` | `lights:song write` | Reaper, the next `write` |
 | `<Region>.lights.hash` | `lights:song write` | The next `write`, to detect MIDI edits |
+
+## Hand-made inputs
+
+Not generated, so outside the rule. `.gitignore` ignores every `fixtures/` folder, so these were added with `git add -f`:
+
+- `tools/shows/make-shows/fixtures/`: `sample-brief.yaml`, `heavy-brief.yaml`, `sample-venue.lcvenue`
+- `tools/shows/reaper-lights/fixtures/lantern.rpp`
 
 ## Exceptions
 
@@ -72,4 +80,4 @@ As of 2026-11-25:
 
 - **Neon Harbour fixtures** are tracked with `git add -f`. The installer does not ship them and no tool loads them by default. `.scratch/repo-debloat/issues/03-drop-neon-harbour-golden.md` removes them.
 - **Palette** is tracked by choice, so users get a ready file. No tool loads it by default.
-- **No staleness test:** `build/icon.ico`, `CHANGELOG.md`, `DESIGN.md` and `.impeccable/design.json`.
+- **No staleness test in `npm test`:** `build/icon.ico`, `CHANGELOG.md`, `package-lock.json` (`npm ci` checks it), `PRODUCT.md`, `DESIGN.md` and `.impeccable/design.json`.
