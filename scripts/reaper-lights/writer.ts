@@ -10,13 +10,13 @@ import { LightsError } from './errors';
 import { findRegion, readProject, type Region, type RppNode, type RppProject } from './rpp';
 import { loadShowFor } from './show';
 import { stackingWarnings } from './stacking';
-import { regionTimeline, TempoMap } from './timeline';
+import { PPQ, regionTimeline, TempoMap } from './timeline';
 
 export class WriteError extends LightsError {}
 
 export const TRACK_NAME = 'MidiToLights';
 /** Ticks per quarter note of the written item. */
-export const PPQ = 960;
+export { PPQ };
 const ITEM_PREFIX = 'lights:';
 
 /** One note-on or note-off at a tick from the item start. */

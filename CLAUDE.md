@@ -47,7 +47,7 @@ The `make-show` skill turns a band's Brief into a Show, lints it, renders its ke
 
 ### Light song
 
-The `light-song` skill turns a song into a Plan and MIDI: on a generated band Show, the user confirms sections and tiers, `generate` fills the Plan and Claude edits the highlights. It never commits Plans, `bands/` or a Venue Patch. See `docs/agents/light-song.md`.
+The `light-song` skill turns a song into a Plan and MIDI: on a generated band Show, the user confirms sections and tiers, `generate` fills the Plan and Claude edits the highlights. It never commits Plans, sections files, `bands/` or a Venue Patch. See `docs/agents/light-song.md`.
 
 ### Security scan
 
