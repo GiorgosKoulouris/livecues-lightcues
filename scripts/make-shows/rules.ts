@@ -139,6 +139,8 @@ export const HIT_KINDS_MIN: Partial<Record<Tier, number>> = { drive: 4, peak: 6 
 // on everything (Colour Split is not).
 export const FULL_AREA_HIT = /^Hit: (Full white|Blinder|Strobe|Colour (?!Split$).+)$/i;
 export const COLOUR_HIT = /^Hit: Colour /i;
+// The Hits that put a prism in, which the Plan generator keeps for the last chorus.
+export const PRISM_HIT = /prism/i;
 
 // Photosensitivity: at most `maxStarts` full-area Hits start in any
 // `windowSeconds`, except in a burst of `burstBeats` or less.

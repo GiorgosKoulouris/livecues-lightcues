@@ -2,25 +2,23 @@
 // generator). Each section picks Scenes of its tier on phrase boundaries, as
 // many as the tier's Density asks. A repeated section reuses the Scenes of its
 // earlier pass and steps up by one element.
-import { DARK_NAME, TIER_BANDS, type Tier } from '../make-shows/rules';
+import { DARK_NAME, PHRASE_BARS, TIER_BANDS, type Tier } from '../make-shows/rules';
 import { COLOUR_SET_LAYER } from './compile';
-import { aim, densityRange } from './density';
+import { aim, cap, densityRange, recolours } from './density';
 import { GenerateError } from './errors';
-import { earlierPasses, isStop, type Span } from './sections';
+import { earlierPasses, isStop, places, type Span } from './sections';
 import { seededIndex } from './seed';
 import { tierTag, type ShowMap, type ShowScene } from './show';
 
 const EPS = 1e-6;
 /** The bars between the places a Look may change. */
-const LOOK_STEP = 8;
+const LOOK_STEP = PHRASE_BARS;
 /** The bars between the places an Effect may swap. */
 const EFFECT_STEP = 4;
 const EFFECTS = ['movement', 'pulse', 'colourfx'] as const;
 type Effect = (typeof EFFECTS)[number];
 /** The Effects a cue gives up, in this order, to stay inside the stacking cap. */
 const DROP_ORDER: readonly Effect[] = ['pulse', 'colourfx'];
-/** The Effects a repeat may add, in the order it tries them. */
-const ADD_ORDER: readonly Effect[] = ['colourfx', 'pulse', 'movement'];
 export const RELEASE = 'release';
 
 /** A Layer key to a Scene name, or `release`. */
@@ -48,18 +46,28 @@ interface Pass {
   last: Map<string, string>;
 }
 
-export const cap = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
-
-/** The bar offsets inside a section a change may land on: 0, then each full-bar step. */
-function places(bars: number, step: number): number[] {
-  const out = [0];
-  for (let at = step; at + 1 <= bars + EPS; at += step) out.push(at);
-  return out;
-}
-
 /** `count` of the places, spread over the section from its first bar. */
 const spread = (all: number[], count: number): number[] =>
   Array.from({ length: count }, (_, i) => all[Math.floor((i * all.length) / count)] as number);
+
+/** How many Effect Layers a section runs. */
+const running = (offsets: Offsets): number => EFFECTS.filter((l) => offsets.get(l)?.length).length;
+
+/**
+ * The changes a repeat tries to step up with, in order (research §3.3): a
+ * verse takes a Pulse or another Movement first, any other section a Colour FX.
+ */
+function stepUps(section: Span, bars: number): { layer: Effect; at: number }[] {
+  // Bar 9 first, then the other 4-bar steps both passes have.
+  const steps = places(bars, EFFECT_STEP)
+    .slice(1)
+    .toSorted((a, b) => Number(b === LOOK_STEP) - Number(a === LOOK_STEP) || a - b);
+  const swaps = steps.flatMap((at) => EFFECTS.map((layer) => ({ layer, at })));
+  const add = (layer: Effect) => ({ layer, at: 0 });
+  return section.kind === 'verse'
+    ? [add('pulse'), ...swaps, add('colourfx'), add('movement')]
+    : [add('colourfx'), add('pulse'), add('movement'), ...swaps];
+}
 
 /** The options that pass `keep`, or all of them where none does. */
 function prefer<T>(options: T[], keep: (option: T) => boolean): T[] {
@@ -175,7 +183,6 @@ export class Looks {
 
   /** Releases Effects until the section is inside its tier's stacking cap. */
   private capStack(offsets: Offsets, model: Pass | undefined, bars: number, tier: Tier): void {
-    const running = () => EFFECTS.filter((l) => offsets.get(l)?.length).length;
     // What the earlier pass did not run is given up first.
     const order = DROP_ORDER.toSorted(
       (a, b) =>
@@ -183,7 +190,7 @@ export class Looks {
         Number(Boolean(model?.offsets.get(b)?.length)),
     );
     for (const layer of order) {
-      if (running() <= TIER_BANDS[tier].maxDynamic) break;
+      if (running(offsets) <= TIER_BANDS[tier].maxDynamic) break;
       if (densityRange(tier, layer, bars).min === 0) offsets.set(layer, []);
     }
   }
@@ -236,11 +243,16 @@ export class Looks {
       let pool = this.pool(layer, section.tier as Tier).filter((s) => s.name !== last.get(layer));
       if (pool.length === 0) return;
       const wanted = reuse(layer, offset);
-      const again = pool.find((s) => s.name === wanted);
+      const reused = pool.find((s) => s.name === wanted);
       if (layer === 'movement') pool = prefer(pool, (s) => family.has(s.shape ?? ''));
+      // A new Look changes colour where one can, so it counts as a colour change.
+      if (layer === this.lookKey) {
+        const before = this.show.scene(last.get(layer) ?? '');
+        pool = prefer(pool, (s) => recolours(s, before));
+      }
       pool = prefer(pool, (s) => !used.has(s.name));
       const seed = `${this.song}|${section.label}|${section.bar}|${layer}|${offset}`;
-      const { name } = again ?? (pool[seededIndex(seed, pool.length)] as ShowScene);
+      const { name } = reused ?? (pool[seededIndex(seed, pool.length)] as ShowScene);
       picks[layer] = name;
       used.add(name);
       held.set(layer, name);
@@ -285,29 +297,19 @@ export class Looks {
    * Adds an Effect to a repeat, then swaps, until it has more elements than the
    * pass before it over the bars both have.
    */
-  private stepUp(pass: Pass, previous: Pass, again: (offsets: Offsets) => Pass): Pass {
+  private stepUp(pass: Pass, previous: Pass, replay: (offsets: Offsets) => Pass): Pass {
     const { section } = pass;
     const tier = section.tier as Tier;
     const bars = Math.min(section.bars, previous.section.bars);
     const target = this.elements(previous, bars);
-    // Bar 9 first, then the other 4-bar steps both passes have.
-    const steps = places(bars, EFFECT_STEP)
-      .slice(1)
-      .toSorted((a, b) => Number(b === LOOK_STEP) - Number(a === LOOK_STEP) || a - b);
-    const changes = [
-      ...ADD_ORDER.map((layer) => ({ layer, at: 0 })),
-      ...steps.flatMap((at) => EFFECTS.map((layer) => ({ layer, at }))),
-    ];
-
     let best = pass;
-    for (const { layer, at } of changes) {
+    for (const { layer, at } of stepUps(section, bars)) {
       if (this.elements(best, bars) > target) break;
       const own = best.offsets.get(layer) ?? [];
       if (own.includes(at) || (at > 0 && own.length === 0)) continue;
       if (this.pool(layer, tier).length === 0) continue;
       if (own.length >= densityRange(tier, layer, section.bars).max) continue;
-      const running = EFFECTS.filter((l) => best.offsets.get(l)?.length).length;
-      if (own.length === 0 && running >= TIER_BANDS[tier].maxDynamic) continue;
+      if (own.length === 0 && running(best.offsets) >= TIER_BANDS[tier].maxDynamic) continue;
       const colourMax = densityRange(tier, 'colour', section.bars).max;
       // The colour ceiling gives way only to a repeat that would otherwise have fewer.
       const full = this.colourUsed(best.offsets, section) >= colourMax;
@@ -316,7 +318,7 @@ export class Looks {
         layer,
         [...own, at].sort((a, b) => a - b),
       );
-      const trial = again(offsets);
+      const trial = replay(offsets);
       if (this.elements(trial, bars) > this.elements(best, bars)) best = trial;
     }
     return best;
@@ -339,9 +341,9 @@ export class Looks {
     if (model) this.keepSwaps(offsets, model, section, tier);
     this.capStack(offsets, model, section.bars, tier);
     this.capColour(offsets, model, section, tier);
-    const again = (changed: Offsets) => this.play(section, changed, model, family);
-    let pass = again(offsets);
-    if (previous) pass = this.stepUp(pass, previous, again);
+    const replay = (changed: Offsets) => this.play(section, changed, model, family);
+    let pass = replay(offsets);
+    if (previous) pass = this.stepUp(pass, previous, replay);
 
     this.passes.set(section, pass);
     this.held = pass.held;

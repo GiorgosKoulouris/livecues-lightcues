@@ -19,6 +19,8 @@ import {
   type MarkerKind,
 } from './vocabulary';
 
+const EPS = 1e-6;
+
 export interface Section {
   /** The line in the sections file. */
   line: number;
@@ -38,9 +40,23 @@ export interface Span extends Section {
 /** The sections that hold the stage dark and need no tier. */
 export const isStop = (kind: MarkerKind): boolean => kind === 'stop' || kind === 'blackout';
 
-/** The sections that take the Break Colour Set. */
-export const isBreak = (kind: MarkerKind): boolean =>
-  kind === 'break' || kind === 'breakdown' || kind === 'bridge';
+/** The sections that take the Break Colour Set, the first to keep it first. */
+const BREAK_KINDS: readonly MarkerKind[] = ['breakdown', 'bridge', 'break'];
+
+export const isBreak = (kind: MarkerKind): boolean => BREAK_KINDS.includes(kind);
+
+/** Lower for a break that keeps the Break set before the others. */
+export const breakRank = (kind: MarkerKind): number => BREAK_KINDS.indexOf(kind);
+
+/** How loud a section's tier is, Chill lowest. */
+export const loudness = (section: Section): number => TIERS.indexOf(section.tier as Tier);
+
+/** The bar offsets inside a section a change may land on: 0, then each step with a whole bar left. */
+export function places(bars: number, step: number): number[] {
+  const out = [0];
+  for (let at = step; at + 1 <= bars + EPS; at += step) out.push(at);
+  return out;
+}
 
 /**
  * The passes of a section's label before it, in song order: `chorus1` and
@@ -53,9 +69,9 @@ export function earlierPasses<S extends Section>(sections: readonly S[], section
     .filter((s) => !isStop(s.kind) && normaliseLabel(s.label) === label);
 }
 
-/** The last chorus of a song, else its last drop. */
+/** The last chorus of a song. */
 export const lastChorus = <S extends Section>(sections: readonly S[]): S | undefined =>
-  sections.findLast((s) => s.kind === 'chorus') ?? sections.findLast((s) => s.kind === 'drop');
+  sections.findLast((s) => s.kind === 'chorus');
 
 const KEYS = ['bar', 'label', 'tier'];
 

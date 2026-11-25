@@ -59,7 +59,7 @@ const EPS = 1e-6;
 /** A marker this close after an event still takes it into its section, in seconds. */
 const SNAP = 0.01;
 
-const cap = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
+export const cap = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
 
 const zeroCounts = (): Record<DensityMetric, number> => ({
   look: 0,
@@ -71,7 +71,7 @@ const zeroCounts = (): Record<DensityMetric, number> => ({
 });
 
 /** Whether a Look lights something in another colour than the Look before it. */
-function recolours(next: ShowScene | undefined, previous: ShowScene | undefined): boolean {
+export function recolours(next: ShowScene | undefined, previous: ShowScene | undefined): boolean {
   const a = next?.paint ?? {};
   const b = previous?.paint ?? {};
   const set = (p: Record<string, string>) => [...new Set(Object.values(p))].sort().join('|');

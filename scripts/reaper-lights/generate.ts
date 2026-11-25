@@ -9,7 +9,8 @@ import { analyseRegion, isDrumStem } from './analyse';
 import { GenerateError } from './errors';
 import { PlanError } from './plan';
 import { placeHits, type HitEvent, type Hits } from './hits';
-import { cap, Looks, RELEASE, type Picks } from './looks';
+import { cap } from './density';
+import { Looks, RELEASE, type Picks } from './looks';
 import { findRegion, readProject, type Region, type RppProject } from './rpp';
 import { isStop, lastChorus, parseSections, type Section, type Span } from './sections';
 import { planSetCues, type SetRole } from './set-cues';
@@ -157,10 +158,6 @@ function colourSetCues(
   song: string,
   sections: Span[],
 ): ColourSetCues {
-  if (show.colourSets.length === 0) {
-    const none = 'The Show has no Colour Sets, so none is cued';
-    return { byBar: new Map(), notes: [], warnings: [none] };
-  }
   const sheet = cueSheetPath(showFile);
   const rows = songRolesBeside(showFile, (path) => readFileSync(path, 'utf8'));
   if (!rows) throw new GenerateError(`No Song sets table: generate needs it in ${sheet}`);
@@ -224,6 +221,7 @@ export function generateLights(options: GenerateOptions): Generated {
     ...markerWarnings(sections, timeline),
     ...drums.warnings,
     ...sets.warnings,
+    ...hits.warnings,
     ...(show.scenes.some((s) => s.mode === 'flash')
       ? []
       : ['The Show has no Hit Scenes, so no Hit is placed']),

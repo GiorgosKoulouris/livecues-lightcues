@@ -79,7 +79,7 @@ A reference in a Rule's colour, or in a Step or Fade colour Effect, to one of a 
 _Avoid_: Palette colour, swatch
 
 **Set role**:
-The part a Colour Set plays in one song: Main (verses and choruses, held from bar 1), Break (bridges and breakdowns, led by a contrast hue) or Swap (the last chorus, Main's Primary and Secondary exchanged). A role belongs to the song, not the set: one Colour Set can be one song's Main and another's Break or Swap. Neighbouring songs never share a Main.
+The part a Colour Set plays in one song: Main (verses and choruses, held from bar 1), Break (bridges, breaks and breakdowns, led by a contrast hue) or Swap (the last chorus, Main's Primary and Secondary exchanged). A role belongs to the song, not the set: one Colour Set can be one song's Main and another's Break or Swap. Neighbouring songs never share a Main.
 _Avoid_: Variant, alt set
 
 ### Visualiser
@@ -233,6 +233,10 @@ _Avoid_: Cue list, script
 **Density**:
 A tier's targets for how busy a Plan is, per 8-bar phrase: how often the Look changes, how often each dynamic Layer swaps its Effect Scene, how many Hits fire, and how often the colour changes (Colour Sets and Colour FX). Higher tiers are denser. Repeated sections reuse their Scenes and step up one element each time. Density never raises a Go Scene's strobe above the Strobe cap.
 _Avoid_: Busyness, cue rate
+
+**Movement family**:
+The Movement Scenes whose movement Effect has the same shape. A repeated section keeps the family of its first pass.
+_Avoid_: Movement style
 
 **Plan generator**:
 Fills a Plan's sections to their tier's Density, from the sections and tiers the user confirmed, the song's Show and its drum stem. Claude edits the result by hand. Not the Show generator, which builds the Show the Plan picks Scenes from.

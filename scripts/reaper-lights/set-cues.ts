@@ -2,8 +2,8 @@
 // Main holds from bar 1, Break takes the break sections, Main returns after
 // them and Swap takes the last chorus. A song with too few breaks lends Break a
 // section, or 8 bars of one, so that it gets its 4 cues.
-import { COLOUR_SET_CUES, PHRASE_BARS, TIERS, type Tier } from '../make-shows/rules';
-import { isBreak, isStop, lastChorus, type Span } from './sections';
+import { COLOUR_SET_CUES, PHRASE_BARS } from '../make-shows/rules';
+import { breakRank, isBreak, isStop, lastChorus, loudness, places, type Span } from './sections';
 
 export type SetRole = 'main' | 'break' | 'swap';
 
@@ -30,13 +30,9 @@ const wholeSections = (sections: Span[]): Unit[] =>
 
 /** Each section cut at every 8th bar that has a whole bar left to light. */
 const phrases = (sections: Span[]): Unit[] =>
-  sections.flatMap((section) => {
-    const out: Unit[] = [{ bar: section.bar, section }];
-    for (let at = PHRASE_BARS; at + 1 <= section.bars; at += PHRASE_BARS) {
-      out.push({ bar: section.bar + at, section });
-    }
-    return out;
-  });
+  sections.flatMap((section) =>
+    places(section.bars, PHRASE_BARS).map((at) => ({ bar: section.bar + at, section })),
+  );
 
 /** A cue wherever the role changes, unit by unit. */
 function walk(units: Unit[], onBreak: (unit: Unit) => boolean, swap: number | undefined): SetCue[] {
@@ -59,11 +55,11 @@ function walk(units: Unit[], onBreak: (unit: Unit) => boolean, swap: number | un
   return cues;
 }
 
-/** The section that takes Swap: the last chorus, else the latest of the loudest. */
+/** The section that takes Swap: the last chorus or drop, else the latest of the loudest. */
 function swapSection(sections: Span[]): Span | undefined {
-  const loudness = (s: Span) => TIERS.indexOf(s.tier as Tier);
   return (
     lastChorus(sections) ??
+    sections.findLast((s) => s.kind === 'drop') ??
     sections
       .filter((s) => !isStop(s.kind) && !isBreak(s.kind))
       .toSorted((a, b) => loudness(b) - loudness(a) || b.bar - a.bar)[0]
@@ -78,9 +74,6 @@ function swapBar(section: Span | undefined): number | undefined {
   return late === 1 ? undefined : late;
 }
 
-/** Which breaks get the Break set first, when 6 cues cannot take them all. */
-const breakWeight = (s: Span): number => ['breakdown', 'bridge', 'break'].indexOf(s.kind);
-
 /** The break sections as runs of neighbours, the weightiest first. */
 function breakRuns(sections: Span[]): Span[][] {
   const runs: Span[][] = [];
@@ -91,75 +84,95 @@ function breakRuns(sections: Span[]): Span[][] {
     if (run && before && run.at(-1) === before) run.push(section);
     else runs.push([section]);
   });
-  const weight = (run: Span[]) => Math.min(...run.map(breakWeight));
-  return runs.toSorted((a, b) => weight(a) - weight(b));
+  const rank = (run: Span[]) => Math.min(...run.map((s) => breakRank(s.kind)));
+  return runs.toSorted((a, b) => rank(a) - rank(b));
+}
+
+/**
+ * The units Break borrows to reach the minimum, or none where no choice does.
+ * A solo is tried first, then the quietest unit, the one that brings most cues
+ * and the latest; the next one is tried where that leaves the song short.
+ */
+function borrowed(
+  units: Unit[],
+  swap: number | undefined,
+  cueCount: (lent: readonly Unit[]) => number,
+): Unit[] | undefined {
+  const base = cueCount([]);
+  const solo = (u: Unit) => (u.section.kind === 'solo' ? 0 : 1);
+  const order = units
+    .filter((u) => u.bar > 1 && (swap === undefined || u.bar < swap) && !isStop(u.section.kind))
+    .map((u) => ({ u, gain: cueCount([u]) - base }))
+    .toSorted(
+      (a, b) =>
+        solo(a.u) - solo(b.u) ||
+        loudness(a.u.section) - loudness(b.u.section) ||
+        b.gain - a.gain ||
+        b.u.bar - a.u.bar,
+    )
+    .map(({ u }) => u);
+  const search = (lent: Unit[]): Unit[] | undefined => {
+    const now = cueCount(lent);
+    if (now >= COLOUR_SET_CUES.min) return lent;
+    for (const unit of order) {
+      if (lent.includes(unit)) continue;
+      // Every borrow brings a cue, so the search goes no deeper than the shortfall.
+      const next = cueCount([...lent, unit]);
+      if (next <= now || next > COLOUR_SET_CUES.max) continue;
+      const found = search([...lent, unit]);
+      if (found) return found;
+    }
+    return undefined;
+  };
+  return search([]);
 }
 
 export function planSetCues(sections: Span[]): SetCuePlan {
   const notes: string[] = [];
   const swapOn = swapSection(sections);
   const swap = swapBar(swapOn);
-  if (swapOn && swap !== undefined && !lastChorus(sections)) {
+  if (swapOn && swap !== undefined && swapOn.kind !== 'chorus') {
     notes.push(`Colour Sets: no chorus, so Swap takes ${swapOn.label} at bar ${swap}`);
   }
 
-  // A Swap inside the bar 1 section needs that section cut into phrases.
-  let units = swapOn?.bar === 1 ? phrases(sections) : wholeSections(sections);
-  /** The sections wholly on Break, and the units lent to it, each with its note. */
+  /** The sections wholly on Break. */
   const whole = new Set<Span>();
-  const lent = new Map<Unit, string>();
-  const cuesWith = (extra: (u: Unit) => boolean = () => false) =>
-    walk(units, (u) => whole.has(u.section) || lent.has(u) || extra(u), swap);
+  const cuesFor = (units: Unit[], lent: readonly Unit[]) => {
+    const taken = new Set(lent.map((u) => u.bar));
+    return walk(units, (u) => whole.has(u.section) || taken.has(u.bar), swap);
+  };
+  // A Swap inside the bar 1 section needs that section cut into phrases.
+  const sectionUnits = swapOn?.bar === 1 ? phrases(sections) : wholeSections(sections);
 
   for (const run of breakRuns(sections)) {
-    if (cuesWith((u) => run.includes(u.section)).length <= COLOUR_SET_CUES.max) {
-      for (const section of run) whole.add(section);
-    } else {
-      notes.push(
-        `Colour Sets: ${run[0]?.label} at bar ${run[0]?.bar} keeps the set held there, ` +
-          `${COLOUR_SET_CUES.max} cues at most`,
-      );
+    for (const section of run) whole.add(section);
+    if (cuesFor(sectionUnits, []).length <= COLOUR_SET_CUES.max) continue;
+    for (const section of run) whole.delete(section);
+    notes.push(
+      `Colour Sets: ${run[0]?.label} at bar ${run[0]?.bar} keeps the set held there, ` +
+        `${COLOUR_SET_CUES.max} cues at most`,
+    );
+  }
+
+  // Too few cues: lend Break whole sections, else 8 bars of them.
+  let cues = cuesFor(sectionUnits, []);
+  for (const units of [sectionUnits, phrases(sections)]) {
+    const lent = borrowed(units, swap, (extra) => cuesFor(units, extra).length);
+    if (!lent) continue;
+    cues = cuesFor(units, lent);
+    for (const { bar, section } of lent.toSorted((a, b) => a.bar - b.bar)) {
+      const how = bar === section.bar ? 'at' : 'from';
+      notes.push(`Colour Sets: Break borrows ${section.label} ${how} bar ${bar}`);
     }
+    break;
   }
 
-  // Too few cues: lend Break a solo, else the quietest unit before the Swap.
-  const borrow = (): boolean => {
-    const now = cuesWith().length;
-    const options = units
-      .filter((u) => u.bar > 1 && (swap === undefined || u.bar < swap))
-      .filter((u) => !isStop(u.section.kind) && !whole.has(u.section) && !lent.has(u))
-      .map((u) => ({ u, gain: cuesWith((other) => other === u).length - now }))
-      .filter(({ gain }) => gain > 0 && now + gain <= COLOUR_SET_CUES.max);
-    const solo = (u: Unit) => (u.section.kind === 'solo' ? 0 : 1);
-    const loudness = (u: Unit) => TIERS.indexOf(u.section.tier as Tier);
-    // Solo, then quietest, then the most cues, then the latest.
-    const best = options.toSorted(
-      (a, b) =>
-        solo(a.u) - solo(b.u) ||
-        loudness(a.u) - loudness(b.u) ||
-        b.gain - a.gain ||
-        b.u.bar - a.u.bar,
-    )[0]?.u;
-    if (!best) return false;
-    const how = best.bar === best.section.bar ? 'at' : 'from';
-    lent.set(best, `Colour Sets: Break borrows ${best.section.label} ${how} bar ${best.bar}`);
-    return true;
-  };
-  const short = () => cuesWith().length < COLOUR_SET_CUES.min;
-  while (short() && borrow());
-  if (short()) {
-    // Whole sections were not enough: borrow again, on 8-bar boundaries inside them.
-    lent.clear();
-    units = phrases(sections);
-    while (short() && borrow());
-  }
-
-  const cues = cuesWith();
-  const warnings = short()
-    ? [
-        `Only ${cues.length} Colour Set cue${cues.length === 1 ? '' : 's'}: ` +
-          `too few bars before the Swap for ${COLOUR_SET_CUES.min}`,
-      ]
-    : [];
-  return { cues, notes: [...notes, ...lent.values()], warnings };
+  const warnings =
+    cues.length < COLOUR_SET_CUES.min
+      ? [
+          `Only ${cues.length} Colour Set cue${cues.length === 1 ? '' : 's'}: ` +
+            `too few bars before the Swap for ${COLOUR_SET_CUES.min}`,
+        ]
+      : [];
+  return { cues, notes, warnings };
 }

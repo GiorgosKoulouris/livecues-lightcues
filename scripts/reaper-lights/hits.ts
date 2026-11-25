@@ -11,14 +11,14 @@ import {
   FULL_AREA_LIMIT,
   HIT_KINDS_MIN,
   PHRASE_BARS,
+  PRISM_HIT,
   STEM_MAX_ONSETS_PER_BEAT,
-  TIERS,
   type Tier,
 } from '../make-shows/rules';
 import type { StemAnalysis } from './analyse';
 import { aim, densityRange } from './density';
 import { seededIndex } from './seed';
-import { earlierPasses, isStop, lastChorus, type Span } from './sections';
+import { earlierPasses, isStop, lastChorus, loudness, type Span } from './sections';
 import type { ShowMap } from './show';
 import { formatBarBeat, type BarBeat, type SongTimeline } from './timeline';
 
@@ -87,8 +87,8 @@ export interface HitEvent {
   full: boolean;
   /** Written bars from the section start. */
   offset: number;
-  /** Whether it is a body Hit, and so may take another kind. */
-  body: boolean;
+  /** Set on a body Hit, which may take another kind: what it is placed on. */
+  body?: 'onset' | 'grid';
   section: Span;
   at: string;
   scene: string;
@@ -98,10 +98,16 @@ export interface HitEvent {
 
 type Length = Pick<HitEvent, 'length' | 'until'>;
 
+/** The places body Hits may take: on a stem onset, or on the beat grid. */
+interface Spots {
+  onsets: Spot[];
+  grid: Spot[];
+}
+
 export interface HitInput {
   song: string;
   sections: Span[];
-  /** Per section, the colour changes its Looks and Colour FX leave under the ceiling. */
+  /** Per section, the colour changes its Looks, Colour FX and sets leave under the ceiling. */
   colourRoom: number[];
   show: ShowMap;
   timeline: SongTimeline;
@@ -116,6 +122,8 @@ export interface Hits {
   /** Body Hits on a stem onset, and on the beat grid. */
   onStem: number;
   onGrid: number;
+  /** Repeats left with no more elements than the pass before. */
+  warnings: string[];
 }
 
 class Placer {
@@ -123,14 +131,13 @@ class Placer {
   /** Whether the Show has only full-area Hits for the body. */
   private readonly bodyIsFull: boolean;
   private readonly events: HitEvent[] = [];
-  private onStem = 0;
-  private onGrid = 0;
-  private readonly last: Span | undefined;
+  /** The last chorus. */
+  private readonly finale: Span | undefined;
 
   constructor(private readonly input: HitInput) {
     this.kit = hitKit(input.show);
     this.bodyIsFull = this.kit.body.every((n) => FULL_AREA_HIT.test(n));
-    this.last = lastChorus(input.sections);
+    this.finale = lastChorus(input.sections);
   }
 
   /**
@@ -139,9 +146,9 @@ class Placer {
    */
   private kinds(section: Span): string[] {
     const { body } = this.kit;
-    const prism = body.filter((n) => /prism/i.test(n));
+    const prism = body.filter((n) => PRISM_HIT.test(n));
     const others = body.filter((n) => !prism.includes(n));
-    if (section === this.last) return [...prism, ...others];
+    if (section === this.finale) return [...prism, ...others];
     const spare = others.length >= (HIT_KINDS_MIN.peak ?? 0);
     return prism.length > 0 && spare ? others : body;
   }
@@ -153,13 +160,19 @@ class Placer {
   }
 
   /** Places a Hit. A body Hit is added with no Scene, and named once all are placed. */
-  private add(section: Span, spot: Spot, scene: string, span: Length): void {
+  private add(
+    section: Span,
+    spot: Spot,
+    scene: string,
+    span: Length,
+    body?: HitEvent['body'],
+  ): void {
     const full = scene ? FULL_AREA_HIT.test(scene) : this.bodyIsFull;
     this.events.push({
       time: spot.time,
       full,
       offset: spot.offset,
-      body: span.length === BODY_LENGTH,
+      ...(body ? { body } : {}),
       section,
       at: formatBarBeat(spot.at),
       scene,
@@ -208,8 +221,8 @@ class Placer {
   /** Whether a section builds into the next, so its last bar takes a Riser. */
   private rises(section: Span, next: Span | undefined): boolean {
     if (!next || isStop(next.kind)) return false;
-    const level = (s: Span) => TIERS.indexOf(s.tier as Tier);
-    return section.kind === 'build' || section.kind === 'pre' || level(next) > level(section);
+    const louder = loudness(next) > loudness(section);
+    return section.kind === 'build' || section.kind === 'pre' || louder;
   }
 
   /**
@@ -219,7 +232,7 @@ class Placer {
   private count(section: Span, riser: boolean): number {
     const tier = section.tier as Tier;
     const { max } = densityRange(tier, 'hits', section.bars);
-    if (section === this.last) return max;
+    if (section === this.finale) return max;
     return Math.min(max, Math.max(riser ? 1 : 0, aim(tier, 'hits', section.bars)));
   }
 
@@ -235,10 +248,11 @@ class Placer {
     return `${this.input.song}|${section.label}|${section.bar}|${what}`;
   }
 
-  /** The sections whose turn Hit is a Blinder: Peak first, then Drive. */
+  /** The sections whose turn Hit is a Blinder: the last chorus, then Peak, then Drive. */
   private blinderSections(turns: Span[]): Set<Span> {
     const loud = [
-      ...turns.filter((s) => s.tier === 'peak'),
+      ...turns.filter((s) => s === this.finale),
+      ...turns.filter((s) => s.tier === 'peak' && s !== this.finale),
       ...turns.filter((s) => s.tier === 'drive'),
     ];
     return new Set(this.kit.blinder ? loud.slice(0, BLINDERS_PER_SONG) : []);
@@ -299,10 +313,13 @@ class Placer {
     return [...out.values()];
   }
 
-  /** The spots body Hits may take before `until` bars in: the onsets, then the grid. */
-  private spots(section: Span, until: number): Spot[][] {
+  /** The spots body Hits may take before `until` bars in, the best first. */
+  private spots(section: Span, until: number): Spots {
     const byRank = (a: Spot, b: Spot) => a.rank - b.rank || a.time - b.time;
-    return [this.onsets(section, until), this.grid(section, until)].map((s) => s.toSorted(byRank));
+    return {
+      onsets: this.onsets(section, until).toSorted(byRank),
+      grid: this.grid(section, until).toSorted(byRank),
+    };
   }
 
   private usable(spot: Spot): boolean {
@@ -312,19 +329,16 @@ class Placer {
   /** Adds a body Hit on the first usable spot that `fits`, an onset before a grid beat. */
   private takeBody(
     section: Span,
-    spots: Spot[][],
+    { onsets, grid }: Spots,
     fits: (spot: Spot) => boolean,
     scene = '',
   ): boolean {
-    for (const [i, list] of spots.entries()) {
-      const spot = list.find((s) => fits(s) && this.usable(s));
-      if (!spot) continue;
-      this.add(section, spot, scene, { length: BODY_LENGTH });
-      if (i === 0) this.onStem++;
-      else this.onGrid++;
-      return true;
-    }
-    return false;
+    const first = (list: Spot[]) => list.find((s) => fits(s) && this.usable(s));
+    const onset = first(onsets);
+    const spot = onset ?? first(grid);
+    if (!spot) return false;
+    this.add(section, spot, scene, { length: BODY_LENGTH }, onset ? 'onset' : 'grid');
+    return true;
   }
 
   /** The last chorus's pattern: every downbeat, then each phrase's second-half backbeats. */
@@ -354,8 +368,8 @@ class Placer {
     };
     const within = (from: number, to: number) => (s: Spot) =>
       s.offset >= from - EPS && s.offset < to - EPS;
-    if (section === this.last) {
-      const [onsets] = spots as [Spot[], Spot[]];
+    if (section === this.finale) {
+      const { onsets } = spots;
       for (const at of this.pattern(section, until)) {
         const on = (s: Spot) => s.at.bar === at.bar && Math.abs(s.at.beat - at.beat) < EPS;
         // A bar the stems play in takes the pattern's beat only on an onset.
@@ -375,15 +389,32 @@ class Placer {
     }
   }
 
-  /** Names the body Hits of a section in time order, rotating through the kinds. */
+  /** The Hits of a section, in its first `bars` bars when given. */
+  private inside(section: Span, bars = Infinity): HitEvent[] {
+    return this.events.filter((e) => e.section === section && e.offset < bars - EPS);
+  }
+
+  /** The colour changes a section has left under its ceiling, after its colour Hits. */
+  private colourLeft(section: Span): number {
+    const used = this.inside(section).filter((e) => COLOUR_HIT.test(e.scene)).length;
+    return (this.input.colourRoom[this.input.sections.indexOf(section)] ?? 0) - used;
+  }
+
+  /**
+   * Names the body Hits of a section in time order, rotating through the kinds.
+   * A colour Hit is passed over once the section is at its colour ceiling.
+   */
   private nameBody(section: Span): void {
     const body = this.kinds(section);
+    const plain = body.filter((n) => !COLOUR_HIT.test(n));
     // The last chorus starts at the head of its list, where the prism Hits are.
-    let next = section === this.last ? 0 : seededIndex(this.seed(section, 'hits'), body.length);
-    const unnamed = this.events
-      .filter((e) => e.section === section && e.scene === '')
+    let next = section === this.finale ? 0 : seededIndex(this.seed(section, 'hits'), body.length);
+    const unnamed = this.inside(section)
+      .filter((e) => e.scene === '')
       .toSorted((a, b) => a.time - b.time);
     for (const event of unnamed) {
+      const full = this.colourLeft(section) <= 0 && plain.length > 0;
+      while (full && COLOUR_HIT.test(body[next % body.length] as string)) next++;
       event.scene = body[next % body.length] as string;
       next++;
     }
@@ -391,31 +422,31 @@ class Placer {
 
   /** The distinct Hit Scenes a section fires in its first `bars` bars. */
   private fired(section: Span, bars: number): Set<string> {
-    const inside = this.events.filter((e) => e.section === section && e.offset < bars - EPS);
-    return new Set(inside.map((e) => e.scene));
+    return new Set(this.inside(section, bars).map((e) => e.scene));
   }
 
   /**
    * Gives a section one more Hit kind in its first `bars` bars: a body Hit that
-   * doubles another takes it, else an added body Hit does. A kind the body
-   * rotates through comes before a colour Hit, which flashes the whole stage.
+   * doubles another takes it, else an added body Hit does. At the Hit ceiling,
+   * the added one is moved from after those bars. The kinds the body
+   * rotates through come first; a colour Hit, which also counts as a colour
+   * change and may flash the whole stage, is the last resort.
    */
   private addKind(section: Span, bars: number): boolean {
     const have = this.fired(section, bars);
-    const unused = (names: string[]) => names.filter((n) => !have.has(n));
-    // A colour Hit counts as a colour change too, so those come last.
-    const body = unused(this.kinds(section)).toSorted(
-      (a, b) => Number(COLOUR_HIT.test(a)) - Number(COLOUR_HIT.test(b)),
-    );
-    const inside = this.events.filter((e) => e.section === section && e.offset < bars - EPS);
+    const candidates = [...new Set([...this.kinds(section), ...this.kit.colours])]
+      .filter((n) => !have.has(n))
+      .toSorted((a, b) => Number(COLOUR_HIT.test(a)) - Number(COLOUR_HIT.test(b)));
+    const inside = this.inside(section, bars);
     const doubles = inside.filter(
       (e) => e.body && inside.some((other) => other !== e && other.scene === e.scene),
     );
-    const all = this.events.filter((e) => e.section === section);
+    const all = this.inside(section);
     const room = all.length < densityRange(section.tier as Tier, 'hits', section.bars).max;
+    const spare = room ? undefined : all.findLast((e) => e.body && e.offset >= bars - EPS);
     const riser = all.some((e) => e.scene === this.kit.riser);
     const until = Math.min(bars, riser ? section.bars - 1 : section.bars);
-    return [...new Set([...body, ...unused(this.kit.colours)])].some((kind) => {
+    for (const kind of candidates) {
       const full = FULL_AREA_HIT.test(kind);
       const double = doubles.findLast((e) => !full || this.clearOfFullArea(e.time));
       if (double) {
@@ -423,15 +454,22 @@ class Placer {
         double.full = full;
         return true;
       }
-      if (!room) return false;
+      if (!room && !spare) continue;
+      if (spare) this.events.splice(this.events.indexOf(spare), 1);
       const fits = (s: Spot) => s.offset < until - EPS && this.clearFor(kind, s.time);
-      return this.takeBody(section, this.spots(section, until), fits, kind);
-    });
+      if (this.takeBody(section, this.spots(section, until), fits, kind)) return true;
+      if (spare) this.events.push(spare);
+    }
+    return false;
   }
 
-  /** Adds Hit kinds to each repeat until it has more elements than the pass before it. */
-  private stepUpRepeats(): void {
+  /**
+   * Adds Hit kinds to each repeat until it has more elements than the pass before
+   * it, and says which could not get there.
+   */
+  private stepUpRepeats(): string[] {
     const { sections, elementsOf } = this.input;
+    const warnings: string[] = [];
     for (const section of sections) {
       const previous = earlierPasses(sections, section).at(-1);
       if (isStop(section.kind) || !previous) continue;
@@ -439,11 +477,17 @@ class Placer {
       const count = (s: Span) => elementsOf(s, bars) + this.fired(s, bars).size;
       const target = count(previous);
       while (count(section) <= target && this.addKind(section, bars));
+      if (count(section) > target) continue;
+      warnings.push(
+        `Bar ${section.bar}: ${section.label} has no more elements than ${previous.label} ` +
+          `at bar ${previous.bar}: no room is left under the Density ceilings`,
+      );
     }
+    return warnings;
   }
 
   run(): Hits {
-    const { sections, colourRoom } = this.input;
+    const { sections } = this.input;
     const plans = sections.map((section, i) => {
       const next = sections[i + 1];
       if (isStop(section.kind)) return { section, next, riser: false, turn: false, body: 0 };
@@ -463,18 +507,18 @@ class Placer {
       if (isStop(section.kind)) this.stop(section, next);
     }
     const blinders = this.blinderSections(plans.filter((p) => p.turn).map((p) => p.section));
-    plans.forEach((plan, i) => {
+    for (const plan of plans) {
       const { section, next, riser } = plan;
       if (riser && next) {
         const start = this.spot(section, { bar: next.bar - 1, beat: 1 }, 0);
         this.add(section, start, this.kit.riser as string, { length: RISER_LENGTH });
       }
-      if (!plan.turn) return;
+      if (!plan.turn) continue;
       const loud = section.tier === 'drive' || section.tier === 'peak';
       const named = blinders.has(section)
         ? this.kit.blinder
         : loud
-          ? this.loudTurn(section, colourRoom[i] ?? 0)
+          ? this.loudTurn(section, this.colourLeft(section))
           : undefined;
       // A turn too close to another full-area Hit takes the first body Hit, if
       // that one is clear; else its place goes to the body.
@@ -489,7 +533,7 @@ class Placer {
         plan.turn = false;
         plan.body++;
       }
-    });
+    }
 
     for (const { section, riser, turn, body } of plans) {
       if (body <= 0 || this.kit.body.length === 0) continue;
@@ -497,11 +541,12 @@ class Placer {
       this.placeBody(section, until, body, turn ? 1 : 0);
       this.nameBody(section);
     }
-    this.stepUpRepeats();
+    const warnings = this.stepUpRepeats();
     return {
+      warnings,
       events: this.events.toSorted((a, b) => a.time - b.time),
-      onStem: this.onStem,
-      onGrid: this.onGrid,
+      onStem: this.events.filter((e) => e.body === 'onset').length,
+      onGrid: this.events.filter((e) => e.body === 'grid').length,
     };
   }
 }
