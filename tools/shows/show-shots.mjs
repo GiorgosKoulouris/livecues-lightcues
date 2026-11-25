@@ -22,7 +22,7 @@ try {
     logLevel: 'warn',
   });
   const parsed = args.parseShotArgs(process.argv.slice(2));
-  const { module: shots } = await runnerImport(root('../e2e/show-shots.ts'), {
+  const { module: shots } = await runnerImport(root('../../e2e/show-shots.ts'), {
     configFile: false,
     logLevel: 'warn',
   });

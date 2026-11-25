@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { loadShowFile } from '../../src/engine/show-file';
-import { validateShow } from '../../src/shared/show';
+import { loadShowFile } from '../../../src/engine/show-file';
+import { validateShow } from '../../../src/shared/show';
 import { energyEntries, energyFiles, energyShow, noteName, SHOW_NAME } from './energy';
 
 const show = energyShow();
@@ -120,9 +120,8 @@ describe('the Energy Show', () => {
 });
 
 describe('the committed Energy Show', () => {
-  it('is what scripts/make-shows writes (run npm run show:energy)', () => {
-    const read = (name: string) =>
-      readFileSync(new URL(`../../shows/${name}`, import.meta.url), 'utf8');
+  it('is what tools/shows/make-shows writes (run npm run show:energy)', () => {
+    const read = (name: string) => readFileSync(new URL(`../${name}`, import.meta.url), 'utf8');
     expect(energyFiles()).toEqual({
       show: read(`${SHOW_NAME}.lcshow`),
       cueSheet: read(`${SHOW_NAME} cue sheet.md`),

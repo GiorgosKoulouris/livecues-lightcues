@@ -217,7 +217,7 @@ export function loadShow(json: string): ShowMap {
   return new ShowMap(raw);
 }
 
-export const DEFAULT_SHOW = 'shows/Energy.lcshow';
+export const DEFAULT_SHOW = 'tools/shows/Energy.lcshow';
 
 /** Where a Show a Plan names is: found from the cwd or the Plan's folder. */
 export function showPathFor(show: string, planPath: string): string {
@@ -226,7 +226,7 @@ export function showPathFor(show: string, planPath: string): string {
   return found;
 }
 
-/** The Show a plan names (default `shows/Energy.lcshow`). */
+/** The Show a plan names (default `tools/shows/Energy.lcshow`). */
 export function loadShowFor(plan: Plan, planPath: string): ShowMap {
   return loadShow(readFileSync(showPathFor(plan.show ?? DEFAULT_SHOW, planPath), 'utf8'));
 }

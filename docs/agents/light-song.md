@@ -23,4 +23,4 @@ The commands, the sections file and what the generator places: [development.md Â
 - `generate --force` writes over hand edits. Ask the user first, and keep a copy of the old Plan.
 - `render` scores Density per project marker and compares repeats by marker name. A section with no marker is not scored on its own.
 - A muted drum stem item is skipped without a warning. With no other usable stem, the body Hits go on the beat grid. The user unmutes it for `generate`.
-- The Density figures in `scripts/make-shows/rules.ts` are tuned from songs the user has watched, as separate work.
+- The Density figures in `tools/shows/make-shows/rules.ts` are tuned from songs the user has watched, as separate work.

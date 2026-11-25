@@ -31,12 +31,12 @@
     "security:test-rules": "semgrep --test --metrics=off security/semgrep",
     "icon": "node scripts/make-icon.mjs",
     "examples": "node scripts/make-examples.mjs",
-    "show:palette": "node scripts/make-palette.mjs",
-    "show:energy": "node scripts/make-energy.mjs",
-    "show:lint": "node scripts/show-lint.mjs",
-    "show:generate": "node scripts/make-show.mjs",
-    "show:shots": "npm run build && node scripts/show-shots.mjs",
-    "lights:song": "node scripts/lights-song.mjs"
+    "show:palette": "node tools/shows/make-palette.mjs",
+    "show:energy": "node tools/shows/make-energy.mjs",
+    "show:lint": "node tools/shows/show-lint.mjs",
+    "show:generate": "node tools/shows/make-show.mjs",
+    "show:shots": "npm run build && node tools/shows/show-shots.mjs",
+    "lights:song": "node tools/shows/lights-song.mjs"
   },
   "engines": {
     "node": ">=22.12.0"

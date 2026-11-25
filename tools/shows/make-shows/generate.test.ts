@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { loadShowFile } from '../../src/engine/show-file';
-import { loadVenueFile } from '../../src/engine/venue-file';
-import { validateShow, type Rule, type Scene } from '../../src/shared/show';
+import { loadShowFile } from '../../../src/engine/show-file';
+import { loadVenueFile } from '../../../src/engine/venue-file';
+import { validateShow, type Rule, type Scene } from '../../../src/shared/show';
 import { DEFAULT_RIG, loadBrief } from './brief';
 import {
   colourOf,
@@ -324,7 +324,7 @@ describe('the brief changes the Show', () => {
 });
 
 describe('the committed sample output', () => {
-  it('is what show:generate writes (run npm run show:generate -- scripts/make-shows/fixtures/sample-brief.yaml)', () => {
+  it('is what show:generate writes (run npm run show:generate -- tools/shows/make-shows/fixtures/sample-brief.yaml)', () => {
     const read = (name: string) => readFileSync(fixture(name), 'utf8');
     expect(files).toEqual({
       show: read('Neon Harbour.lcshow'),

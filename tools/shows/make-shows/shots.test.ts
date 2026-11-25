@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { loadShowFile } from '../../src/engine/show-file';
+import { loadShowFile } from '../../../src/engine/show-file';
 import { keyShots, parseShotArgs, shotFile } from './shots';
 
 const sample = loadShowFile(
-  readFileSync('scripts/make-shows/fixtures/Neon Harbour.lcshow', 'utf8'),
+  readFileSync('tools/shows/make-shows/fixtures/Neon Harbour.lcshow', 'utf8'),
 );
 
 describe('parseShotArgs', () => {

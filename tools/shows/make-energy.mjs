@@ -1,6 +1,6 @@
-// Writes the Palette Show and its Cue Sheet from scripts/make-shows/palette.ts.
-// Usage: npm run show:palette [-- --out <folder>] [--venue <file.lcvenue>]
-// The folder defaults to shows/. See scripts/make-shows/write.ts.
+// Writes the Energy Show and its Cue Sheet from tools/shows/make-shows/energy.ts.
+// Usage: npm run show:energy [-- --out <folder>] [--venue <file.lcvenue>]
+// The folder defaults to tools/shows/. See tools/shows/make-shows/write.ts.
 import { fileURLToPath } from 'node:url';
 import { runnerImport } from 'vite';
 
@@ -11,12 +11,12 @@ const load = (file) =>
     logLevel: 'warn',
   });
 const [{ module: show }, { module: writer }] = await Promise.all([
-  load('palette.ts'),
+  load('energy.ts'),
   load('write.ts'),
 ]);
-const root = fileURLToPath(new URL('..', import.meta.url));
+const root = fileURLToPath(new URL('../..', import.meta.url));
 try {
-  await writer.run(root, process.argv.slice(2), show.SHOW_NAME, show.paletteFiles());
+  await writer.run(root, process.argv.slice(2), show.SHOW_NAME, show.energyFiles());
 } catch (error) {
   console.error(error instanceof Error ? error.message : error);
   process.exitCode = 1;

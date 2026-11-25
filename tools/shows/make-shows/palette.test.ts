@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { loadShowFile } from '../../src/engine/show-file';
-import { validateShow } from '../../src/shared/show';
+import { loadShowFile } from '../../../src/engine/show-file';
+import { validateShow } from '../../../src/shared/show';
 import { noteName, paletteEntries, paletteFiles, paletteShow, SHOW_NAME } from './palette';
 
 const show = paletteShow();
@@ -64,9 +64,8 @@ describe('the Palette Show', () => {
 });
 
 describe('the committed Palette Show', () => {
-  it('is what scripts/make-shows writes (run npm run show:palette)', () => {
-    const read = (name: string) =>
-      readFileSync(new URL(`../../shows/${name}`, import.meta.url), 'utf8');
+  it('is what tools/shows/make-shows writes (run npm run show:palette)', () => {
+    const read = (name: string) => readFileSync(new URL(`../${name}`, import.meta.url), 'utf8');
     expect(paletteFiles()).toEqual({
       show: read(`${SHOW_NAME}.lcshow`),
       cueSheet: read(`${SHOW_NAME} cue sheet.md`),

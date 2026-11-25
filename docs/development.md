@@ -49,9 +49,9 @@ npm test
 | `npm run package` | Build the Windows x64 installer, its blockmap and `latest.yml` into `dist/`. Never publishes. Windows host only: on Linux the NSIS step needs Wine. |
 | `npm run icon` | Regenerate `build/icon.ico` from `build/icon.svg`. |
 | `npm run examples` | Regenerate the example Venue Patch and Show in [examples/](../examples/). |
-| `npm run show:palette` | Write the Palette Show and its Cue Sheet to `shows/`. Options: `-- --out <folder>` to write elsewhere, `--venue <file.lcvenue>` to print the Venue Check. See [Palette Show](#palette-show). |
+| `npm run show:palette` | Write the Palette Show and its Cue Sheet to `tools/shows/`. Options: `-- --out <folder>` to write elsewhere, `--venue <file.lcvenue>` to print the Venue Check. See [Palette Show](#palette-show). |
 | `npm run show:generate` | Generate a Show and its Cue Sheet from a Brief: `-- <brief.yaml> [--out <folder>] [--venue <file.lcvenue>]`. Writes beside the brief and prints the Venue Check against its venue. See [Show generator](#show-generator). |
-| `npm run show:energy` | Write the Energy Show and its Cue Sheet to `shows/`. Same options as `show:palette`. See [Energy Show](#energy-show). |
+| `npm run show:energy` | Write the Energy Show and its Cue Sheet to `tools/shows/`. Same options as `show:palette`. See [Energy Show](#energy-show). |
 | `npm run lights:song` | Reaper Lights: `inspect <project.rpp> <region>` prints a song's span, tempo and markers; `analyse <project.rpp> <region>` prints RMS and onsets per bar from the WAV stems; `generate <project.rpp> <region> --show <file.lcshow> --sections <file> [--force]` writes a Plan filled to its [Density](agents/shows.md#density-lint) (see [Plan generator](#plan-generator)); `render <project.rpp> <plan>` writes the timeline page; `write <project.rpp> <plan> [--force] [--allow-stack]` saves a Plan's MIDI into `<name>.lights.rpp`. `render` warns, and `write` refuses, when a cue stacks more `dynamic` Scenes than its tier allows (M4); `--allow-stack` writes anyway. On a tagged Show, `render` also prints [Density](agents/shows.md#density-lint) warnings and draws a Density row; `write` ignores them. See [Reaper Lights](#reaper-lights). |
 | `npm test` | Run the test suite (Vitest). |
 | `npm run test:watch` | Run Vitest in watch mode. |
@@ -68,21 +68,21 @@ npm test
 
 ## Palette Show
 
-A venue-independent Show of 61 Scenes by feeling, fired from the DAW on MIDI channel 1. It is built from [scripts/make-shows/palette.ts](../scripts/make-shows/palette.ts) with the app's own models.
+A venue-independent Show of 61 Scenes by feeling, fired from the DAW on MIDI channel 1. It is built from [tools/shows/make-shows/palette.ts](../tools/shows/make-shows/palette.ts) with the app's own models.
 
 To change it:
 
 1. Edit the lists in `palette.ts`: Looks, Movement, Accents, Hits, notes, House Presets and Haze Presets.
-2. Run `npm run show:palette`. It writes `shows/Palette.lcshow` and `shows/Palette cue sheet.md`, which holds the note map and how the Layers combine. Both are committed.
+2. Run `npm run show:palette`. It writes `tools/shows/Palette.lcshow` and `tools/shows/Palette cue sheet.md`, which holds the note map and how the Layers combine. Both are committed.
 3. Check the Show against a venue. Pass `--venue <file.lcvenue>`, or paste the path when the script asks (Enter skips). It prints the Venue Check: Rules that target no Fixture, approximated aims and strobes, missing Prism or Gobo, and House and Haze Presets the venue has not set up. Venue Patches stay local, not in the repo.
-4. Run `npm test` to check that the Show is valid, every note is unique, and `shows/` matches `palette.ts`.
-5. Commit `palette.ts` and the files in `shows/` together.
+4. Run `npm test` to check that the Show is valid, every note is unique, and the output matches `palette.ts`.
+5. Commit `palette.ts` and its two output files together.
 
-Don't edit the files in `shows/` by hand. They are overwritten on the next run, and a test fails when they differ from the script.
+Don't edit the output files by hand. They are overwritten on the next run, and a test fails when they differ from the script.
 
 ## Energy Show
 
-A venue-independent Show of about 156 Scenes, grouped in four tiers (Chill, Groove, Drive, Peak). Where Palette is shy, Energy stacks: five Layers, one MIDI channel each, so a Look, a Movement, a Pulse and a Colour FX run together. It is built from [scripts/make-shows/energy.ts](../scripts/make-shows/energy.ts) with the app's own models, and uses Spreads, Chase width, Random, Fan, Figure-8, Prism and Gobo.
+A venue-independent Show of about 156 Scenes, grouped in four tiers (Chill, Groove, Drive, Peak). Where Palette is shy, Energy stacks: five Layers, one MIDI channel each, so a Look, a Movement, a Pulse and a Colour FX run together. It is built from [tools/shows/make-shows/energy.ts](../tools/shows/make-shows/energy.ts) with the app's own models, and uses Spreads, Chase width, Random, Fan, Figure-8, Prism and Gobo.
 
 | Ch | Layer | Holds |
 |---|---|---|
@@ -98,33 +98,33 @@ Tiers sit on two octaves each, on channels 1–4: Chill C1–B2 (24–47), Groov
 To change it:
 
 1. Edit the lists in `energy.ts`: Looks, Movement, Pulse, Colour FX, Hits, House Presets and Haze Presets.
-2. Run `npm run show:energy`. It writes `shows/Energy.lcshow` and `shows/Energy cue sheet.md`, which holds the note map per channel, a tier guide, how the Layers combine and the House and Haze notes. Both are committed.
+2. Run `npm run show:energy`. It writes `tools/shows/Energy.lcshow` and `tools/shows/Energy cue sheet.md`, which holds the note map per channel, a tier guide, how the Layers combine and the House and Haze notes. Both are committed.
 3. Check the Show against a venue with `--venue` or the prompt, as for the Palette Show. In the venue it lists the Blinder Rule of `Hit: Blinder` (no Blinders; the hit falls back to the front Quads), assumed pan and tilt ranges on the Quads and assumed strobe Hz spans.
-4. Run `npm test` to check that the Show is valid, every note is unique within its channel, and `shows/` matches `energy.ts`.
-5. Commit `energy.ts` and the files in `shows/` together.
+4. Run `npm test` to check that the Show is valid, every note is unique within its channel, and the output matches `energy.ts`.
+5. Commit `energy.ts` and its two output files together.
 
-Don't edit the files in `shows/` by hand. They are overwritten on the next run, and a test fails when they differ from the script.
+Don't edit the output files by hand. They are overwritten on the next run, and a test fails when they differ from the script.
 
 ## Show generator
 
-`npm run show:generate -- <brief.yaml>` builds a venue-independent Show and its Cue Sheet from a Brief (`bands/<Band>/brief.yaml`). Source: [scripts/make-shows/generate.ts](../scripts/make-shows/generate.ts). Thresholds and the generator's knobs are in `scripts/make-shows/rules.ts`, shared with `npm run show:lint`.
+`npm run show:generate -- <brief.yaml>` builds a venue-independent Show and its Cue Sheet from a Brief (`bands/<Band>/brief.yaml`). Source: [tools/shows/make-shows/generate.ts](../tools/shows/make-shows/generate.ts). Thresholds and the generator's knobs are in `tools/shows/make-shows/rules.ts`, shared with `npm run show:lint`.
 
 - One Colour Set per song, on channel 6. Looks per tier and the utilities (Base, Dark, Silhouette, Shafts, Walk-on, Reveal, Bow) are on channel 1, built from slots. Scenes carry `tier:`, `part:` and `dynamic` tags for the lint.
 - Parts the venue has no Fixtures for are left out, and the Cue Sheet says so. With no venue it builds for the default rig.
 - Movement, Pulse, Colour FX and Hits are not built yet (`dynamicEntries` is the seam).
-- The sample brief's output is committed in `scripts/make-shows/fixtures/`. After a change to the generator or the app models, run `npm run show:generate -- scripts/make-shows/fixtures/sample-brief.yaml` and commit it (`git add -f`, as `fixtures/` is ignored). `npm test` fails while it is stale. Never commit a real Venue Patch.
+- The sample brief's output is committed in `tools/shows/make-shows/fixtures/`. After a change to the generator or the app models, run `npm run show:generate -- tools/shows/make-shows/fixtures/sample-brief.yaml` and commit it (`git add -f`, as `fixtures/` is ignored). `npm test` fails while it is stale. Never commit a real Venue Patch.
 
 ## Reaper Lights
 
-Turns one song (a Region) of a Reaper project into MIDI that fires its Show: a generated band Show, or the Energy Show. Code is in [scripts/reaper-lights/](../scripts/reaper-lights/). The specs and issues are under `.scratch/reaper-lights/` and `.scratch/plan-density/`.
+Turns one song (a Region) of a Reaper project into MIDI that fires its Show: a generated band Show, or the Energy Show. Code is in [tools/shows/reaper-lights/](../tools/shows/reaper-lights/). The specs and issues are under `.scratch/reaper-lights/` and `.scratch/plan-density/`.
 
 - `inspect` prints the Region's span, length in bars, tempo and signature changes, and its markers at song bars.
 - The `light-song` skill ([.claude/skills/light-song/](../.claude/skills/light-song/SKILL.md), [agent notes](agents/light-song.md)) runs the session. On a generated band Show: inspect, analyse, a sections and tiers round the user confirms, [generate](#plan-generator), edits to the highlights, render and review, then write. On Energy or Palette: a brief round and a hand-written Plan take the place of the sections round, generate and the highlights. `.claude/` is git-ignored and the skill stays untracked.
 - `render` compiles a Plan and writes `<Song>.lights.html` next to it: one self-contained page with section bands, a bar ruler and a lane per Layer showing Scene names, Flash ticks and the Scenes' colours from the Show. Local only; re-run it after each plan edit.
 - `analyse` reads the WAV items inside the Region on stem tracks: tracks named Drums, KickBand or Snare (case-insensitive, name contains it), and any track with an item whose file name contains the Region's name (the full mix) and prints one line per bar: section marker, RMS in dBFS per track, and onsets as song `bar.beat` rounded to a 16th note. Item position, offset and length are honoured; source files resolve against the `.rpp` folder. Other tracks are ignored. MP3 and other formats, items with no source file, and files that are missing, are skipped with a warning. Onsets are energy-flux peaks: dense full mixes yield few, a drum stem many. A helper only: placements are proposed to the user, not written.
-- `write` compiles a Plan (`<Song>.lights.yaml`, with the Show at `shows/Energy.lcshow` unless it names one; a relative `show:` path is found from the working directory, then from the Plan's folder) and saves one MIDI item, `lights:<region>`, on lane 1 of the `MidiToLights` track. It never edits the original `.rpp`: it writes `<name>.lights.rpp` next to it. An existing `.lights.rpp` is the base, so other Regions' items stay; delete it to start again from the original. The file is written to a temp file and renamed, then a per-Region hash goes beside the Plan.
+- `write` compiles a Plan (`<Song>.lights.yaml`, with the Show at `tools/shows/Energy.lcshow` unless it names one; a relative `show:` path is found from the working directory, then from the Plan's folder) and saves one MIDI item, `lights:<region>`, on lane 1 of the `MidiToLights` track. It never edits the original `.rpp`: it writes `<name>.lights.rpp` next to it. An existing `.lights.rpp` is the base, so other Regions' items stay; delete it to start again from the original. The file is written to a temp file and renamed, then a per-Region hash goes beside the Plan.
 - If the item's MIDI was edited in Reaper (it matches neither the stored hash nor what the Plan would write), `write` stops. Fold the edits into the Plan, or pass `--force`.
-- Errors in a Plan name the line. Run `npm test` for the tests. The fixture `scripts/reaper-lights/fixtures/lantern.rpp` is force-added to git (`fixtures/` is git-ignored).
+- Errors in a Plan name the line. Run `npm test` for the tests. The fixture `tools/shows/reaper-lights/fixtures/lantern.rpp` is force-added to git (`fixtures/` is git-ignored).
 
 ### Plan generator
 

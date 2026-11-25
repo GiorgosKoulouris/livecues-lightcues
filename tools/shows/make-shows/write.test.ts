@@ -2,15 +2,15 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { loadVenueFile } from '../../src/engine/venue-file';
+import { loadVenueFile } from '../../../src/engine/venue-file';
 import { energyFiles, energyShow } from './energy';
 import { parseWriteArgs, venueCheckLines, venueCheckReport, writeShowFiles } from './write';
 
-const demoVenue = readFileSync(new URL('../../examples/demo.lcvenue', import.meta.url), 'utf8');
+const demoVenue = readFileSync(new URL('../../../examples/demo.lcvenue', import.meta.url), 'utf8');
 
 describe('parseWriteArgs', () => {
-  it('defaults to shows/ and no venue', () => {
-    expect(parseWriteArgs([])).toEqual({ out: 'shows', venue: undefined });
+  it('defaults to tools/shows/ and no venue', () => {
+    expect(parseWriteArgs([])).toEqual({ out: 'tools/shows', venue: undefined });
   });
 
   it('reads --out and --venue', () => {

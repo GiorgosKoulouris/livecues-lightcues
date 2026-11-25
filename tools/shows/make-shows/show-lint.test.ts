@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { saveShowFile } from '../../src/engine/show-file';
-import type { Colour, Rule, RuleTarget, Scene, Show, Trigger } from '../../src/shared/show';
+import { saveShowFile } from '../../../src/engine/show-file';
+import type { Colour, Rule, RuleTarget, Scene, Show, Trigger } from '../../../src/shared/show';
 import { failsStrict, grade, lintShow, runLint, tierOf, type Score } from './show-lint';
 import { parseSongSets } from './song-sets';
 
@@ -492,7 +492,7 @@ describe('strict mode', () => {
 
 describe('the committed Shows', () => {
   it.each(['Energy', 'Palette'])('lints %s without failing, whatever its score', (name) => {
-    const json = readFileSync(new URL(`../../shows/${name}.lcshow`, import.meta.url), 'utf8');
+    const json = readFileSync(new URL(`../${name}.lcshow`, import.meta.url), 'utf8');
     const { text } = runLint([`${name}.lcshow`], () => json);
     expect(text).toMatch(/Total: \d+\/\d+/);
   });

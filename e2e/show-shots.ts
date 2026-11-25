@@ -1,5 +1,5 @@
 // Renders the key Scenes of a Show in the Visualiser and saves PNGs. Driven by
-// `npm run show:shots` (scripts/show-shots.mjs) and by e2e/show-shots.test.ts.
+// `npm run show:shots` (tools/shows/show-shots.mjs) and by e2e/show-shots.test.ts.
 //
 // The real built app in `out/`. The Show and the venue open through the Open…
 // buttons, with the native file dialog answered by the test. The Visualiser is
@@ -10,7 +10,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { loadShowFile } from '../src/engine/show-file';
-import { keyShots, shotFile, type ShotArgs } from '../scripts/make-shows/shots';
+import { keyShots, shotFile, type ShotArgs } from '../tools/shows/make-shows/shots';
 
 /** The haze the shots assume: the rubric's "about 40 %". */
 const HAZE_PERCENT = 40;

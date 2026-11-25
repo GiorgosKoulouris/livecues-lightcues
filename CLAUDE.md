@@ -39,7 +39,7 @@ A release is a `vX.Y.Z` tag on `main` that equals `v` + the `package.json` versi
 
 ### Generated Shows
 
-The Palette and Energy Shows and their Cue Sheets are generated into `shows/` and committed. Never edit them by hand: edit `scripts/make-shows/`, rerun `npm run show:palette` or `npm run show:energy`, and commit both. See `docs/agents/shows.md`.
+The Palette and Energy Shows and their Cue Sheets are generated into `tools/shows/` and committed. Never edit them by hand: edit `tools/shows/make-shows/`, rerun `npm run show:palette` or `npm run show:energy`, and commit both. See `docs/agents/shows.md`.
 
 ### Make show
 

@@ -3,24 +3,24 @@
 // `npm run show:energy`.
 //
 // Usage: npm run show:<name> [-- --out <folder>] [--venue <file.lcvenue>]
-// The folder defaults to shows/. With no --venue in an interactive terminal,
+// The folder defaults to tools/shows/. With no --venue in an interactive terminal,
 // the script asks for one; Enter skips the check.
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { loadVenueFile } from '../../src/engine/venue-file';
-import { loadShowFile } from '../../src/engine/show-file';
-import { ruleTargets, type Show } from '../../src/shared/show';
+import { loadVenueFile } from '../../../src/engine/venue-file';
+import { loadShowFile } from '../../../src/engine/show-file';
+import { ruleTargets, type Show } from '../../../src/shared/show';
 import {
   approximatedAims,
   approximatedStrobes,
   fixtureUnsupportedGoboPrisms,
   hazePresetsWithoutHazers,
   unsetHousePresets,
-} from '../../src/shared/venue-check';
-import type { VenuePatch } from '../../src/shared/venue-patch';
+} from '../../../src/shared/venue-check';
+import type { VenuePatch } from '../../../src/shared/venue-patch';
 
-export const SHOWS_FOLDER = 'shows';
+export const SHOWS_FOLDER = 'tools/shows';
 
 export interface ShowFiles {
   show: string;

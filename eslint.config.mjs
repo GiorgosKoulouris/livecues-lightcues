@@ -28,6 +28,7 @@ export default defineConfig(
       'src/engine/**',
       'src/shared/**',
       'scripts/**',
+      'tools/**',
       'e2e/**',
       '*.config.*',
     ],

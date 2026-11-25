@@ -15,7 +15,7 @@
 import { dirname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { readFileSync } from 'node:fs';
-import { saveShowFile } from '../../src/engine/show-file';
+import { saveShowFile } from '../../../src/engine/show-file';
 import {
   type Colour,
   type Rule,
@@ -24,7 +24,7 @@ import {
   type Show,
   type Slot,
   type Trigger,
-} from '../../src/shared/show';
+} from '../../../src/shared/show';
 import { loadBrief, type Brief, type VenueSummary } from './brief';
 import { colourSets, type ColourSetPlan } from './colour-sets';
 import {

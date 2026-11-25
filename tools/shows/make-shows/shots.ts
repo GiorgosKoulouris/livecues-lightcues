@@ -1,6 +1,6 @@
 // Pure helpers of `show:shots`: the arguments, and which Scenes make the key
 // shots of a Show. The Playwright run is in `e2e/show-shots.ts`.
-import type { Scene, Show } from '../../src/shared/show';
+import type { Scene, Show } from '../../../src/shared/show';
 import { TIER_BANDS, TIERS, type Tier } from './rules';
 import { tierOf } from './show-lint';
 

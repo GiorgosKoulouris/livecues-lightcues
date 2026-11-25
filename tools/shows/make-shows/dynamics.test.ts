@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { loadShowFile } from '../../src/engine/show-file';
-import { loadVenueFile } from '../../src/engine/venue-file';
+import { loadShowFile } from '../../../src/engine/show-file';
+import { loadVenueFile } from '../../../src/engine/venue-file';
 import {
   isSlotRef,
   NO_EFFECT,
@@ -11,8 +11,8 @@ import {
   type RuleColour,
   type Scene,
   type Show,
-} from '../../src/shared/show';
-import { fitSpeedLimit } from '../../src/shared/speed-limit';
+} from '../../../src/shared/show';
+import { fitSpeedLimit } from '../../../src/shared/speed-limit';
 import { DEFAULT_RIG, loadBrief, type Brief, type VenueSummary } from './brief';
 import { stepFlashLength, stepMovement } from './dynamics';
 import { generate, generateFiles } from './generate';

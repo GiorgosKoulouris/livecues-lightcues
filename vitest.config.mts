@@ -24,6 +24,14 @@ export default defineConfig({
         },
       },
       {
+        // Show tooling (ADR 0025).
+        test: {
+          name: 'tools',
+          include: ['tools/**/*.test.{mjs,ts}'],
+          environment: 'node',
+        },
+      },
+      {
         // Component tests (Testing Library + jsdom).
         plugins: [react()],
         test: {

@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { takeShots } from './show-shots';
 
 // The sample Show and its made-up venue, from the generator's fixtures.
-const FIXTURES = 'scripts/make-shows/fixtures';
+const FIXTURES = 'tools/shows/make-shows/fixtures';
 
 test('the key Scenes of the sample Show render as lit PNGs', async () => {
   const out = mkdtempSync(join(tmpdir(), 'lightcues-shots-out-'));

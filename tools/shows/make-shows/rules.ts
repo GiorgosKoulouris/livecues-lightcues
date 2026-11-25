@@ -2,11 +2,11 @@
 // against them and the Show generator builds to them. Rule IDs (P1, M4, ...)
 // refer to the rules catalogue in the show generator research. Plain data and
 // small helpers only: no app imports beyond types and the shared strobe maths.
-import type { Role } from '../../src/shared/fixture-profile';
-import type { Swatch } from '../../src/shared/colour';
-import { NO_EFFECT, type Rule, type RuleTarget } from '../../src/shared/show';
-import { strobeHz } from '../../src/shared/strobe';
-import type { Zone, ZoneRow } from '../../src/shared/venue-patch';
+import type { Role } from '../../../src/shared/fixture-profile';
+import type { Swatch } from '../../../src/shared/colour';
+import { NO_EFFECT, type Rule, type RuleTarget } from '../../../src/shared/show';
+import { strobeHz } from '../../../src/shared/strobe';
+import type { Zone, ZoneRow } from '../../../src/shared/venue-patch';
 
 // ---------------------------------------------------------------- tiers
 

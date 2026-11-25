@@ -12,7 +12,7 @@ The `make-show` skill builds a band's Show from a Brief and checks it. It lives 
 
 ## show:shots
 
-Source: `e2e/show-shots.ts` (the run), `scripts/make-shows/shots.ts` (the arguments and the choice of Scenes), `scripts/show-shots.mjs` (the command).
+Source: `e2e/show-shots.ts` (the run), `tools/shows/make-shows/shots.ts` (the arguments and the choice of Scenes), `tools/shows/show-shots.mjs` (the command).
 
 - It runs the built app (`npm run build` first, which the npm script does), opens the venue and the Show through the Open buttons, and Detaches the Visualiser. Camera FOH, Assume haze 40 %.
 - Shots: Base, one Look per tier, Silhouette, the chorus combo (Drive Look and up to 2 dynamic Scenes) and the peak combo (Peak Look and up to 3). A shot the Show cannot make is skipped.

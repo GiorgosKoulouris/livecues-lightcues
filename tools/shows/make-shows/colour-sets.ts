@@ -6,8 +6,8 @@
 //           contrast hue: the complement of the first band colour, and the
 //           mood's.
 //   roles   `colourSets` hands every song a Main, a Break and a Swap.
-import type { Swatch } from '../../src/shared/colour';
-import type { ColourSet } from '../../src/shared/show';
+import type { Swatch } from '../../../src/shared/colour';
+import type { ColourSet } from '../../../src/shared/show';
 import type { Brief } from './brief';
 import {
   slugOf,

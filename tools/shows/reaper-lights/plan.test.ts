@@ -13,7 +13,7 @@ const fail = (text: string): PlanError => {
 describe('parsePlan', () => {
   it('reads every section', () => {
     const plan = parsePlan(`song: Lantern
-show: shows/Energy.lcshow
+show: tools/shows/Energy.lcshow
 brief:
   vibe: warm, slow
   avoid: [red]

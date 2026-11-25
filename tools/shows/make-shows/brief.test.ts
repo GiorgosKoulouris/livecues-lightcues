@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { loadVenueFile } from '../../src/engine/venue-file';
+import { loadVenueFile } from '../../../src/engine/venue-file';
 import {
   BriefError,
   DEFAULT_RIG,

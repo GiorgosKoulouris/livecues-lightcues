@@ -7,7 +7,7 @@
 import { fileURLToPath } from 'node:url';
 import { runnerImport } from 'vite';
 
-// Vite's module runner loads the TypeScript under scripts/reaper-lights.
+// Vite's module runner loads the TypeScript under tools/shows/reaper-lights.
 const { module } = await runnerImport(
   fileURLToPath(new URL('./reaper-lights/cli.ts', import.meta.url)),
   { configFile: false, logLevel: 'warn' },

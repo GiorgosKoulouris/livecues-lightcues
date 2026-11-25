@@ -11,7 +11,7 @@
 //
 // Speed: Effect lengths step up so movement stays under the Speed limit and
 // beat-rate square Effects stay at or under the Strobe cap at the song BPM.
-import { fitSpeedLimit } from '../../src/shared/speed-limit';
+import { fitSpeedLimit } from '../../../src/shared/speed-limit';
 import {
   EFFECT_LENGTHS,
   NO_EFFECT,
@@ -26,7 +26,7 @@ import {
   type Scene,
   type Slot,
   type Trigger,
-} from '../../src/shared/show';
+} from '../../../src/shared/show';
 import {
   ALL_ROWS,
   BACK_ROWS,
@@ -43,7 +43,7 @@ import {
   type Part,
   type Tier,
 } from './rules';
-import type { ZoneRow } from '../../src/shared/venue-patch';
+import type { ZoneRow } from '../../../src/shared/venue-patch';
 
 // One MIDI channel per Layer. Colour Sets are on channel 6, where House and
 // Haze Presets sit in Energy.

@@ -8,8 +8,8 @@
 // target; `dynamic` marks a Scene as dynamic, which an active Effect also
 // does. An item that cannot be placed is "not scored".
 import { parseArgs } from 'node:util';
-import { loadShowFile } from '../../src/engine/show-file';
-import type { Colour } from '../../src/shared/colour';
+import { loadShowFile } from '../../../src/engine/show-file';
+import type { Colour } from '../../../src/shared/colour';
 import {
   isSlotRef,
   NO_EFFECT,
@@ -18,7 +18,7 @@ import {
   type RuleColour,
   type Scene,
   type Show,
-} from '../../src/shared/show';
+} from '../../../src/shared/show';
 import {
   DARK_NAME,
   flashHz,

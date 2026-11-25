@@ -7,12 +7,12 @@
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { LineCounter, parseDocument, isMap, isScalar, isSeq, type Node, type YAMLMap } from 'yaml';
-import { loadVenueFile } from '../../src/engine/venue-file';
-import { SWATCHES, type Swatch } from '../../src/shared/colour';
-import type { Role } from '../../src/shared/fixture-profile';
-import { ROLES } from '../../src/shared/fixture-profile';
+import { loadVenueFile } from '../../../src/engine/venue-file';
+import { SWATCHES, type Swatch } from '../../../src/shared/colour';
+import type { Role } from '../../../src/shared/fixture-profile';
+import { ROLES } from '../../../src/shared/fixture-profile';
 import { inPart, MOODS, STROBE_MAX_HZ, SWATCH_HUE, type Mood } from './rules';
-import { hasGobo, hasPrism } from '../../src/shared/gobo-prism';
+import { hasGobo, hasPrism } from '../../../src/shared/gobo-prism';
 import {
   fixtureMode,
   fixtureRole,
@@ -21,7 +21,7 @@ import {
   type VenuePatch,
   type Zone,
   type ZoneRow,
-} from '../../src/shared/venue-patch';
+} from '../../../src/shared/venue-patch';
 
 export const BPM_RANGE = [90, 200] as const;
 /** The fastest strobe a Brief may ask for, in Hz. */
