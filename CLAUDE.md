@@ -37,6 +37,10 @@ Reviewers apply `CODING_STANDARDS.md`.
 
 A release is a `vX.Y.Z` tag on `main` that equals `v` + the `package.json` version. Bump the version on `dev`, promote and ship, then tag by hand. See `docs/agents/releasing.md`.
 
+### Generated files
+
+Generated output is gitignored unless the installer ships it or a tool loads it by default. Before adding, moving or committing a generated file, see `docs/agents/generated-files.md`.
+
 ### Generated Shows
 
 The Palette and Energy Shows and their Cue Sheets are generated into `tools/shows/` and committed. Never edit them by hand: edit `tools/shows/make-shows/`, rerun `npm run show:palette` or `npm run show:energy`, and commit both. See `docs/agents/shows.md`.
