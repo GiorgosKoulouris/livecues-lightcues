@@ -190,6 +190,33 @@ end: { look: drive blue }
     expect(lint(body)!.sections[0]!.counts).toMatchObject({ look: 2, colourfx: 1 });
   });
 
+  it('compares a repeat with the pass before over the bars both have', () => {
+    const body = `cues:
+  - { at: 1, look: drive red, movement: Fan }
+  - { at: 9, movement: Sway }
+  - { at: 17, look: drive red, movement: Fan }
+`;
+    const sections: [string, number][] = [
+      ['chorus1', 1],
+      ['chorus2', 17],
+    ];
+    // An 8-bar repeat of a 16-bar chorus is not asked for the bar 9 swap.
+    expect(matching(body, 'repeat', sections, { bars: 24 })).toEqual([]);
+  });
+
+  it('counts no reset Scene as an element of a repeat', () => {
+    const body = `start: { movement: Fan }
+cues:
+  - { at: 1, look: drive red }
+  - { at: 9, look: drive red, movement: release }
+`;
+    const sections: [string, number][] = [
+      ['chorus1', 1],
+      ['chorus2', 9],
+    ];
+    expect(matching(body, 'repeat', sections, { bars: 16 })).toEqual([]);
+  });
+
   it('counts nothing for the reset, with or without start overrides', () => {
     const start = 'start: { look: chill red, movement: Fan }\n';
     for (const body of ['', start]) {
@@ -246,9 +273,19 @@ events:
     expect(of('chill', ['Riser'])).toEqual([]);
   });
 
-  it('asks no Hit kinds of a section shorter than a phrase', () => {
-    const body = 'cues:\n  - { at: 1, look: drive red }\n';
-    expect(matching(body, 'Hit kinds', [['drop', 1]], { bars: 7 })).toEqual([]);
+  it('scales the Hit kinds down for a section shorter than a phrase, rounded down', () => {
+    const of = (tier: string, bars: number) =>
+      matching(
+        `cues:\n  - { at: 1, look: ${tier} red }\nevents:\n${hits('Riser')}\n`,
+        'Hit kinds',
+        [['drop', 1]],
+        { bars },
+      );
+    expect(of('drive', 4)).toEqual([
+      'Bar 1.1: drop (Drive, 4 bars): too few Hit kinds: 1, needs 2',
+    ]);
+    expect(of('peak', 7)).toEqual(['Bar 1.1: drop (Peak, 7 bars): too few Hit kinds: 1, needs 5']);
+    expect(of('peak', 1)).toEqual([]);
   });
 
   describe('full-area Hits', () => {

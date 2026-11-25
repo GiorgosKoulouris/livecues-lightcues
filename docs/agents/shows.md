@@ -27,7 +27,8 @@
 - A section starts at each project marker (`roll`, `endroll` and `hit` start none). Its tier is that of the Look held there. No tier, or no markers: no scores.
 - Per metric: below the floor scores 0, above the ceiling 1, between them 2. A section shorter than 8 bars rounds the band outward to whole events. A longer one compares the exact rate: floor over its whole bars, ceiling over its bars rounded up.
 - The reset, `start:` overrides included, and the end cue count for nothing. A marker at the same time as the next one has no length: it is warned and not scored.
-- Also warned: a repeat with fewer Scenes than the pass before it, Colour Set cues outside 4–6, too few Hit kinds in a Drive or Peak section of 8 bars or more, and full-area Hits over 3 starts a second outside a burst.
+- Also warned: a repeat with fewer Scenes than the pass before it, Colour Set cues outside 4–6, too few Hit kinds in a Drive or Peak section, and full-area Hits over 3 starts a second outside a burst.
+- Repeats are counted over the bars both passes have, without reset Scenes. A section shorter than 8 bars needs its share of the Hit kinds, rounded down.
 - Report-only. `write` does not refuse on Density.
 
 ## Show lint

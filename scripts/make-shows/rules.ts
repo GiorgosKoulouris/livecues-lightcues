@@ -131,7 +131,8 @@ export const DENSITY: Record<Tier, Record<DensityMetric, DensityBand>> = {
 // Per song: Colour Set cues (Main, Break, Main, Swap, plus at most two more).
 export const COLOUR_SET_CUES = { min: 4, max: 6 } as const;
 
-// The distinct Hit Scenes a section of at least one phrase needs.
+// The distinct Hit Scenes a section needs. One shorter than a phrase needs its
+// share, rounded down.
 export const HIT_KINDS_MIN: Partial<Record<Tier, number>> = { drive: 4, peak: 6 };
 
 // The Hits that flash the whole stage: Full white, Blinder, Strobe, and a colour

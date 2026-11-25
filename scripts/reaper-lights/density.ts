@@ -117,12 +117,17 @@ function tally(
   });
 }
 
-/** The Scenes running at a section's start or fired inside it. */
-function elements(events: readonly MidiEvent[], from: number, to: number, lookKey: string) {
+/** The Scenes running at a stretch's start or fired before `ends` says it is over. */
+function elements(
+  events: readonly MidiEvent[],
+  from: number,
+  ends: (time: number) => boolean,
+  lookKey: string,
+) {
   const held = new Map<string, string>();
   const fired = new Set<string>();
   for (const e of events) {
-    if (e.time >= to - SNAP) break;
+    if (ends(e.time)) break;
     if (e.time >= from - SNAP && e.scene !== undefined) fired.add(e.scene);
     if (e.time > from + SNAP || e.kind === 'flash') continue;
     // A Look fired after a Colour FX stops it.
@@ -216,12 +221,19 @@ export function densityReport(
   const startLines = new Set(Object.values(plan.start).map((p) => p.line));
   const isReset = (e: MidiEvent) => e.line === undefined || startLines.has(e.line);
   const counted = tally(own, show, lookKey, isReset);
+  const asked = own.filter((e) => !isReset(e));
 
   const markers = timeline.markers
     .filter((m) => !EVENT_MARKERS.some((k) => k === matchMarker(m.name)))
     .toSorted((a, b) => a.time - b.time);
   const warnings: string[] = [];
-  const previous = new Map<string, { name: string; bar: string; count: number }>();
+  const previous = new Map<string, { name: string; bar: string; from: number; bars: number }>();
+  /** The elements in the first `bars` bars of the section starting at `from`. */
+  const countElements = (from: number, bars: number) => {
+    const limit = timeline.barsAt(timeline.start + from) + bars;
+    const ends = (time: number) => timeline.barsAt(timeline.start + time + SNAP) > limit + EPS;
+    return elements(asked, from, ends, lookKey).size;
+  };
 
   const sections = markers.flatMap((marker, i): SectionDensity[] => {
     const next = markers[i + 1]?.time ?? timeline.end;
@@ -271,22 +283,30 @@ export function densityReport(
       const kinds = new Set(
         inside.filter((c) => c.event.kind === 'flash').map((c) => c.event.scene),
       ).size;
-      const needed = HIT_KINDS_MIN[tier];
-      if (needed !== undefined && bars >= PHRASE_BARS - EPS && kinds < needed) {
+      // A section shorter than a phrase needs its share of the kinds, rounded down.
+      const share = Math.min(bars / PHRASE_BARS, 1);
+      const needed = Math.floor((HIT_KINDS_MIN[tier] ?? 0) * share + EPS);
+      if (kinds < needed) {
         warnings.push(`${head}: too few Hit kinds: ${kinds}, needs ${needed}`);
       }
     }
 
     const label = normaliseLabel(marker.name);
-    const count = elements(own, from, to, lookKey).size;
+    // Both passes are counted over the bars both have, so that a shorter repeat
+    // is not asked for what the longer pass fired later.
     const before = previous.get(label);
-    if (before && count < before.count) {
-      warnings.push(
-        `${head}: a repeat with fewer elements than ${before.name} at ${before.bar}: ` +
-          `${count} Scenes against ${before.count}`,
-      );
+    if (before) {
+      const shared = Math.min(bars, before.bars);
+      const count = countElements(from, shared);
+      const earlier = countElements(before.from, shared);
+      if (count < earlier) {
+        warnings.push(
+          `${head}: a repeat with fewer elements than ${before.name} at ${before.bar}: ` +
+            `${count} Scenes against ${earlier}`,
+        );
+      }
     }
-    previous.set(label, { name: marker.name, bar, count });
+    previous.set(label, { name: marker.name, bar, from, bars });
     return [section];
   });
 
