@@ -1,0 +1,47 @@
+# A made-up song. Scene names are exact Energy Show names; times are song bars or markers.
+song: Lantern
+brief:
+  vibe: dark, patient
+  energy: slow build, one big last chorus
+  palette: silhouettes first, two-tone to finish, shafts in the break
+  movement: wide fans
+  strobe: one short burst into the last chorus
+  special: roll into Chorus2
+palette:
+  chill:
+    look: 'Chill: Silhouette'
+    movement: 'Chill: Bloom'
+  groove:
+    look: 'Groove: Silhouette'
+    movement: 'Groove: Fan'
+    pulse: 'Groove: Back pulse'
+  peak:
+    look: 'Peak: Two Tone'
+    movement: 'Peak: Anthem fan'
+    pulse: 'Peak: All pulse 1b'
+cues:
+  - at: Verse1
+    tier: chill
+  - at: Pre1
+    tier: groove
+  - at: Break1
+    look: 'Breakdown: Shafts'
+    movement: release
+    pulse: release
+  - at: Chorus3
+    tier: peak
+events:
+  - at: 51
+    scene: 'Hit: Roll 1b'
+    length: 2 bars
+  - at: 76.3
+    scene: 'Hit: Strobe'
+    length: 2 beats
+patterns:
+  - from: 81
+    to: 89
+    every: 2 bars
+    beat: 3
+    scene: 'Hit: Colour red'
+    length: 1/2 beat
+end: 'Intro/Outro: Fade'

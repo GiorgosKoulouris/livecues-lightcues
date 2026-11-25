@@ -52,7 +52,7 @@ const target = (roles: Role[], zones?: Zone[]): RuleTarget =>
 // sheet says it.
 const PARTS = {
   all: { label: 'everything', target: {} as RuleTarget },
-  // Overhead washes: the Quads in the venue.
+  // Overhead washes: the Quads.
   quads: { label: 'Quads', target: target(['Wash'], zonesWhere('Overhead')) },
   // The Front row of overhead washes: the FOH Quads.
   front: { label: 'front Quads', target: target(['Wash'], zonesWhere('Overhead', ['Front'])) },

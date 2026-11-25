@@ -41,19 +41,18 @@ const zonesWhere = (
 const target = (roles: Role[], zones?: Zone[]): RuleTarget =>
   zones ? { roles, zones } : { roles };
 
-// Overhead washes: the main stage wash (the Quads in the venue).
+// Overhead washes: the main stage wash.
 const WASH = target(['Wash'], zonesWhere('Overhead'));
-// The Front row of overhead washes: the FOH Quads in the venue.
+// The Front row of overhead washes.
 const FRONT = target(['Wash'], zonesWhere('Overhead', ['Front']));
 // The upstage half of the overhead washes, for back light.
 const BACK = target(['Wash'], zonesWhere('Overhead', ['Midstage', 'Upstage']));
 const WASH_SR = target(['Wash'], zonesWhere('Overhead', ROWS, ['Stage Right']));
-// Floor washes and LED bars: the floor pars in the venue.
+// Floor washes and LED bars.
 const FLOOR = target(['Wash', 'Pixel/Bar'], zonesWhere('Floor'));
 const FLOOR_SR = target(['Wash', 'Pixel/Bar'], zonesWhere('Floor', ROWS, ['Stage Right']));
 const BEAMS = target(['Spot/Beam']);
-// Effect Fixtures: the Mini Dekkers in the venue (the hazer too, which the
-// app can't drive).
+// Effect Fixtures.
 const FX = target(['Effect']);
 // Every wash and bar, overhead and floor, for colour Accents. Beams keep the
 // Look's colour.

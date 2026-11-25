@@ -69,9 +69,9 @@ Reaper Lights files sit with the Reaper project, normally outside the repo. `.li
 
 ## Hand-made inputs
 
-Not generated, so outside the rule. `.gitignore` ignores every `fixtures/` folder, so these were added with `git add -f`:
+Not generated, so outside the rule. Fixtures are made up: never copy or trim a real project, song, Brief or Venue Patch, and use no real song, band or venue name. `.gitignore` ignores every `fixtures/` folder, so these were added with `git add -f`:
 
-- `tools/shows/make-shows/fixtures/`: `sample-brief.yaml`, `heavy-brief.yaml`, `sample-venue.lcvenue`
+- `tools/shows/make-shows/fixtures/`: `sample-brief.yaml`, `sample-venue.lcvenue`
 - `tools/shows/reaper-lights/fixtures/lantern.rpp`
 
 ## Exceptions

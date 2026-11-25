@@ -99,7 +99,7 @@ To change it:
 
 1. Edit the lists in `energy.ts`: Looks, Movement, Pulse, Colour FX, Hits, House Presets and Haze Presets.
 2. Run `npm run show:energy`. It writes `tools/shows/Energy.lcshow` and `tools/shows/Energy cue sheet.md`, which holds the note map per channel, a tier guide, how the Layers combine and the House and Haze notes. Both are committed.
-3. Check the Show against a venue with `--venue` or the prompt, as for the Palette Show. In the venue it lists the Blinder Rule of `Hit: Blinder` (no Blinders; the hit falls back to the front Quads), assumed pan and tilt ranges on the Quads and assumed strobe Hz spans.
+3. Check the Show against a venue with `--venue` or the prompt, as for the Palette Show. For a venue with no Blinders it lists the Blinder Rule of `Hit: Blinder` (the hit falls back to the front Quads). The same check lists any assumed pan and tilt ranges and strobe Hz spans.
 4. Run `npm test` to check that the Show is valid, every note is unique within its channel, and the output matches `energy.ts`.
 5. Commit `energy.ts` and its two output files together.
 
@@ -124,7 +124,7 @@ Turns one song (a Region) of a Reaper project into MIDI that fires its Show: a g
 - `analyse` reads the WAV items inside the Region on stem tracks: tracks named Drums, KickBand or Snare (case-insensitive, name contains it), and any track with an item whose file name contains the Region's name (the full mix) and prints one line per bar: section marker, RMS in dBFS per track, and onsets as song `bar.beat` rounded to a 16th note. Item position, offset and length are honoured; source files resolve against the `.rpp` folder. Other tracks are ignored. MP3 and other formats, items with no source file, and files that are missing, are skipped with a warning. Onsets are energy-flux peaks: dense full mixes yield few, a drum stem many. A helper only: placements are proposed to the user, not written.
 - `write` compiles a Plan (`<Song>.lights.yaml`, with the Show at `tools/shows/Energy.lcshow` unless it names one; a relative `show:` path is found from the working directory, then from the Plan's folder) and saves one MIDI item, `lights:<region>`, on lane 1 of the `MidiToLights` track. It never edits the original `.rpp`: it writes `<name>.lights.rpp` next to it. An existing `.lights.rpp` is the base, so other Regions' items stay; delete it to start again from the original. The file is written to a temp file and renamed, then a per-Region hash goes beside the Plan.
 - If the item's MIDI was edited in Reaper (it matches neither the stored hash nor what the Plan would write), `write` stops. Fold the edits into the Plan, or pass `--force`.
-- Errors in a Plan name the line. Run `npm test` for the tests. The fixture `tools/shows/reaper-lights/fixtures/lantern.rpp` is force-added to git (`fixtures/` is git-ignored).
+- Errors in a Plan name the line. Run `npm test` for the tests. The fixture `tools/shows/reaper-lights/fixtures/lantern.rpp` is a made-up project, force-added to git (`fixtures/` is git-ignored).
 
 ### Plan generator
 
