@@ -190,6 +190,45 @@ end: { look: drive blue }
     expect(lint(body)!.sections[0]!.counts).toMatchObject({ look: 2, colourfx: 1 });
   });
 
+  it("counts each section's swaps, Hits and colour changes", () => {
+    const body = `cues:
+  - { at: 1, look: drive red, movement: Fan, pulse: Pulse }
+  - { at: 3, movement: Sway }
+  - { at: 9, look: peak blue, movement: Fan, colourfx: Step }
+  - { at: 13, pulse: release, colourfx: release }
+events:
+  - { at: 2, scene: "Hit: Riser" }
+  - { at: 9, scene: "Hit: Colour Primary" }
+  - { at: 10, scene: "Hit: Punch floor" }
+`;
+    const report = lint(
+      body,
+      [
+        ['verse', 1],
+        ['chorus', 9],
+      ],
+      { bars: 16 },
+    )!;
+    expect(report.sections.map((s) => s.counts)).toEqual([
+      { look: 1, movement: 2, pulse: 1, colourfx: 0, hits: 1, colour: 1 },
+      { look: 1, movement: 1, pulse: 0, colourfx: 1, hits: 2, colour: 3 },
+    ]);
+  });
+
+  it('flags a repeat with fewer elements than the pass before', () => {
+    const body = `cues:
+  - { at: 1, look: drive red, movement: Fan, pulse: Pulse }
+  - { at: 9, look: drive blue, movement: Sway, pulse: release }
+`;
+    const sections: [string, number][] = [
+      ['chorus1', 1],
+      ['chorus2', 9],
+    ];
+    expect(matching(body, 'repeat', sections, { bars: 16 })).toEqual([
+      'Bar 9.1: chorus2 (Drive, 8 bars): a repeat with fewer elements than chorus1 at 1.1: 2 Scenes against 3',
+    ]);
+  });
+
   it('compares a repeat with the pass before over the bars both have', () => {
     const body = `cues:
   - { at: 1, look: drive red, movement: Fan }

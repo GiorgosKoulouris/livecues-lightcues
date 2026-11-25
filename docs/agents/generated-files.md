@@ -8,6 +8,7 @@ What is generated, and whether git tracks it. Why the show tooling sits apart: [
 - Each committed generated file has a staleness test: `npm test` fails when the file differs from what its generator writes.
 - Committed output is tracked through `.gitignore`, never through `git add -f`.
 - A new generated file gets a row here.
+- Song, Show and Venue files stay out of the repo unless they are examples. A test builds its own input or reads an example.
 
 Files that break the rule today are under [Exceptions](#exceptions).
 
