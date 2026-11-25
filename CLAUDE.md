@@ -45,6 +45,10 @@ The Palette and Energy Shows and their Cue Sheets are generated into `shows/` an
 
 The `make-show` skill turns a band's Brief into a Show, lints it, renders its key Scenes with `npm run show:shots` and scores the Shot rubric items. It never commits `bands/` or a Venue Patch. See `docs/agents/make-show.md`.
 
+### Light song
+
+The `light-song` skill turns a song into a Plan and MIDI: on a generated band Show, the user confirms sections and tiers, `generate` fills the Plan and Claude edits the highlights. It never commits Plans, `bands/` or a Venue Patch. See `docs/agents/light-song.md`.
+
 ### Security scan
 
 When asked to "run the security scan", run `npm run security:scan`, triage its outputs, review the code and write a report to `reports/security/`. Report-only: change and commit nothing. Follow `docs/agents/security-scan.md`.
